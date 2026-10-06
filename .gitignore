@@ -1,0 +1,14 @@
+# Personal coding-agent files (shared guidance is AGENTS.md)
+*.local.md
+.claude/
+
+# Python
+__pycache__/
+*.py[codz]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage

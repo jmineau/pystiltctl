@@ -1,0 +1,41 @@
+[project]
+name = "pystiltctl"
+version = "0.0.1"
+description = "Run PYSTILT projects at scale outside Slurm: queues, Kubernetes Jobs, scaling, and bucket sync."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "James Mineau", email = "jameskmineau@gmail.com" }]
+requires-python = ">=3.11"
+dependencies = [
+    "pystilt",
+]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.0",
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B", "SIM", "I", "D213"]
+ignore = ["E501"]
+
+[tool.pyright]
+include = ["src"]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "basic"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
