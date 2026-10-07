@@ -62,6 +62,11 @@ Rules that keep the line:
 stiltctl's other parts (a `Dockerfile`, `helm/` charts, `terraform/`,
 `scripts/`) come here as each is built, in the same places.
 
+pystiltctl is an application, not a library: it is installed into a Linux
+container image and run from there. So CI tests Linux only, and a release
+will publish a container image (and Helm chart) once the `Dockerfile` exists;
+it is not published to PyPI.
+
 ## Commands
 
 The environment is uv-managed (`uv sync`); every task is a `just` recipe, and CI
