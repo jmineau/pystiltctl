@@ -10,11 +10,16 @@ It calls PYSTILT; PYSTILT knows nothing of it.
 
 from __future__ import annotations
 
-from importlib.metadata import PackageNotFoundError, version
+import logging
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _version
 
 try:
-    __version__ = version("pystiltctl")
-except PackageNotFoundError:
+    __version__ = _version("pystiltctl")  # set by setuptools-scm from git tags
+except PackageNotFoundError:  # pragma: no cover - not installed
     __version__ = "0+unknown"
+
+# A library leaves logging configuration to the application.
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = ["__version__"]

@@ -1,0 +1,13 @@
+{
+  "title": "pystiltctl",
+  "description": "Run PYSTILT projects at scale outside Slurm: queues, Kubernetes Jobs, scaling, and bucket sync.",
+  "creators": [
+    {
+      "name": "Mineau, James",
+      "affiliation": "University of Utah",
+      "orcid": "0000-0002-2289-2252"
+    }
+  ],
+  "license": "MIT",
+  "upload_type": "software"
+}
