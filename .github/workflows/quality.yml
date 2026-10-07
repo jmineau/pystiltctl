@@ -1,0 +1,46 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    env:
+      UV_NO_SYNC: "1"  # `just` recipes run in the environment synced below
+      RUFF_OUTPUT_FORMAT: github  # annotate the PR diff
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # setuptools-scm reads the version from tags
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.23"
+          python-version: "3.11"
+
+      - name: Install
+        run: uv sync --locked
+
+      - name: Lint and format check
+        run: uv run just lint
+
+      - name: Type check
+        if: ${{ !cancelled() }}
+        run: uv run just type-check
+
+      - name: Docstring coverage
+        if: ${{ !cancelled() }}
+        run: uv run just docstr

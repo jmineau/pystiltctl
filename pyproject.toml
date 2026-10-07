@@ -1,41 +1,142 @@
+[build-system]
+requires = ["setuptools>=77", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "pystiltctl"
-version = "0.0.1"
+dynamic = ["version"]  # from git tags, via setuptools-scm
 description = "Run PYSTILT projects at scale outside Slurm: queues, Kubernetes Jobs, scaling, and bucket sync."
 readme = "README.md"
-license = "MIT"
-authors = [{ name = "James Mineau", email = "jameskmineau@gmail.com" }]
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    {name = "James Mineau", email = "jameskmineau@gmail.com"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
 dependencies = [
     "pystilt",
 ]
 
+[project.urls]
+Homepage = "https://github.com/jmineau/pystiltctl"
+Documentation = "https://jmineau.github.io/pystiltctl/"
+Repository = "https://github.com/jmineau/pystiltctl"
+Issues = "https://github.com/jmineau/pystiltctl/issues"
+Changelog = "https://github.com/jmineau/pystiltctl/blob/main/CHANGELOG.md"
+
 [dependency-groups]
+# Dev tooling and docs together; `uv sync` installs it by default.
 dev = [
-    "pyright>=1.1.0",
-    "pytest>=7.0.0",
-    "ruff>=0.1.0",
+    "docstr-coverage>=2.3",
+    "git-cliff>=2.10",  # `just changelog`
+    "pre-commit>=4.0",
+    "pydata-sphinx-theme>=0.16",
+    "pyrefly>=1.3",
+    "pytest>=9.0",
+    "pytest-cov>=6.0",
+    "pytest-xdist>=3.6",
+    "ruff>=0.16",
+    "rust-just>=1.40",
+    "setuptools-scm>=8",  # `just version`
+    "sphinx>=8.1",
+    "sphinx-autobuild>=2024.10",  # `just docs-serve`
+    "sphinx-autodoc-typehints>=3.0",
+    "sphinx-copybutton>=0.5",
+    "twine>=6.0",  # `just dist`
 ]
 
-[build-system]
-requires = ["setuptools>=69"]
-build-backend = "setuptools.build_meta"
+[tool.coverage.run]
+source = ["pystiltctl"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "def __repr__",
+]
+
+[tool.pyrefly]
+project-includes = ["src"]
+
+[tool.pytest]
+minversion = "9.0"
+testpaths = ["tests"]
+strict = true  # strict markers, config, xfail and parametrize ids
+addopts = ["-ra"]
+log_level = "INFO"  # show captured logs for failing tests
+# Warnings are errors, so deprecations surface early. Ignore a specific
+# third-party warning with e.g. "ignore:some message:DeprecationWarning:pkg".
+filterwarnings = ["error"]
+markers = [
+    "network: needs live network access; excluded from default runs",
+    "slow: expensive in time, bandwidth or disk; excluded from default runs",
+]
+
+[tool.repo-review]
+# Scientific Python repo-review (`uvx --from "sp-repo-review[cli]" sp-repo-review .`)
+# checks that this template skips on purpose:
+ignore = [
+    "PY007",  # task runner: just, not nox/tox
+    "MY101",  # pyrefly's default preset; tighten per project
+    "PC110", "PC190",  # ruff runs as a local `uv run` hook, so uv.lock pins its version
+    "PC140",  # pyrefly runs as a local `uv run` hook, so it sees the project's dependencies
+    "PC160",  # no spell checker
+    "PC180",  # no markdown formatter
+    "PC901", "PC902", "PC903",  # pre-commit.ci is not used
+]
+
+[tool.ruff]
+# target-version comes from project.requires-python
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle
+    "F",  # Pyflakes
+    "UP",  # pyupgrade
+    "B",  # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "I",  # isort
+    "D213",  # docstring summary on the second line
+    "NPY",  # NumPy-specific, incl. NumPy 2 deprecations
+    "RUF100",  # unused noqa
+]
+ignore = [
+    "E501",  # line too long, handled by formatter
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pystiltctl"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.ruff]
-target-version = "py311"
+[tool.setuptools.package-data]
+"pystiltctl" = ["py.typed"]
 
-[tool.ruff.lint]
-select = ["E", "F", "UP", "B", "SIM", "I", "D213"]
-ignore = ["E501"]
+[tool.setuptools_scm]
+# Releases are git tags vX.Y.Z (see CONTRIBUTING.md). Between releases the
+# version is the next patch as a dev version, e.g. 0.2.1.dev3+g1a2b3c4.
+fallback_version = "0.0.0"  # no git metadata at all (e.g. a bare source copy)
 
-[tool.pyright]
-include = ["src"]
-venvPath = "."
-venv = ".venv"
-typeCheckingMode = "basic"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
+[tool.uv]
+required-version = ">=0.12"
+# Rebuild the editable install when pyproject.toml or the git state changes, so
+# `__version__` follows new commits and tags.
+cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
