@@ -1,7 +1,11 @@
 """Sphinx configuration."""
 
 import datetime
+import sys
 from importlib.metadata import version as _version
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent / "_ext"))
 
 # -- Project -------------------------------------------------------------------
 
@@ -23,6 +27,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
+    "api_pages",  # _ext/api_pages.py: class pages with member tables
 ]
 templates_path = ["_templates"]
 exclude_patterns = ["_build"]
@@ -30,6 +35,7 @@ exclude_patterns = ["_build"]
 # -- HTML ----------------------------------------------------------------------
 
 html_theme = "pydata_sphinx_theme"
+html_title = f"{project} {version_match}"  # not the full dev version
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 html_theme_options = {
@@ -52,11 +58,12 @@ html_theme_options = {
 # NumPy-style docstrings only.
 napoleon_google_docstring = False
 napoleon_include_init_with_doc = True
+napoleon_use_ivar = True  # what a class page's tables leave in "Attributes"
 
+# A page per module, class, function, and class member, as in pandas'
+# reference. The page templates are in _templates/autosummary/.
 autodoc_default_options = {
-    "members": True,
     "member-order": "bysource",
-    "exclude-members": "__weakref__",
 }
 autosummary_generate = True  # stubs go to docs/_autosummary/ (gitignored)
 
