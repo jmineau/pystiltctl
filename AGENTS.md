@@ -56,7 +56,7 @@ Rules that keep the line:
 
 - `src/pystiltctl/`: the package (`py.typed` ships, so annotations are public API).
 - `tests/`: pytest suite.
-- `docs/`: Sphinx site (PyData theme); `docs/api.rst` drives the autosummary API pages.
+- `docs/`: Sphinx site (PyData theme). `docs/api.rst` lists the API by topic; each class gets a page with tables of its attributes and methods, and each member a page of its own (`docs/_templates/autosummary/`, `docs/_ext/api_pages.py`).
 - `dev/`: local plans (`dev/TASKS.md`), excluded from git through `.git/info/exclude`.
 
 stiltctl's other parts (a `Dockerfile`, `helm/` charts, `terraform/`,
@@ -91,8 +91,9 @@ After editing dependencies in `pyproject.toml`, run `uv lock` and commit
 ## Conventions
 
 - Python 3.11+; prefer stdlib features over backports.
-- Ruff lint rules `E, F, UP, B, SIM, I, D213, NPY, RUF100`; line length is the
-  formatter's business. Suppress a rule inline with a reason (`# noqa: B008 - why`).
+- Ruff lint rules `E, F, UP, B, SIM, I, D, D213, NPY, RUF100` (pydocstyle with
+  the NumPy convention); line length is the formatter's business. Suppress a
+  rule inline with a reason (`# noqa: B008 - why`).
 - NumPy-style docstrings, with the summary on the second line (D213):
 
   ```python
@@ -108,6 +109,10 @@ After editing dependencies in `pyproject.toml`, run `uv lock` and commit
   ```
 
 - Public functions, classes and modules have docstrings (`just docstr` enforces 95%).
+- Each public attribute and property has its own page in the API reference, and that
+  page is where its See Also and Examples go (as in pandas). Say what it is in its
+  docstring, and add See Also or Examples where they help; one with no docstring
+  shows an empty row.
 - pyrefly must pass with no errors; suppress with `# pyrefly: ignore[<code>]` on the
   line above, with a reason.
 - The library never configures logging; modules use `logging.getLogger(__name__)`.
@@ -119,8 +124,10 @@ After editing dependencies in `pyproject.toml`, run `uv lock` and commit
 
 - `network`: needs live network access; `slow`: expensive. Both are skipped by
   `just test` and in CI; run them with `uv run pytest -m network` or `-m slow`.
-- Markers are strict, and warnings are errors: register new markers, and ignore a
-  specific third-party warning, in `[tool.pytest]` in `pyproject.toml`.
+- Markers are strict, and warnings are errors: register new markers in
+  `[tool.pytest]` in `pyproject.toml`. A test that triggers a warning on purpose
+  asserts it (`with pytest.warns(UserWarning, match="..."):`); a third-party
+  warning is ignored by message and module in `[tool.pytest]` `filterwarnings`.
 - `just test` runs in parallel (pytest-xdist); tests must not depend on order or
   shared state. Debug with a serial `uv run pytest tests/test_x.py -x`.
 - Tests must not depend on machine-specific paths or data.
@@ -132,9 +139,9 @@ After editing dependencies in `pyproject.toml`, run `uv lock` and commit
 - User-visible changes go under `## [Unreleased]` in `CHANGELOG.md`, which follows
   [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). `just changelog`
   drafts entries from commit messages (`cliff.toml`); the entries are edited by hand.
-- Docs are versioned on GitHub Pages (`dev/`, one folder per release, `stable/`);
-  `.github/scripts/docs_versions.py` maintains the gh-pages branch. Never edit
-  gh-pages by hand.
+- Docs are versioned on GitHub Pages, which serves the gh-pages branch (`dev/`,
+  one folder per release, `stable/`); `.github/scripts/docs_versions.py`
+  maintains the branch. Never edit gh-pages by hand.
 - The version comes from git tags (setuptools-scm); there is no version string in
   the source. Pushing a `vX.Y.Z` tag publishes it. **Do not cut a release, create
   a tag, or push unless the maintainer asks.**
