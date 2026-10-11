@@ -32,7 +32,7 @@ shows them all).
 | `just quality-check` | `lint`, `type-check`, `docstr` and `test`: what CI checks |
 | `just test` | pytest in parallel, skipping tests marked `network` or `slow` (extra args go to pytest; plain `uv run pytest` runs serially, for debugging) |
 | `just format` | fix lint and format the code with ruff |
-| `just build-docs` | build the HTML docs into `docs/_build/`; warnings are errors |
+| `just build-docs` | build the HTML docs into `docs/_build/`, running every example; warnings are errors |
 | `just docs-serve` | preview the docs at <http://127.0.0.1:8000>, rebuilt on every save (on a remote machine, forward the port, e.g. VS Code's Ports panel) |
 | `just changelog` | draft CHANGELOG entries from the commits since the last release |
 | `just pre-commit` | run every hook on every file |

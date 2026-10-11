@@ -57,6 +57,7 @@ Rules that keep the line:
 - `src/pystiltctl/`: the package (`py.typed` ships, so annotations are public API).
 - `tests/`: pytest suite.
 - `docs/`: Sphinx site (PyData theme). `docs/api.rst` lists the API by topic; each class gets a page with tables of its attributes and methods, and each member a page of its own (`docs/_templates/autosummary/`, `docs/_ext/api_pages.py`).
+  Its examples run when the docs build (see [Examples in the docs](#examples-in-the-docs)).
 - `dev/`: local plans (`dev/TASKS.md`), excluded from git through `.git/info/exclude`.
 
 stiltctl's other parts (a `Dockerfile`, `helm/` charts, `terraform/`,
@@ -79,7 +80,7 @@ runs the same recipes.
 | Tests (no network/slow) | `just test` (parallel; extra args go to pytest) |
 | Lint / fix and format | `just lint` / `just format` |
 | Type check | `just type-check` (pyrefly) |
-| Docs (warnings are errors) | `just build-docs` |
+| Docs (runs every example; warnings are errors) | `just build-docs` |
 | Live docs preview | `just docs-serve` (port 8000) |
 | All pre-commit hooks | `just pre-commit` |
 | Build and check dists | `just dist` |
@@ -119,6 +120,56 @@ After editing dependencies in `pyproject.toml`, run `uv lock` and commit
 - Docs and help text use PYSTILT's voice: short sentences, the reader's words.
 - Keep changes small and code easy to read and debug; most users are scientists
   who will read the source when something looks wrong.
+
+## Examples in the docs
+
+Examples run when the docs build, so they show real output, and the build fails
+when one breaks.
+
+- **A figure in a docstring:** put a `.. plot::` directive in the Examples
+  section. Its code runs (doctest `>>>` lines work), and the figure appears
+  under it.
+
+  ```rst
+  Examples
+  --------
+  .. plot::
+
+     >>> import matplotlib.pyplot as plt
+     >>> _ = plt.plot([0, 1, 2], [0, 1, 4])
+  ```
+
+- **Code in an `.rst` page:** a `.. ipython:: python` block runs, and shows each
+  line with its output, as in an IPython session. Changing a
+  `.. code-block:: python` to `.. ipython:: python` is enough to make it run. For
+  a figure, put `@savefig name.png` on the line above the plotting call.
+
+  ```rst
+  .. ipython:: python
+
+     import matplotlib.pyplot as plt
+     import pystiltctl
+
+     pystiltctl.__version__
+
+     @savefig squares.png width=5in
+     plt.plot([0, 1, 2], [0, 1, 4]);
+  ```
+
+  A block that raises or warns fails the build; `:okexcept:` or `:okwarning:`
+  under the directive allows one that is meant to. All `.rst` pages share one
+  session, so each page imports and defines what it uses.
+- **When they run:** `just build-docs` runs everything, as CI does;
+  `just docs-serve` reruns a page's blocks whenever that page is rebuilt.
+- **Notebooks, and code cells in Markdown pages,** are off in this project.
+  `copier update --data docs_notebooks=true` turns them on; it adds myst-nb, and
+  Jupyter with it, to the dev tools.
+- **Data:** the docs build on GitHub Actions, so an example uses synthetic data,
+  a small file in the repository, or a public download, never a machine-specific
+  path. Seed random numbers so the figures don't change from build to build.
+- **Optional dependencies:** if an example needs an extra, add
+  `pystiltctl[extra]` to the `dev` group, so `uv sync` installs it
+  here and in CI.
 
 ## Tests
 
