@@ -56,32 +56,24 @@ Rules that keep the line:
 
 - `src/pystiltctl/`: the package (`py.typed` ships, so annotations are public API).
   - `cli.py`: the `pystiltctl` command (typer); each command calls one module.
-  - `inputs.py`: `push` and `pull` copy a project's inputs (`config.yaml`,
-    `receptors.csv`, `tables/`) to and from a bucket through fsspec. Never the output.
-  - `job.py`: `submit`'s indexed Job. `job_spec` reads the project's `execution`
-    settings (through `stilt.Project`), `manifest` writes the Job as a dict, and
-    `create` hands it to `kubectl create`. Retries are the Job's `podFailurePolicy`
-    on the worker's exit code; there is no retry loop here.
-  - `status.py`: `stilt status --json` (a subprocess, on the pulled inputs) and the
-    project's Jobs from `kubectl get jobs -l pystiltctl/project=...`. Completion is
-    PYSTILT's count; the Jobs only say what ran.
-  - `worker.py`: what a pod runs: pull the inputs, then `os.execv` into
-    `python -m stilt run --task I/N`, so the stop signal and the exit code are
-    `stilt`'s own.
-- `tests/`: pytest suite.
+  - `inputs.py`: `push`/`pull` copy `config.yaml`, `receptors.csv`, `tables/` to and
+    from a bucket (fsspec); never the output.
+  - `worker.py`: what a pod runs: pull, then `os.execv` into `python -m stilt run
+    --task I/N`, so the stop signal and the exit code are `stilt`'s own.
+  - `job.py`: `submit`'s indexed Job, defaults from the project's `execution`
+    settings; retries are its `podFailurePolicy`, never a loop here.
+  - `status.py`: `stilt status --json` plus the Jobs labeled `pystiltctl/project`.
+- `tests/`: pytest suite; `tests/kubernetes/` is the end-to-end test on kind (its README).
 - `docs/`: Sphinx site (PyData theme). `docs/api.rst` lists the API by topic; each class gets a page with tables of its attributes and methods, and each member a page of its own (`docs/_templates/autosummary/`, `docs/_ext/api_pages.py`).
   Its examples run when the docs build (see [Examples in the docs](#examples-in-the-docs)).
 - `dev/`: the maintainer's local notes, excluded from git through `.git/info/exclude`.
 
-- `Dockerfile`: the image every pod runs. It installs from `uv.lock` (no dev
-  group, the `s3` and `gcs` extras) into `/opt/venv` on `python:3.13-slim`, with
-  `tini` as process 1 so the stop signal reaches `stilt`. PYSTILT's wheel carries a
-  static `hycs_std`, so the image needs no compilers or Fortran libraries.
-  setuptools-scm cannot see `.git` in the build, so the version comes in as
-  `--build-arg VERSION=...`. `.dockerignore` lets in only what `uv sync` builds from.
-- `.github/workflows/image.yml`: builds the image on every PR and runs a task of an
-  empty project in it; pushes `ghcr.io/jmineau/pystiltctl:main` from main, and
-  `:<version>` and `:latest` from a `vX.Y.Z` tag. It is not a template file.
+- `Dockerfile`: the image every pod runs: `uv.lock` (no dev group; `s3`, `gcs`
+  extras) on `python:3.13-slim`, `tini` as process 1. PYSTILT's wheel carries a
+  static `hycs_std`. The build has no `.git`, so the version is `--build-arg VERSION`.
+- `.github/workflows/image.yml` (not a template file): builds and smoke-tests the
+  image on every PR; pushes `ghcr.io/jmineau/pystiltctl:main` from main, and
+  `:<version>` and `:latest` from a tag.
 
 pystiltctl is an application, not a library: it is installed into a Linux
 container image and run from there. So CI tests Linux only, and a release
@@ -202,21 +194,10 @@ when one breaks.
 - `just test` runs in parallel (pytest-xdist); tests must not depend on order or
   shared state. Debug with a serial `uv run pytest tests/test_x.py -x`.
 - Tests must not depend on machine-specific paths or data.
-- `.github/workflows/kubernetes.yml` is the end-to-end test: on a kind cluster it
-  runs `tests/kubernetes/demo/` (two receptors, one cropped HRRR block from NOAA,
-  cached) with the image from the commit, an in-cluster moto S3 server and a met
-  PVC (`tests/kubernetes/cluster.yaml`, one `List` so `check-yaml` takes it), then
-  checks that a missing project fails its Job at once. `AWS_ENDPOINT_URL` sends
-  every S3 call to moto, NOAA's too, so the pods' met is the mounted folder, never
-  a `download:`. `stilt status` (so `pystiltctl status`) reads the met's first
-  file header to find the results, so a met on a volume must be at the same path
-  where `status` runs: the workflow links the runner's folder to `/met`.
-- Tests never need a cluster: `job.create`'s `kubectl` call is monkeypatched.
-  The `project` fixture's `config.yaml` (`tests/conftest.py`, `CONFIG`) is the
-  smallest one PYSTILT opens; `stilt.Project` validates it, so keep it valid.
-- Buckets in tests are fsspec's `memory://` store (the `bucket` fixture, unique per
-  test) or a `tmp_path` folder; no test needs s3fs or a network. The worker's
-  `os.execv` is monkeypatched (the `execs` fixture) to record the `stilt` command.
+- The pytest suite needs no cluster, no s3fs and no network: buckets are fsspec's
+  `memory://` (fixture `bucket`), and `kubectl` and the worker's `os.execv`
+  (fixture `execs`) are monkeypatched. `CONFIG` in `tests/conftest.py` is the
+  smallest `config.yaml` PYSTILT opens; keep it valid.
 
 ## Commits, changelog, releases
 
