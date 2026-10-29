@@ -50,6 +50,21 @@ def local_path(location: str | Path) -> Path:
     return Path(fsspec.core.strip_protocol(str(location)))
 
 
+def project_name(location: str | Path) -> str:
+    """
+    Return a project's name, the last part of its folder or URL.
+
+    PYSTILT names a project after its folder, so a pod that pulls the
+    inputs into a folder of this name runs a project of the same name.
+
+    Examples
+    --------
+    >>> project_name("s3://bucket/projects/my_project/")
+    'my_project'
+    """
+    return str(location).rstrip("/").rsplit("/", 1)[-1]
+
+
 def push(project: str | Path, url: str) -> list[str]:
     """
     Copy a project's inputs to *url*.

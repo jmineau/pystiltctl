@@ -20,7 +20,7 @@ def project(tmp_path):
     directory = tmp_path / "my_project"
     (directory / "tables").mkdir(parents=True)
     (directory / "config.yaml").write_text(CONFIG)
-    (directory / "receptors.csv").write_text("time,longitude,latitude,height\n")
+    (directory / "receptors.csv").write_text("time,longitude,latitude,altitude\n")
     (directory / "tables" / "kernels.parquet").write_bytes(b"not really parquet")
     (directory / "output").mkdir()
     (directory / "output" / "result.nc").write_bytes(b"a result")

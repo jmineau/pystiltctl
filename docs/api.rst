@@ -16,6 +16,7 @@ Project inputs
    inputs.pull
    inputs.is_local
    inputs.local_path
+   inputs.project_name
 
 Worker
 ------
@@ -43,3 +44,15 @@ Kubernetes Job
    job.default_image
    job.kubernetes_memory
    job.label_value
+
+Status
+------
+
+.. autosummary::
+   :toctree: _autosummary
+
+   status.simulations
+   status.project_jobs
+   status.job_summary
+   status.report
+   status.count_indexes

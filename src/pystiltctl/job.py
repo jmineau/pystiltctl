@@ -32,7 +32,7 @@ import stilt
 import yaml
 
 import pystiltctl
-from pystiltctl.inputs import is_local, local_path, pull
+from pystiltctl.inputs import is_local, local_path, project_name, pull
 
 #: Retries per task for a stopped pod (exit 3) or a crash.
 RETRIES = 3
@@ -236,7 +236,6 @@ def job_spec(
         opened = stilt.Project(directory, output=output)
         execution = opened.config.execution
         results = str(opened.output.directory)
-    name = project.rstrip("/").rsplit("/", 1)[-1]
     if not is_local(project) and is_local(results):
         raise ValueError(
             "The output directory is a path, so each pod would write its results "
@@ -248,7 +247,7 @@ def job_spec(
         memory = kubernetes_memory(execution.mem)
     return JobSpec(
         project=project,
-        name=name,
+        name=project_name(project),
         tasks=tasks,
         parallelism=min(parallelism or execution.array_parallelism or tasks, tasks),
         cpus=cpus or execution.cpus,

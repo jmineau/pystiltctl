@@ -6,6 +6,7 @@ Examples::
     pystiltctl push ./my_project s3://bucket/projects/my_project
     pystiltctl submit s3://bucket/projects/my_project --tasks 20
     pystiltctl submit s3://bucket/projects/my_project --dry-run    # print the Job
+    pystiltctl status s3://bucket/projects/my_project
     pystiltctl worker s3://bucket/projects/my_project --tasks 20   # in a pod
 
 ``pystiltctl worker`` exits with ``stilt run``'s code: 0 when every
@@ -17,13 +18,14 @@ there is no project at the URL (a retry will not help).
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Annotated, NoReturn
 
 import typer
 
-from pystiltctl import inputs, job, worker
+from pystiltctl import inputs, job, status, worker
 
 app = typer.Typer(
     name="pystiltctl",
@@ -163,6 +165,50 @@ def submit(
     typer.echo(
         f"Submitted job: {name}  ({spec.tasks} tasks, {spec.parallelism} at once)"
     )
+
+
+@app.command(name="status")
+def status_command(
+    project: Annotated[
+        str,
+        typer.Argument(help="The project: the URL it was pushed to, or a folder."),
+    ],
+    output: Annotated[
+        str | None,
+        typer.Option(help="Output directory to use instead of config.yaml's."),
+    ] = None,
+    namespace: Annotated[
+        str | None, typer.Option(help="Namespace. Default: kubectl's current one.")
+    ] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Print the same as JSON, for a program to read."),
+    ] = False,
+) -> None:
+    """
+    Show a project's Jobs on the cluster and count its simulations.
+
+    The counts are stilt status's, read from the output directory: how many
+    simulations are complete, failed, interrupted and pending. The Jobs are
+    the ones pystiltctl submit started for this project, with how many of
+    their tasks are done, running, and failed.
+    """
+    try:
+        data = status.simulations(project, output=output)
+    except FileNotFoundError as error:
+        _fail(str(error))
+    except RuntimeError as error:
+        _fail(f"stilt status failed: {error}", EXIT_RETRY)
+    try:
+        jobs: list[dict] | str = status.project_jobs(
+            inputs.project_name(project), namespace=namespace
+        )
+    except (FileNotFoundError, RuntimeError) as error:
+        jobs = str(error)
+    if as_json:
+        typer.echo(json.dumps({**data, "jobs": jobs}, indent=2))
+    else:
+        typer.echo(status.report(data, jobs))
 
 
 @app.command(name="worker")
