@@ -16,41 +16,27 @@ Contribution mechanics are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## What it is
 
-pystiltctl runs [PYSTILT](https://github.com/jmineau/PYSTILT) projects at
-scale outside Slurm: on Kubernetes, behind a queue, on autoscaled
-workers, with results on an object store. Its layout follows Ben Fasoli's
-[stiltctl](https://github.com/uataq/stiltctl), which ran STILT-R on
-Kubernetes; it is a new codebase, not a fork, and it runs PYSTILT.
+pystiltctl runs [PYSTILT](https://github.com/jmineau/PYSTILT) projects on
+Kubernetes, as indexed Jobs, with inputs and results on a bucket. It does for
+PYSTILT what Ben Fasoli's [stiltctl](https://github.com/uataq/stiltctl) did for
+STILT-R; it is a new codebase, not a fork.
 
 ## The boundary
 
-PYSTILT stays a library and a command line with no queue, no database,
-and no orchestration (decided in PYSTILT#67, #87, and #150). Everything
-that schedules work lives here. The line between them:
+PYSTILT stays a library and a command line with no queue, no database and no
+orchestration (PYSTILT#67, #87, #150). pystiltctl owns starting tasks, Jobs,
+retries, bucket sync and reports; PYSTILT owns what a task runs (`stilt run
+<project> --task I/N`), the output layout, completion, and the exit code (0 all
+complete, 1 some failed, 2 bad command line, 3 stopped).
 
-| pystiltctl owns | PYSTILT owns |
-|---|---|
-| queues, Kubernetes Jobs, scaling | the transport run, footprints, and the output layout |
-| splitting work into tasks and starting them | what a task runs: `stilt run <project> --task I/N` (or `--receptors FILE`) |
-| syncing a project and its outputs to and from a bucket | reading and writing an output directory, local or `s3://`/`gs://` |
-| retries and alerts, from a task's exit code | the exit code: 0 all complete, 1 some failed, 2 bad command line, 3 stopped (retry) |
-| dashboards and reports | `stilt status --json`, `project.status()` |
-
-Rules that keep the line:
-
-- **Call PYSTILT through its public surface only:** the `stilt` command
-  line, or `stilt.Project` and the names in `stilt.__all__`. Never import
-  a private name (`stilt._*`, a module's `_function`). If pystiltctl needs
-  something PYSTILT does not expose, open a PYSTILT issue rather than
-  reaching in.
-- **A task is a command line.** Whatever starts it (a Kubernetes indexed
-  Job, a queue consumer), the work is `stilt run --task I/N` in a
-  container that has the project, its meteorology, and its output
-  directory. Completion is decided by PYSTILT, from the files in the
-  output directory; pystiltctl never keeps its own record of what is done.
-- **No PYSTILT logic here.** Nothing in this package computes particles,
-  footprints, hashes, or completion. If it seems to need to, the logic
-  belongs in PYSTILT.
+- **Call PYSTILT through its public surface only:** the `stilt` command line, or
+  `stilt.Project` and the names in `stilt.__all__`; never a private name. If
+  something is missing, open a PYSTILT issue rather than reaching in.
+- **A task is a command line**, `stilt run --task I/N`, in a container with the
+  project, its met and its output directory. PYSTILT decides completion from the
+  output files; pystiltctl keeps no record of what is done.
+- **No PYSTILT logic here**: nothing computes particles, footprints, hashes or
+  completion.
 
 ## Layout
 
@@ -63,22 +49,16 @@ Rules that keep the line:
   - `job.py`: `submit`'s indexed Job, defaults from the project's `execution`
     settings; retries are its `podFailurePolicy`, never a loop here.
   - `status.py`: `stilt status --json` plus the Jobs labeled `pystiltctl/project`.
-- `tests/`: pytest suite; `tests/kubernetes/` is the end-to-end test on kind (its README).
+- `tests/`: pytest suite; `tests/kubernetes/`, the end-to-end test on kind (its README).
 - `docs/`: Sphinx site (PyData theme). `docs/api.rst` lists the API by topic; each class gets a page with tables of its attributes and methods, and each member a page of its own (`docs/_templates/autosummary/`, `docs/_ext/api_pages.py`).
   Its examples run when the docs build (see [Examples in the docs](#examples-in-the-docs)).
 - `dev/`: the maintainer's local notes, excluded from git through `.git/info/exclude`.
-
-- `Dockerfile`: the image every pod runs: `uv.lock` (no dev group; `s3`, `gcs`
-  extras) on `python:3.13-slim`, `tini` as process 1. PYSTILT's wheel carries a
-  static `hycs_std`. The build has no `.git`, so the version is `--build-arg VERSION`.
-- `.github/workflows/image.yml` (not a template file): builds and smoke-tests the
-  image on every PR; pushes `ghcr.io/jmineau/pystiltctl:main` from main, and
-  `:<version>` and `:latest` from a tag.
-
-pystiltctl is an application, not a library: it is installed into a Linux
-container image and run from there. So CI tests Linux only, and a release
-publishes the container image; it is not published to PyPI. Build the image
-locally with `docker build --build-arg VERSION=$(uv run python -m setuptools_scm) -t pystiltctl .`.
+- `Dockerfile`: the image every pod runs (how to build it is in its header):
+  `uv.lock` with the `s3` and `gcs` extras on `python:3.13-slim`, `tini` as
+  process 1; PYSTILT's wheel carries a static `hycs_std`. `image.yml` (not a
+  template file) smoke-tests it on every PR and pushes `ghcr.io/jmineau/pystiltctl`
+  (`:main` from main; `:<version>`, `:latest` from a tag). pystiltctl is an
+  application that runs in this Linux image: CI tests Linux only, and it is not on PyPI.
 
 ## Commands
 
