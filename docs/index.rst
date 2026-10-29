@@ -10,6 +10,7 @@ Release notes are in the `changelog <https://github.com/jmineau/pystiltctl/blob/
 
    installation
    usage
+   kind
    cli
    api
    contributing

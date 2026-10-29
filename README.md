@@ -46,6 +46,11 @@ uv run pre-commit install
 just quality-check         # lint, type check, docstrings, tests
 ```
 
+## Use of AI coding agents
+
+This project is developed with the help of AI coding agents, directed and
+reviewed by the maintainer, who owns the design and the science.
+
 ## License
 
 MIT; see [LICENSE](LICENSE).
