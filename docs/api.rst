@@ -1,20 +1,28 @@
 API reference
 =============
 
-..
-   Group the API by topic, as pandas does
-   (https://pandas.pydata.org/docs/reference/frame.html): set the current
-   module to pystiltctl, then give each topic a heading and an
-   autosummary table, with ":toctree: _autosummary", of its classes and
-   functions. Each class gets a page with tables of its attributes and
-   methods, and each member a page of its own
-   (_templates/autosummary/class.rst, _ext/api_pages.py). A table of
-   modules works too: a module's page lists what it defines. A subclass's
-   page links to the members it inherits, so list the base classes as well.
-   Until there are topics, the table below lists the package's modules.
+pystiltctl is used from its command line (:doc:`cli`); these are the
+functions behind it.
+
+.. currentmodule:: pystiltctl
+
+Project inputs
+--------------
 
 .. autosummary::
    :toctree: _autosummary
-   :recursive:
 
-   pystiltctl
+   inputs.push
+   inputs.pull
+   inputs.is_local
+
+Worker
+------
+
+.. autosummary::
+   :toctree: _autosummary
+
+   worker.run_task
+   worker.task_index
+   worker.project_directory
+   worker.stilt_command

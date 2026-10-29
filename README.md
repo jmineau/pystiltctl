@@ -18,14 +18,15 @@ nothing of it. [AGENTS.md](AGENTS.md) draws the line between the two.
 The layout follows Ben Fasoli's [stiltctl](https://github.com/uataq/stiltctl), which ran STILT-R
 on Kubernetes. This is a new codebase that runs PYSTILT.
 
-**Status:** started. Nothing runs yet.
+**Status:** early. `pystiltctl push` and `pystiltctl worker` work; `submit` (the Kubernetes
+Job) and a container image are next.
 
 ## Installation
 
 From GitHub:
 
 ```bash
-pip install git+https://github.com/jmineau/pystiltctl
+pip install "pystiltctl[s3] @ git+https://github.com/jmineau/pystiltctl"
 ```
 
 pystiltctl requires Python 3.11 or newer.

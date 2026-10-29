@@ -33,8 +33,8 @@ that schedules work lives here. The line between them:
 | queues, Kubernetes Jobs, scaling | the transport run, footprints, and the output layout |
 | splitting work into tasks and starting them | what a task runs: `stilt run <project> --task I/N` (or `--receptors FILE`) |
 | syncing a project and its outputs to and from a bucket | reading and writing an output directory, local or `s3://`/`gs://` |
-| retries and alerts, from a task's exit code | the exit code: 0 all complete, 1 some failed, 2 stopped before finishing |
-| dashboards and reports | `stilt status`, `stilt output ls`, `project.status()` |
+| retries and alerts, from a task's exit code | the exit code: 0 all complete, 1 some failed, 2 bad command line, 3 stopped (retry) |
+| dashboards and reports | `stilt status --json`, `project.status()` |
 
 Rules that keep the line:
 
@@ -55,10 +55,16 @@ Rules that keep the line:
 ## Layout
 
 - `src/pystiltctl/`: the package (`py.typed` ships, so annotations are public API).
+  - `cli.py`: the `pystiltctl` command (typer); each command calls one module.
+  - `inputs.py`: `push` and `pull` copy a project's inputs (`config.yaml`,
+    `receptors.csv`, `tables/`) to and from a bucket through fsspec. Never the output.
+  - `worker.py`: what a pod runs: pull the inputs, then `os.execv` into
+    `python -m stilt run --task I/N`, so the stop signal and the exit code are
+    `stilt`'s own.
 - `tests/`: pytest suite.
 - `docs/`: Sphinx site (PyData theme). `docs/api.rst` lists the API by topic; each class gets a page with tables of its attributes and methods, and each member a page of its own (`docs/_templates/autosummary/`, `docs/_ext/api_pages.py`).
   Its examples run when the docs build (see [Examples in the docs](#examples-in-the-docs)).
-- `dev/`: local plans (`dev/TASKS.md`), excluded from git through `.git/info/exclude`.
+- `dev/`: the maintainer's local notes, excluded from git through `.git/info/exclude`.
 
 stiltctl's other parts (a `Dockerfile`, `helm/` charts, `terraform/`,
 `scripts/`) come here as each is built, in the same places.
@@ -182,6 +188,9 @@ when one breaks.
 - `just test` runs in parallel (pytest-xdist); tests must not depend on order or
   shared state. Debug with a serial `uv run pytest tests/test_x.py -x`.
 - Tests must not depend on machine-specific paths or data.
+- Buckets in tests are fsspec's `memory://` store (the `bucket` fixture, unique per
+  test) or a `tmp_path` folder; no test needs s3fs or a network. The worker's
+  `os.execv` is monkeypatched (the `execs` fixture) to record the `stilt` command.
 
 ## Commits, changelog, releases
 
@@ -194,8 +203,7 @@ when one breaks.
   one folder per release, `stable/`); `.github/scripts/docs_versions.py`
   maintains the branch. Never edit gh-pages by hand.
 - The version comes from git tags (setuptools-scm); there is no version string in
-  the source. Pushing a `vX.Y.Z` tag publishes it. **Do not cut a release, create
-  a tag, or push unless the maintainer asks.**
+  the source. The maintainer cuts releases; pushing a `vX.Y.Z` tag publishes it.
 
 ## Template
 

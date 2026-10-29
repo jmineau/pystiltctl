@@ -24,8 +24,18 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "pystilt",
+    "fsspec>=2024.2",
+    "pystilt>=0.1.0a26",
+    "typer>=0.9",
 ]
+
+[project.optional-dependencies]
+# Buckets: s3:// (AWS, MinIO, any S3-compatible store) and gs:// (Google Cloud).
+s3 = ["s3fs>=2024.2"]
+gcs = ["gcsfs>=2024.2"]
+
+[project.scripts]
+pystiltctl = "pystiltctl.cli:app"
 
 [project.urls]
 Homepage = "https://github.com/jmineau/pystiltctl"
