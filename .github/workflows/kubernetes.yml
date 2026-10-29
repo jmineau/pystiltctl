@@ -105,6 +105,9 @@ jobs:
           uv run pystiltctl submit s3://stilt/projects/demo --tasks 2 \
             --image pystiltctl:ci --secret bucket-creds --volume met:/met
           kubectl wait --for=condition=complete job -l pystiltctl/project=demo --timeout=600s
+          # stilt status reads the met's header to find the results, so the
+          # met must be at /met here too, as in the pods.
+          sudo ln -s "$GITHUB_WORKSPACE/met" /met
           uv run pystiltctl status s3://stilt/projects/demo
           uv run pystiltctl status s3://stilt/projects/demo --json > status.json
           python3 - <<'CHECK'

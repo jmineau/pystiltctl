@@ -208,7 +208,9 @@ when one breaks.
   PVC (`tests/kubernetes/cluster.yaml`, one `List` so `check-yaml` takes it), then
   checks that a missing project fails its Job at once. `AWS_ENDPOINT_URL` sends
   every S3 call to moto, NOAA's too, so the pods' met is the mounted folder, never
-  a `download:`.
+  a `download:`. `stilt status` (so `pystiltctl status`) reads the met's first
+  file header to find the results, so a met on a volume must be at the same path
+  where `status` runs: the workflow links the runner's folder to `/met`.
 - Tests never need a cluster: `job.create`'s `kubectl` call is monkeypatched.
   The `project` fixture's `config.yaml` (`tests/conftest.py`, `CONFIG`) is the
   smallest one PYSTILT opens; `stilt.Project` validates it, so keep it valid.
