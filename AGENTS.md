@@ -58,6 +58,10 @@ Rules that keep the line:
   - `cli.py`: the `pystiltctl` command (typer); each command calls one module.
   - `inputs.py`: `push` and `pull` copy a project's inputs (`config.yaml`,
     `receptors.csv`, `tables/`) to and from a bucket through fsspec. Never the output.
+  - `job.py`: `submit`'s indexed Job. `job_spec` reads the project's `execution`
+    settings (through `stilt.Project`), `manifest` writes the Job as a dict, and
+    `create` hands it to `kubectl create`. Retries are the Job's `podFailurePolicy`
+    on the worker's exit code; there is no retry loop here.
   - `worker.py`: what a pod runs: pull the inputs, then `os.execv` into
     `python -m stilt run --task I/N`, so the stop signal and the exit code are
     `stilt`'s own.
@@ -195,6 +199,9 @@ when one breaks.
 - `just test` runs in parallel (pytest-xdist); tests must not depend on order or
   shared state. Debug with a serial `uv run pytest tests/test_x.py -x`.
 - Tests must not depend on machine-specific paths or data.
+- Tests never need a cluster: `job.create`'s `kubectl` call is monkeypatched.
+  The `project` fixture's `config.yaml` (`tests/conftest.py`, `CONFIG`) is the
+  smallest one PYSTILT opens; `stilt.Project` validates it, so keep it valid.
 - Buckets in tests are fsspec's `memory://` store (the `bucket` fixture, unique per
   test) or a `tmp_path` folder; no test needs s3fs or a network. The worker's
   `os.execv` is monkeypatched (the `execs` fixture) to record the `stilt` command.

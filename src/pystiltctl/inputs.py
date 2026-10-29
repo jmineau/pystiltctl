@@ -38,6 +38,18 @@ def is_local(location: str | Path) -> bool:
     return fsspec.utils.get_protocol(str(location)) in ("file", "local")
 
 
+def local_path(location: str | Path) -> Path:
+    """
+    Return a local *location* as a path, without a ``file://`` in front.
+
+    Examples
+    --------
+    >>> local_path("file:///data/my_project")
+    PosixPath('/data/my_project')
+    """
+    return Path(fsspec.core.strip_protocol(str(location)))
+
+
 def push(project: str | Path, url: str) -> list[str]:
     """
     Copy a project's inputs to *url*.

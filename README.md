@@ -18,8 +18,8 @@ nothing of it. [AGENTS.md](AGENTS.md) draws the line between the two.
 The layout follows Ben Fasoli's [stiltctl](https://github.com/uataq/stiltctl), which ran STILT-R
 on Kubernetes. This is a new codebase that runs PYSTILT.
 
-**Status:** early. `pystiltctl push`, `pystiltctl worker` and the container image
-(`ghcr.io/jmineau/pystiltctl`) work; `submit` (the Kubernetes Job) is next.
+**Status:** early. `pystiltctl push`, `submit` (a Kubernetes indexed Job) and `worker`
+work, with the container image `ghcr.io/jmineau/pystiltctl`; `status` is next.
 
 ## Installation
 

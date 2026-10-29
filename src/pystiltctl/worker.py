@@ -14,9 +14,7 @@ import os
 import sys
 from pathlib import Path
 
-import fsspec
-
-from pystiltctl.inputs import is_local, pull
+from pystiltctl.inputs import is_local, local_path, pull
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +56,7 @@ def project_directory(project: str, workdir: str | Path) -> Path:
     inputs are copied into *workdir*, in a folder with the project's name.
     """
     if is_local(project):
-        return Path(fsspec.core.strip_protocol(project))
+        return local_path(project)
     name = project.rstrip("/").rsplit("/", 1)[-1]
     return pull(project, Path(workdir) / name)
 
