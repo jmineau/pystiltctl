@@ -1,0 +1,137 @@
+name: Kubernetes
+
+# Runs a real project on a kind cluster: pystiltctl push, submit, status,
+# with the image built from this commit, an S3 server in the cluster for
+# the inputs and results, and one cropped HRRR block mounted as the met.
+# Then checks that a Job whose project is missing fails at once, without
+# retries (the worker's exit code 2).
+
+on:
+  push:
+    branches: [main]
+  pull_request:  # any base, so a PR stacked on another PR is checked too
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      UV_NO_SYNC: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # setuptools-scm reads the version from tags
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.23"
+          python-version: "3.13"
+
+      - name: Install
+        run: uv sync --locked --extra s3
+
+      - name: Restore the met
+        id: met-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: met
+          key: met-hrrr-20210115-00
+
+      - name: Download the met
+        # One 6-hour HRRR block from NOAA's bucket, cropped to Utah (about 21 MB).
+        if: steps.met-cache.outputs.cache-hit != 'true'
+        run: |
+          uv run python -c '
+          from arlmet.archives import HRRRArchive
+          HRRRArchive().fetch("2021-01-15 00:00", "2021-01-15 05:59", dest_dir="met",
+                              bbox=(-114.0, 39.0, -110.0, 42.0))
+          '
+
+      - name: Save the met
+        if: steps.met-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: met
+          key: ${{ steps.met-cache.outputs.cache-primary-key }}
+
+      - name: Build the image
+        run: docker build -t pystiltctl:ci .
+
+      - name: Write the kind config
+        # The node mounts the runner's met folder at /met.
+        run: |
+          cat > kind.yaml <<KIND
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+            - role: control-plane
+              extraMounts:
+                - hostPath: $GITHUB_WORKSPACE/met
+                  containerPath: /met
+                  readOnly: true
+          KIND
+
+      - uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: stilt
+          config: kind.yaml
+
+      - name: Start the S3 server
+        run: |
+          kind load docker-image pystiltctl:ci --name stilt
+          kubectl apply -f tests/kubernetes/cluster.yaml
+          kubectl wait --for=condition=available deployment/s3 --timeout=300s
+          kubectl port-forward service/s3 5000:5000 > port-forward.log 2>&1 &
+          for _ in $(seq 30); do nc -z 127.0.0.1 5000 && break; sleep 1; done
+
+      - name: Run the demo project
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ENDPOINT_URL: http://127.0.0.1:5000
+        run: |
+          uv run python -c "import s3fs; s3fs.S3FileSystem().mkdir('stilt')"
+          uv run pystiltctl push tests/kubernetes/demo s3://stilt/projects/demo
+          uv run pystiltctl submit s3://stilt/projects/demo --tasks 2 \
+            --image pystiltctl:ci --secret bucket-creds --volume met:/met
+          kubectl wait --for=condition=complete job -l pystiltctl/project=demo --timeout=600s
+          uv run pystiltctl status s3://stilt/projects/demo
+          uv run pystiltctl status s3://stilt/projects/demo --json > status.json
+          python3 - <<'CHECK'
+          import json
+          status = json.load(open("status.json"))
+          assert status["simulations"]["complete"] == 2, status["simulations"]
+          assert [job["state"] for job in status["jobs"]] == ["complete"], status["jobs"]
+          CHECK
+
+      - name: A missing project fails the Job without retries
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ENDPOINT_URL: http://127.0.0.1:5000
+        run: |
+          name=$(uv run pystiltctl submit s3://stilt/projects/demo --tasks 2 \
+            --image pystiltctl:ci --secret bucket-creds --volume met:/met --dry-run \
+            | sed 's|s3://stilt/projects/demo|s3://stilt/projects/missing|' \
+            | kubectl create -f - -o name)
+          kubectl wait --for=condition=failed "$name" --timeout=300s
+          reason=$(kubectl get "$name" -o jsonpath='{.status.conditions[?(@.type=="Failed")].reason}')
+          test "$reason" = PodFailurePolicy || { echo "::error::failed for $reason"; exit 1; }
+
+      - name: Show the cluster
+        if: ${{ !cancelled() }}
+        run: |
+          kubectl get jobs,pods -o wide
+          kubectl describe jobs -l app.kubernetes.io/name=pystiltctl | tail -40
+          kubectl logs -l app.kubernetes.io/name=pystiltctl --prefix --tail=30 || true
