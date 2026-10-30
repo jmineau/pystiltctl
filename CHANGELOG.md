@@ -22,6 +22,9 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
   which adds the hours now due (8 hours behind the clock, for the met archive),
   writes `receptors.csv` back to the bucket, and runs the last day's receptors.
   `push` and `pull` carry `sites.csv`.
+- `--render URL` on `schedule` and `tick` draws each finished footprint for a
+  web map: a PNG on one log color scale, rows in web Mercator, with a JSON of
+  its corners, and an `index.json` per day.
 - `pystiltctl status` counts a project's simulations by state (`stilt status`)
   and lists its Jobs on the cluster, with their tasks done, running and failed.
   `--json` prints the same for a program.

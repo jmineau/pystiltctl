@@ -32,8 +32,9 @@ from typing import Any
 
 import stilt
 
+from pystiltctl import render as renderer
 from pystiltctl.inputs import SITES, is_local, put
-from pystiltctl.worker import WORKDIR, become, project_directory, stilt_command
+from pystiltctl.worker import WORKDIR, become, project_directory, run, stilt_command
 
 logger = logging.getLogger(__name__)
 
@@ -117,13 +118,17 @@ def tick(
     now: datetime | None = None,
     cpus: int | None = None,
     output: str | None = None,
+    render: str | None = None,
     workdir: str | Path = WORKDIR,
-) -> None:
+) -> int:
     """
-    Add the hours now due to *project*, then run its last day, in place of this process.
+    Add the hours now due to *project*, then run its last day.
 
-    This is what each pod of a schedule's CronJob runs. It does not return:
-    it becomes ``stilt run --receptors``, whose exit code is the pod's.
+    This is what each pod of a schedule's CronJob runs. Without *render* it
+    does not return: it becomes ``stilt run --receptors``, whose exit code
+    is the pod's. With *render*, it runs ``stilt`` and then draws the day's
+    finished footprints to *render* (:func:`pystiltctl.render.render`), and
+    returns ``stilt run``'s exit code.
 
     Parameters
     ----------
@@ -139,8 +144,16 @@ def tick(
         ``config.yaml``.
     output : str, optional
         The output directory, in place of the one ``config.yaml`` names.
+    render : str, optional
+        Where to draw the footprints for a web map, such as
+        ``s3://my-site/footprints/towers``.
     workdir : str or Path
         Where a URL's inputs are copied, and the list of receptors written.
+
+    Returns
+    -------
+    int
+        ``stilt run``'s exit code, when *render* is given.
 
     Raises
     ------
@@ -159,4 +172,10 @@ def tick(
     ids = Path(workdir) / f"{directory.name}-due.txt"
     ids.parent.mkdir(parents=True, exist_ok=True)
     ids.write_text("".join(f"{r.id}\n" for r in receptors))
-    become(stilt_command(directory, receptors=ids, cpus=cpus, output=output))
+    command = stilt_command(directory, receptors=ids, cpus=cpus, output=output)
+    if render is None:
+        become(command)
+        return 0  # reached only when become is replaced, as in the tests
+    code = run(command)
+    renderer.render(directory, render, [str(r.id) for r in receptors], output=output)
+    return code
