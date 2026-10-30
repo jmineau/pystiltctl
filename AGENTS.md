@@ -66,13 +66,20 @@ Rules that keep the line:
   Its examples run when the docs build (see [Examples in the docs](#examples-in-the-docs)).
 - `dev/`: the maintainer's local notes, excluded from git through `.git/info/exclude`.
 
-stiltctl's other parts (a `Dockerfile`, `helm/` charts, `terraform/`,
-`scripts/`) come here as each is built, in the same places.
+- `Dockerfile`: the image every pod runs. It installs from `uv.lock` (no dev
+  group, the `s3` and `gcs` extras) into `/opt/venv` on `python:3.13-slim`, with
+  `tini` as process 1 so the stop signal reaches `stilt`. PYSTILT's wheel carries a
+  static `hycs_std`, so the image needs no compilers or Fortran libraries.
+  setuptools-scm cannot see `.git` in the build, so the version comes in as
+  `--build-arg VERSION=...`. `.dockerignore` lets in only what `uv sync` builds from.
+- `.github/workflows/image.yml`: builds the image on every PR and runs a task of an
+  empty project in it; pushes `ghcr.io/jmineau/pystiltctl:main` from main, and
+  `:<version>` and `:latest` from a `vX.Y.Z` tag. It is not a template file.
 
 pystiltctl is an application, not a library: it is installed into a Linux
 container image and run from there. So CI tests Linux only, and a release
-will publish a container image (and Helm chart) once the `Dockerfile` exists;
-it is not published to PyPI.
+publishes the container image; it is not published to PyPI. Build the image
+locally with `docker build --build-arg VERSION=$(uv run python -m setuptools_scm) -t pystiltctl .`.
 
 ## Commands
 

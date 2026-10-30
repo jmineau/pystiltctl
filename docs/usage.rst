@@ -6,6 +6,23 @@ one share of the receptors, ``stilt run --task I/N``, and writes its
 results straight to a bucket. PYSTILT decides what is finished from those
 files, so running a project again only fills in what is missing.
 
+The container image
+-------------------
+
+Every pod runs the pystiltctl image. It has PYSTILT (with HYSPLIT),
+pystiltctl, and what ``s3://`` and ``gs://`` buckets need:
+
+.. code-block:: bash
+
+   docker pull ghcr.io/jmineau/pystiltctl:latest   # the latest release
+   docker pull ghcr.io/jmineau/pystiltctl:main     # the latest code on main
+
+To build it yourself, from a clone of the repository:
+
+.. code-block:: bash
+
+   docker build --build-arg VERSION=0.1.0 -t pystiltctl .
+
 Put the project on a bucket
 ---------------------------
 
