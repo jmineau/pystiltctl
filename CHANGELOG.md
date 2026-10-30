@@ -20,6 +20,8 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
 - `pystiltctl status` counts a project's simulations by state (`stilt status`)
   and lists its Jobs on the cluster, with their tasks done, running and failed.
   `--json` prints the same for a program.
+- A docs page, "Try it on your computer", that runs a small project on a kind
+  cluster, as the end-to-end test does.
 - The `s3` and `gcs` extras, for `s3://` and `gs://` buckets.
 - A container image, `ghcr.io/jmineau/pystiltctl`, with PYSTILT, pystiltctl and
   the bucket libraries: `:latest` for the latest release, `:main` for main.
