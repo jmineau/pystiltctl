@@ -191,6 +191,100 @@ def test_project_jobs_spelling_of_the_project_does_not_matter(
     assert [j["name"] for j in status.project_jobs(status_of)[0]] == ["stilt-winter-0"]
 
 
+@pytest.fixture
+def folders(tmp_path):
+    """A project folder ``winter`` and a symlink to the folder that holds it."""
+    real = tmp_path / "data"
+    (real / "winter").mkdir(parents=True)
+    (tmp_path / "link").symlink_to(real)
+    return SimpleNamespace(
+        root=tmp_path.resolve(),
+        winter=str(real.resolve() / "winter"),
+        dotdot=f"{real}/../data/winter",
+        symlink=str(tmp_path / "link" / "winter"),
+    )
+
+
+@pytest.mark.parametrize("submit_as", ["winter", "dotdot", "symlink"])
+@pytest.mark.parametrize("status_of", ["winter", "dotdot", "symlink"])
+def test_project_jobs_of_a_folder_spelled_through_dotdot_or_a_symlink(
+    cluster, folders, submit_as, status_of
+):
+    """One folder, three spellings: each finds the Job the others submitted (#18)."""
+    cluster.jobs.append(submitted(getattr(folders, submit_as), "stilt-winter-0"))
+    jobs, unclaimed = status.project_jobs(getattr(folders, status_of))
+    assert [j["name"] for j in jobs] == ["stilt-winter-0"]
+    assert unclaimed == []
+
+
+def test_project_jobs_finds_a_job_whose_annotation_is_not_normalized(cluster, folders):
+    """A Job made before `submit` normalized the annotation is still found."""
+    old = submitted(folders.winter, "stilt-winter-old")
+    old["metadata"]["annotations"][job.PROJECT_ANNOTATION] = folders.dotdot
+    cluster.jobs.append(old)
+    assert [j["name"] for j in status.project_jobs(folders.symlink)[0]] == [
+        "stilt-winter-old"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("typed", "written"),
+    [
+        ("dotdot", "winter"),
+        ("symlink", "winter"),
+        ("winter", "winter"),
+    ],
+)
+def test_manifest_annotates_the_project_in_its_normalized_form(folders, typed, written):
+    manifest = submitted(getattr(folders, typed), "stilt-winter-0")
+    assert manifest["metadata"]["annotations"] == {
+        job.PROJECT_ANNOTATION: getattr(folders, written)
+    }
+
+
+@pytest.mark.parametrize(
+    ("typed", "written"),
+    [
+        ("S3://lab/projects/winter/", "s3://lab/projects/winter"),
+        ("file:///data/winter/", "/data/winter"),
+    ],
+)
+def test_manifest_annotates_a_url_in_its_normalized_form(typed, written):
+    manifest = submitted(typed, "stilt-winter-0")
+    assert manifest["metadata"]["annotations"] == {job.PROJECT_ANNOTATION: written}
+
+
+def test_manifest_keeps_the_project_as_typed_for_the_pods(folders):
+    """The pods open the path as given: a link here may not exist in the pod."""
+    spec = job.JobSpec(folders.symlink, project_name(folders.symlink), 2, 2)
+    assert folders.symlink in job.worker_args(spec)
+
+
+@pytest.mark.parametrize("spelling", [".", "./", "../winter", "dotdot", "symlink"])
+def test_project_name_of_a_local_folder_is_the_folders(folders, monkeypatch, spelling):
+    """`.` is the folder named `winter`, not a project called `.` (#20)."""
+    monkeypatch.chdir(folders.winter)
+    assert project_name(getattr(folders, spelling, spelling)) == "winter"
+
+
+def test_project_name_of_a_url_is_the_last_part():
+    assert project_name("s3://lab/projects/winter/") == "winter"
+    assert project_name("file:///data/winter/") == "winter"
+
+
+@pytest.mark.parametrize("spelling", [".", "./"])
+def test_cli_status_of_dot_lists_the_projects_jobs(
+    project, cluster, monkeypatch, spelling
+):
+    """`pystiltctl status .` inside the folder finds the Jobs submitted by path (#20)."""
+    cluster.jobs.append(submitted(str(project), "stilt-my-project-0"))
+    monkeypatch.chdir(project)
+    result = CliRunner().invoke(app, ["status", spelling])
+    assert result.exit_code == 0, result.output
+    assert "stilt-my-project-0" in result.output
+    assert "Jobs: none on the cluster" not in result.output
+
+
 def test_project_jobs_leaves_out_a_job_with_no_annotation(cluster):
     """An older Job cannot be told from another project's: skip it, and say so."""
     project = "s3://lab-a/projects/winter"

@@ -20,7 +20,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from pystiltctl.inputs import is_local, local_path, project_name, pull
+from pystiltctl.inputs import is_local, local_path, project_key, project_name, pull
 from pystiltctl.job import PROJECT_ANNOTATION, PROJECT_LABEL, label_value
 
 
@@ -76,27 +76,6 @@ def job_summary(job: dict[str, Any]) -> dict[str, Any]:
         "failed_indexes": status.get("failedIndexes") or "",
         "running": status.get("active", 0),
     }
-
-
-def project_key(project: str) -> str:
-    """
-    Return *project* in the form two spellings of one project share.
-
-    ``pystiltctl submit`` writes the project into the Job as it was typed,
-    so ``status`` compares projects through this: a folder as its path, a
-    URL without trailing slashes and with a lowercase scheme.
-
-    Examples
-    --------
-    >>> project_key("S3://bucket/projects/my_project/")
-    's3://bucket/projects/my_project'
-    >>> project_key("file:///data/my_project/")
-    '/data/my_project'
-    """
-    if is_local(project):
-        return str(local_path(project))
-    scheme, sep, rest = project.partition("://")
-    return f"{scheme.lower()}{sep}{rest.rstrip('/')}"
 
 
 def project_jobs(

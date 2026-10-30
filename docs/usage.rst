@@ -126,12 +126,16 @@ directory, so they are right whatever the Jobs did. ``failed`` counts
 failed simulations by reason; each one's ``.failure.yaml``, under
 ``logs/`` in the output directory, says why. The Jobs are the ones
 ``pystiltctl submit`` started for this project (those whose
-``pystiltctl/project-url`` annotation is this project's URL), with how many
+``pystiltctl/project-url`` annotation is this project: its URL, or its real
+path for a folder), with how many
 of their tasks are done, running, and failed. Two projects with the same
 folder name, such as ``s3://lab-a/projects/winter`` and
-``s3://lab-b/runs/2025/winter``, each see only their own Jobs. A Job with
-the project's label but no such annotation cannot be told from another
-project's, so ``status`` does not count it and lists it as "Not counted". A failed task is one whose simulations failed:
+``s3://lab-b/runs/2025/winter``, each see only their own Jobs. A folder may
+be written as ``.``, through ``..`` or through a symlink: ``submit`` and
+``status`` both use its real path. A Job with the project's label but no
+such annotation cannot be told from another project's, so ``status`` does not
+count it and lists it as "Not counted". A failed task is one whose
+simulations failed:
 ``kubectl logs`` on its pod shows which. ``--json`` prints the same for a
 program to read.
 

@@ -32,7 +32,7 @@ import stilt
 import yaml
 
 import pystiltctl
-from pystiltctl.inputs import is_local, local_path, project_name, pull
+from pystiltctl.inputs import is_local, local_path, project_key, project_name, pull
 
 #: Retries per task for a stopped pod (exit 3) or a crash.
 RETRIES = 3
@@ -40,7 +40,7 @@ RETRIES = 3
 KEEP_FINISHED = 7 * 24 * 3600
 #: The label every pystiltctl Job and pod carries, with the project's name.
 PROJECT_LABEL = "pystiltctl/project"
-#: The annotation holding the project's URL, for ``pystiltctl status``.
+#: The annotation holding the project's URL or real path, for ``pystiltctl status``.
 PROJECT_ANNOTATION = "pystiltctl/project-url"
 #: Where each pod keeps its inputs and its runs' workdirs: an ``emptyDir``.
 SCRATCH = "/scratch"
@@ -312,7 +312,7 @@ def manifest(spec: JobSpec) -> dict[str, Any]:
     metadata: dict[str, Any] = {
         "generateName": f"stilt-{slug}-",
         "labels": labels,
-        "annotations": {PROJECT_ANNOTATION: spec.project},
+        "annotations": {PROJECT_ANNOTATION: project_key(spec.project)},
     }
     if spec.namespace is not None:
         metadata["namespace"] = spec.namespace
