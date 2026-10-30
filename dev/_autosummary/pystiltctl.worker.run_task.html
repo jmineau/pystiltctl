@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>pystiltctl &#8212; pystiltctl dev</title>
+    <title>pystiltctl.worker.run_task &#8212; pystiltctl dev</title>
   
   
   
@@ -40,12 +40,12 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=60c7850b"></script>
+    <script src="../_static/documentation_options.js?v=924d223f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = '_autosummary/pystiltctl';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_autosummary/pystiltctl.worker.run_task';</script>
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/pystiltctl/switcher.json';
@@ -56,11 +56,11 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Contributing" href="../contributing.html" />
-    <link rel="prev" title="API reference" href="../api.html" />
+    <link rel="next" title="pystiltctl.worker.task_index" href="pystiltctl.worker.task_index.html" />
+    <link rel="prev" title="pystiltctl.inputs.is_local" href="pystiltctl.inputs.is_local.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev5+gb46dac6f7" />
+  <meta name="docsearch:version" content="0.0.1.dev6+gc0d62d769" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -152,6 +152,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../usage.html">
     Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../cli.html">
+    Command line
   </a>
 </li>
 
@@ -298,6 +305,13 @@
 </li>
 
 
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../cli.html">
+    Command line
+  </a>
+</li>
+
+
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="../api.html">
     API reference
@@ -388,8 +402,16 @@
 <nav class="bd-docs-nav bd-links"
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
-  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">pystiltctl</a></li>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.inputs.push.html">pystiltctl.inputs.push</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.inputs.pull.html">pystiltctl.inputs.pull</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.inputs.is_local.html">pystiltctl.inputs.is_local</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">pystiltctl.worker.run_task</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.worker.task_index.html">pystiltctl.worker.task_index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.worker.project_directory.html">pystiltctl.worker.project_directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.worker.stilt_command.html">pystiltctl.worker.stilt_command</a></li>
 </ul>
 </div>
 </nav></div>
@@ -433,7 +455,7 @@
     
     <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API reference</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">pystiltctl</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">pystiltctl.worker.run_task</span></li>
   </ul>
 </nav>
 </div>
@@ -450,14 +472,37 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="module-pystiltctl">
-<span id="pystiltctl"></span><h1>pystiltctl<a class="headerlink" href="#module-pystiltctl" title="Link to this heading">#</a></h1>
-<p>Run PYSTILT projects at scale outside Slurm.</p>
-<p>PYSTILT runs a project’s receptors on one machine or as a Slurm job array,
-and each task of an array is a command line, <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span> <span class="pre">I/N</span></code>.
-pystiltctl runs those command lines elsewhere (Kubernetes Jobs, a queue,
-autoscaled workers) and keeps the project and its output directory in sync.
-It calls PYSTILT; PYSTILT knows nothing of it.</p>
+  <section id="pystiltctl-worker-run-task">
+<h1>pystiltctl.worker.run_task<a class="headerlink" href="#pystiltctl-worker-run-task" title="Link to this heading">#</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="pystiltctl.worker.run_task">
+<span class="sig-prename descclassname"><span class="pre">pystiltctl.worker.</span></span><span class="sig-name descname"><span class="pre">run_task</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_tasks</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cpus</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PosixPath('/tmp/pystiltctl')</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pystiltctl/worker.html#run_task"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pystiltctl.worker.run_task" title="Link to this definition">#</a></dt>
+<dd><p>Run task <em>index</em> of <em>n_tasks</em> of <em>project</em>, in place of this process.</p>
+<p>Pulls the project’s inputs when <em>project</em> is a URL, then replaces this
+process with <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span> <span class="pre">I/N</span></code>, so this function does not return.
+The exit code is <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>’s: 0 when every simulation of the task is
+complete, 1 when some failed, 3 when some were stopped, 2 when the
+command line is wrong.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The project: a URL such as <code class="docutils literal notranslate"><span class="pre">s3://bucket/projects/my_project</span></code>, or
+a folder on a volume mounted in the pod.</p></li>
+<li><p><strong>n_tasks</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – How many tasks the project is split into (the Job’s <code class="docutils literal notranslate"><span class="pre">completions</span></code>).</p></li>
+<li><p><strong>index</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – This task’s index, 0 to <code class="docutils literal notranslate"><span class="pre">n_tasks</span> <span class="pre">-</span> <span class="pre">1</span></code>. Defaults to
+<code class="docutils literal notranslate"><span class="pre">$JOB_COMPLETION_INDEX</span></code>, which an indexed Job sets.</p></li>
+<li><p><strong>cpus</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Receptors to run at once. Defaults to <code class="docutils literal notranslate"><span class="pre">execution.cpus</span></code> in
+<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p></li>
+<li><p><strong>output</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – The output directory, in place of the one <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> names.</p></li>
+<li><p><strong>workdir</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span>) – Where a URL’s inputs are copied.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -471,20 +516,20 @@ It calls PYSTILT; PYSTILT knows nothing of it.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../api.html"
+       href="pystiltctl.inputs.is_local.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">API reference</p>
+        <p class="prev-next-title">pystiltctl.inputs.is_local</p>
       </div>
     </a>
     <a class="right-next"
-       href="../contributing.html"
+       href="pystiltctl.worker.task_index.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Contributing</p>
+        <p class="prev-next-title">pystiltctl.worker.task_index</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -500,9 +545,21 @@ It calls PYSTILT; PYSTILT knows nothing of it.</p>
 
 
   <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl.worker.run_task"><code class="docutils literal notranslate"><span class="pre">run_task()</span></code></a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
 
   <div class="tocsection sourcelink">
-    <a href="../_sources/_autosummary/pystiltctl.rst.txt">
+    <a href="../_sources/_autosummary/pystiltctl.worker.run_task.rst.txt">
       <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
   </div>

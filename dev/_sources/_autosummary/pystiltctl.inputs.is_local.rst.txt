@@ -1,0 +1,6 @@
+﻿pystiltctl.inputs.is\_local
+===========================
+
+.. currentmodule:: pystiltctl.inputs
+
+.. autofunction:: is_local

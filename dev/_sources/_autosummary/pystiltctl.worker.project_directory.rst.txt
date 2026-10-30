@@ -1,0 +1,6 @@
+﻿pystiltctl.worker.project\_directory
+====================================
+
+.. currentmodule:: pystiltctl.worker
+
+.. autofunction:: project_directory

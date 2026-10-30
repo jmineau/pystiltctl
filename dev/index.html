@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=60c7850b"></script>
+    <script src="_static/documentation_options.js?v=924d223f"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="next" title="Installation" href="installation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev5+gb46dac6f7" />
+  <meta name="docsearch:version" content="0.0.1.dev6+gc0d62d769" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -151,6 +151,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="usage.html">
     Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="cli.html">
+    Command line
   </a>
 </li>
 
@@ -300,6 +307,13 @@
 
 
 <li class="nav-item ">
+  <a class="nav-link nav-internal" href="cli.html">
+    Command line
+  </a>
+</li>
+
+
+<li class="nav-item ">
   <a class="nav-link nav-internal" href="api.html">
     API reference
   </a>
@@ -406,7 +420,7 @@
                   
   <section id="pystiltctl">
 <h1>pystiltctl<a class="headerlink" href="#pystiltctl" title="Link to this heading">#</a></h1>
-<p>Run PYSTILT projects at scale outside Slurm: queues, Kubernetes Jobs, scaling, and bucket sync.</p>
+<p>Run PYSTILT projects on Kubernetes, with inputs and results on a bucket.</p>
 <p>Release notes are in the <a class="reference external" href="https://github.com/jmineau/pystiltctl/blob/main/CHANGELOG.md">changelog</a>.</p>
 <div class="toctree-wrapper compound">
 <ul>
@@ -415,9 +429,19 @@
 <li class="toctree-l2"><a class="reference internal" href="installation.html#for-development">For development</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#put-the-project-on-a-bucket">Put the project on a bucket</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#what-each-pod-runs">What each pod runs</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="cli.html#pystiltctl-push">pystiltctl push</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli.html#pystiltctl-worker">pystiltctl worker</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="_autosummary/pystiltctl.html">pystiltctl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#project-inputs">Project inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#worker">Worker</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>

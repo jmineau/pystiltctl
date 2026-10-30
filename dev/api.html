@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=60c7850b"></script>
+    <script src="_static/documentation_options.js?v=924d223f"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -56,11 +56,11 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="pystiltctl" href="_autosummary/pystiltctl.html" />
-    <link rel="prev" title="Usage" href="usage.html" />
+    <link rel="next" title="pystiltctl.inputs.push" href="_autosummary/pystiltctl.inputs.push.html" />
+    <link rel="prev" title="Command line" href="cli.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev5+gb46dac6f7" />
+  <meta name="docsearch:version" content="0.0.1.dev6+gc0d62d769" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -152,6 +152,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="usage.html">
     Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="cli.html">
+    Command line
   </a>
 </li>
 
@@ -298,6 +305,13 @@
 </li>
 
 
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="cli.html">
+    Command line
+  </a>
+</li>
+
+
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="#" aria-current="page">
     API reference
@@ -389,7 +403,15 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.html">pystiltctl</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.push.html">pystiltctl.inputs.push</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.pull.html">pystiltctl.inputs.pull</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.is_local.html">pystiltctl.inputs.is_local</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.worker.run_task.html">pystiltctl.worker.run_task</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.worker.task_index.html">pystiltctl.worker.task_index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.worker.project_directory.html">pystiltctl.worker.project_directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.worker.stilt_command.html">pystiltctl.worker.stilt_command</a></li>
 </ul>
 </div>
 </nav></div>
@@ -449,14 +471,45 @@
                   
   <section id="api-reference">
 <h1>API reference<a class="headerlink" href="#api-reference" title="Link to this heading">#</a></h1>
+<p>pystiltctl is used from its command line (<a class="reference internal" href="cli.html"><span class="doc">Command line</span></a>); these are the
+functions behind it.</p>
+<section id="project-inputs">
+<h2>Project inputs<a class="headerlink" href="#project-inputs" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.html#module-pystiltctl" title="pystiltctl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pystiltctl</span></code></a></p></td>
-<td><p>Run PYSTILT projects at scale outside Slurm.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.push.html#pystiltctl.inputs.push" title="pystiltctl.inputs.push"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.push</span></code></a>(project, url)</p></td>
+<td><p>Copy a project's inputs to <em>url</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.pull.html#pystiltctl.inputs.pull" title="pystiltctl.inputs.pull"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.pull</span></code></a>(url, directory)</p></td>
+<td><p>Copy a project's inputs from <em>url</em> into <em>directory</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.is_local.html#pystiltctl.inputs.is_local" title="pystiltctl.inputs.is_local"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.is_local</span></code></a>(location)</p></td>
+<td><p>Whether <em>location</em> is a path on this machine rather than a URL.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
+</section>
+<section id="worker">
+<h2>Worker<a class="headerlink" href="#worker" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.worker.run_task.html#pystiltctl.worker.run_task" title="pystiltctl.worker.run_task"><code class="xref py py-obj docutils literal notranslate"><span class="pre">worker.run_task</span></code></a>(project, n_tasks, *[, ...])</p></td>
+<td><p>Run task <em>index</em> of <em>n_tasks</em> of <em>project</em>, in place of this process.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.worker.task_index.html#pystiltctl.worker.task_index" title="pystiltctl.worker.task_index"><code class="xref py py-obj docutils literal notranslate"><span class="pre">worker.task_index</span></code></a>([index])</p></td>
+<td><p>Return this pod's task index: <em>index</em>, or else <code class="docutils literal notranslate"><span class="pre">$JOB_COMPLETION_INDEX</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.worker.project_directory.html#pystiltctl.worker.project_directory" title="pystiltctl.worker.project_directory"><code class="xref py py-obj docutils literal notranslate"><span class="pre">worker.project_directory</span></code></a>(project, workdir)</p></td>
+<td><p>Return the local project folder for <em>project</em>, pulling its inputs if needed.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.worker.stilt_command.html#pystiltctl.worker.stilt_command" title="pystiltctl.worker.stilt_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">worker.stilt_command</span></code></a>(directory, task, n_tasks, *)</p></td>
+<td><p>Return the <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code> command line for task <em>task</em> of <em>n_tasks</em>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 </section>
 
 
@@ -470,20 +523,20 @@
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="usage.html"
+       href="cli.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Usage</p>
+        <p class="prev-next-title">Command line</p>
       </div>
     </a>
     <a class="right-next"
-       href="_autosummary/pystiltctl.html"
+       href="_autosummary/pystiltctl.inputs.push.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">pystiltctl</p>
+        <p class="prev-next-title">pystiltctl.inputs.push</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -497,6 +550,19 @@
                 <dialog id="pst-secondary-sidebar-modal"></dialog>
                 <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-inputs">Project inputs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#worker">Worker</a></li>
+</ul>
+  </nav></div>
 
   <div class="sidebar-secondary-item">
 

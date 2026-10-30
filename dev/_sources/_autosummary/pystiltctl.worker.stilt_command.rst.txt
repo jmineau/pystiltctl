@@ -1,0 +1,6 @@
+﻿pystiltctl.worker.stilt\_command
+================================
+
+.. currentmodule:: pystiltctl.worker
+
+.. autofunction:: stilt_command

@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=60c7850b"></script>
+    <script src="_static/documentation_options.js?v=924d223f"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -60,7 +60,7 @@
     <link rel="prev" title="pystiltctl" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev5+gb46dac6f7" />
+  <meta name="docsearch:version" content="0.0.1.dev6+gc0d62d769" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -152,6 +152,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="usage.html">
     Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="cli.html">
+    Command line
   </a>
 </li>
 
@@ -294,6 +301,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="usage.html">
     Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="cli.html">
+    Command line
   </a>
 </li>
 
@@ -449,9 +463,11 @@
 <p>pystiltctl requires Python 3.11 or newer.</p>
 <section id="from-github">
 <h2>From GitHub<a class="headerlink" href="#from-github" title="Link to this heading">#</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/jmineau/pystiltctl
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"pystiltctl[s3] @ git+https://github.com/jmineau/pystiltctl"</span>
 </pre></div>
 </div>
+<p>The <code class="docutils literal notranslate"><span class="pre">s3</span></code> extra reads and writes <code class="docutils literal notranslate"><span class="pre">s3://</span></code> buckets (AWS, MinIO, any
+S3-compatible store); <code class="docutils literal notranslate"><span class="pre">gcs</span></code> does <code class="docutils literal notranslate"><span class="pre">gs://</span></code> buckets on Google Cloud.</p>
 </section>
 <section id="for-development">
 <h2>For development<a class="headerlink" href="#for-development" title="Link to this heading">#</a></h2>

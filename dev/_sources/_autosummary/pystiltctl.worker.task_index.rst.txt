@@ -1,0 +1,6 @@
+﻿pystiltctl.worker.task\_index
+=============================
+
+.. currentmodule:: pystiltctl.worker
+
+.. autofunction:: task_index

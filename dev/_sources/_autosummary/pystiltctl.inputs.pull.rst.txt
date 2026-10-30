@@ -1,0 +1,6 @@
+﻿pystiltctl.inputs.pull
+======================
+
+.. currentmodule:: pystiltctl.inputs
+
+.. autofunction:: pull

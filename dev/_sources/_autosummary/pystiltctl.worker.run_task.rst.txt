@@ -1,0 +1,6 @@
+﻿pystiltctl.worker.run\_task
+===========================
+
+.. currentmodule:: pystiltctl.worker
+
+.. autofunction:: run_task

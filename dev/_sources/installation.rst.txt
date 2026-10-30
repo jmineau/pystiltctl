@@ -8,7 +8,10 @@ From GitHub
 
 .. code-block:: bash
 
-   pip install git+https://github.com/jmineau/pystiltctl
+   pip install "pystiltctl[s3] @ git+https://github.com/jmineau/pystiltctl"
+
+The ``s3`` extra reads and writes ``s3://`` buckets (AWS, MinIO, any
+S3-compatible store); ``gcs`` does ``gs://`` buckets on Google Cloud.
 
 For development
 ---------------
