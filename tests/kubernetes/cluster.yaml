@@ -1,0 +1,79 @@
+# What the end-to-end test needs on its kind cluster, besides pystiltctl:
+# an S3 server (moto), the Secret that points the pods at it, and the met
+# folder the kind node mounts from the runner, as a PersistentVolumeClaim.
+# One List, so it is one YAML document.
+apiVersion: v1
+kind: List
+items:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: s3
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: s3
+    template:
+      metadata:
+        labels:
+          app: s3
+      spec:
+        containers:
+        - name: moto
+          image: python:3.13-slim
+          command:
+          - sh
+          - -c
+          - pip install --quiet 'moto[server]' && exec moto_server -H 0.0.0.0 -p 5000
+          ports:
+          - containerPort: 5000
+          readinessProbe:
+            tcpSocket:
+              port: 5000
+            periodSeconds: 3
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: s3
+  spec:
+    selector:
+      app: s3
+    ports:
+    - port: 5000
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: bucket-creds
+  stringData:
+    AWS_ACCESS_KEY_ID: test
+    AWS_SECRET_ACCESS_KEY: test
+    AWS_DEFAULT_REGION: us-east-1
+    AWS_ENDPOINT_URL: http://s3:5000
+- apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: met
+  spec:
+    capacity:
+      storage: 1Gi
+    accessModes:
+    - ReadOnlyMany
+    storageClassName: ''
+    hostPath:
+      path: /met
+    claimRef:
+      namespace: default
+      name: met
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: met
+  spec:
+    accessModes:
+    - ReadOnlyMany
+    storageClassName: ''
+    volumeName: met
+    resources:
+      requests:
+        storage: 1Gi

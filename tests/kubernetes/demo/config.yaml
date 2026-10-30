@@ -1,0 +1,22 @@
+# A two-receptor project for the end-to-end test on a kind cluster
+# (.github/workflows/kubernetes.yml). The met is one cropped HRRR block,
+# mounted in the pods at /met; results go to the cluster's S3 server.
+# A backward run also needs the hour after its receptor, so the receptors
+# (receptors.csv) end at 04:00: 05:00 would need the 06:00 block.
+mets:
+  hrrr:
+    directory: /met
+    file_format: "%Y%m%d_%H"
+    file_tres: 6h
+variants:
+  hrrr: {}
+grid:
+  xmin: -112.5
+  xmax: -111.5
+  ymin: 40.3
+  ymax: 41.2
+  xres: 0.01
+  yres: 0.01
+n_hours: -3
+numpar: 100
+output: s3://stilt/output
