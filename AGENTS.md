@@ -42,12 +42,13 @@ complete, 1 some failed, 2 bad command line, 3 stopped).
 
 - `src/pystiltctl/`: the package (`py.typed` ships, so annotations are public API).
   - `cli.py`: the `pystiltctl` command (typer); each command calls one module.
-  - `inputs.py`: `push`/`pull` copy `config.yaml`, `receptors.csv`, `tables/` to and
-    from a bucket (fsspec); never the output.
+  - `inputs.py`: `push`/`pull` copy the inputs to and from a bucket (fsspec), never the output.
   - `worker.py`: what a pod runs: pull, then `os.execv` into `python -m stilt run
     --task I/N`, so the stop signal and the exit code are `stilt`'s own.
-  - `job.py`: `submit`'s indexed Job, defaults from the project's `execution`
-    settings; retries are its `podFailurePolicy`, never a loop here.
+  - `job.py`: the indexed Job and the CronJob, defaults from `execution`; retries are
+    their `podFailurePolicy`, never a loop here.
+  - `schedule.py`: `tick`, each hour's pod: `sites.csv` receptors via `add_receptors`,
+    `receptors.csv` put back, then `stilt run --receptors` on the last day.
   - `status.py`: `stilt status --json` plus the Jobs labeled `pystiltctl/project`.
 - `tests/`: pytest suite; `tests/kubernetes/`, the end-to-end test on kind (its README).
 - `docs/`: Sphinx site (PyData theme). `docs/api.rst` lists the API by topic; each class gets a page with tables of its attributes and methods, and each member a page of its own (`docs/_templates/autosummary/`, `docs/_ext/api_pages.py`).

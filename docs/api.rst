@@ -17,6 +17,7 @@ Project inputs
    inputs.is_local
    inputs.local_path
    inputs.project_name
+   inputs.put
 
 Worker
 ------
@@ -28,6 +29,7 @@ Worker
    worker.task_index
    worker.project_directory
    worker.stilt_command
+   worker.become
 
 Kubernetes Job
 --------------
@@ -39,7 +41,9 @@ Kubernetes Job
    job.Volume
    job.job_spec
    job.manifest
+   job.cron_job
    job.create
+   job.apply
    job.to_yaml
    job.default_image
    job.kubernetes_memory
@@ -56,3 +60,14 @@ Status
    status.job_summary
    status.report
    status.count_indexes
+
+Schedule
+--------
+
+.. autosummary::
+   :toctree: _autosummary
+
+   schedule.tick
+   schedule.due_hours
+   schedule.read_sites
+   schedule.hourly_receptors

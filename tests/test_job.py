@@ -113,7 +113,7 @@ def test_manifest_retries_from_exit_codes(pushed):
     assert by_code == {2: "FailJob", 1: "FailIndex"}
     assert {
         "action": "Ignore",
-        "onPodConditions": [{"type": "DisruptionTarget"}],
+        "onPodConditions": [{"type": "DisruptionTarget", "status": "True"}],
     } in rules
 
 
@@ -216,3 +216,18 @@ def test_cli_submit_bad_volume(pushed):
     )
     assert result.exit_code == 2
     assert "CLAIM:/path" in result.output
+
+
+def test_apply_runs_kubectl_apply(monkeypatch, pushed):
+    calls = []
+
+    def run(args, **kwargs):
+        calls.append(args)
+        return subprocess.CompletedProcess(
+            args, 0, stdout="cronjob.batch/stilt-my-project\n", stderr=""
+        )
+
+    monkeypatch.setattr(job.shutil, "which", lambda name: "/usr/bin/kubectl")
+    monkeypatch.setattr(job.subprocess, "run", run)
+    assert job.apply(job.cron_job(job.job_spec(pushed), delay=8)) == "stilt-my-project"
+    assert calls[0][1] == "apply"
