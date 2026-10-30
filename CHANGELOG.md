@@ -13,6 +13,10 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
 - `pystiltctl worker` runs one task of a project in a pod: it copies the inputs
   from the bucket, then runs `stilt run --task I/N` with the pod's index from
   `JOB_COMPLETION_INDEX`, and exits with its code.
+- `pystiltctl submit` runs a project as a Kubernetes indexed Job, with the
+  tasks, CPUs and memory from `config.yaml`'s `execution` section unless given.
+  A stopped task is retried, a preempted pod is retried without counting, and
+  a task whose simulations failed is not. `--dry-run` prints the Job.
 - The `s3` and `gcs` extras, for `s3://` and `gs://` buckets.
 - A container image, `ghcr.io/jmineau/pystiltctl`, with PYSTILT, pystiltctl and
   the bucket libraries: `:latest` for the latest release, `:main` for main.

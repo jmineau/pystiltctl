@@ -4,6 +4,8 @@ The ``pystiltctl`` command-line interface.
 Examples::
 
     pystiltctl push ./my_project s3://bucket/projects/my_project
+    pystiltctl submit s3://bucket/projects/my_project --tasks 20
+    pystiltctl submit s3://bucket/projects/my_project --dry-run    # print the Job
     pystiltctl worker s3://bucket/projects/my_project --tasks 20   # in a pod
 
 ``pystiltctl worker`` exits with ``stilt run``'s code: 0 when every
@@ -21,7 +23,7 @@ from typing import Annotated, NoReturn
 
 import typer
 
-from pystiltctl import inputs, worker
+from pystiltctl import inputs, job, worker
 
 app = typer.Typer(
     name="pystiltctl",
@@ -62,6 +64,105 @@ def push(
     except FileNotFoundError as error:
         _fail(str(error))
     typer.echo(f"Copied {len(copied)} files to {url}")
+
+
+@app.command()
+def submit(
+    project: Annotated[
+        str,
+        typer.Argument(
+            help="The project: the URL it was pushed to, or a folder on a volume."
+        ),
+    ],
+    tasks: Annotated[
+        int | None,
+        typer.Option(
+            min=1,
+            help="Tasks to split the receptors into. Default: execution.n_workers.",
+        ),
+    ] = None,
+    parallelism: Annotated[
+        int | None,
+        typer.Option(
+            min=1,
+            help="Most pods at once. Default: execution.array_parallelism, or all.",
+        ),
+    ] = None,
+    cpus: Annotated[
+        int | None,
+        typer.Option(
+            min=1, help="Receptors each pod runs at once. Default: execution.cpus."
+        ),
+    ] = None,
+    memory: Annotated[
+        str | None,
+        typer.Option(help="Memory per pod, such as 8Gi. Default: execution.mem."),
+    ] = None,
+    image: Annotated[
+        str | None, typer.Option(help="Container image. Default: this version's.")
+    ] = None,
+    output: Annotated[
+        str | None,
+        typer.Option(help="Output directory to use instead of config.yaml's."),
+    ] = None,
+    secret: Annotated[
+        list[str] | None,
+        typer.Option(
+            help="A Secret whose keys become the pods' environment, such as bucket credentials. Repeat for more."
+        ),
+    ] = None,
+    service_account: Annotated[
+        str | None, typer.Option(help="The pods' service account.")
+    ] = None,
+    volume: Annotated[
+        list[str] | None,
+        typer.Option(
+            help="A PersistentVolumeClaim to mount, as CLAIM:/path. Repeat for more."
+        ),
+    ] = None,
+    namespace: Annotated[
+        str | None, typer.Option(help="Namespace. Default: kubectl's current one.")
+    ] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Print the Job instead of creating it.")
+    ] = False,
+) -> None:
+    """
+    Run a project on Kubernetes, as an indexed Job.
+
+    Each pod runs one task, pystiltctl worker, which runs stilt run --task
+    I/N. Settings not given come from the execution section of
+    config.yaml. A task that is stopped is retried; one whose simulations
+    failed is not. Submit again to fill in what is missing: finished
+    simulations are skipped.
+    """
+    try:
+        spec = job.job_spec(
+            project,
+            tasks=tasks,
+            parallelism=parallelism,
+            cpus=cpus,
+            memory=memory,
+            image=image,
+            output=output,
+            secrets=secret or (),
+            service_account=service_account,
+            volumes=[job.Volume.parse(v) for v in volume or ()],
+            namespace=namespace,
+        )
+    except (ValueError, FileNotFoundError) as error:
+        _fail(str(error))
+    manifest = job.manifest(spec)
+    if dry_run:
+        typer.echo(job.to_yaml(manifest), nl=False)
+        return
+    try:
+        name = job.create(manifest)
+    except (FileNotFoundError, RuntimeError) as error:
+        _fail(f"{error} (--dry-run prints the Job without kubectl)")
+    typer.echo(
+        f"Submitted job: {name}  ({spec.tasks} tasks, {spec.parallelism} at once)"
+    )
 
 
 @app.command(name="worker")

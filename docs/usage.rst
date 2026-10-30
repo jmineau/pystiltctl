@@ -51,6 +51,59 @@ Any URL fsspec knows works: ``s3://`` needs ``pystiltctl[s3]`` (AWS,
 MinIO, any S3-compatible store) and ``gs://`` needs ``pystiltctl[gcs]``.
 A plain folder works too, when the pods mount it as a volume.
 
+Run it
+------
+
+.. code-block:: bash
+
+   pystiltctl submit s3://my-bucket/projects/my_project --secret bucket-creds
+
+``pystiltctl submit`` starts one Kubernetes indexed Job on the cluster
+``kubectl`` points at. Its pods split the receptors among them, as the
+tasks of a Slurm job array do. What it does not get from options it takes
+from the ``execution`` section of ``config.yaml``, so a project set up for
+Slurm runs the same way here:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 30 45
+
+   * - Option
+     - Default
+     - What it sets
+   * - ``--tasks``
+     - ``n_workers``
+     - How many tasks (pods in all) the receptors are split into.
+   * - ``--parallelism``
+     - ``array_parallelism``, or all
+     - Most pods running at once.
+   * - ``--cpus``
+     - ``cpus``
+     - Receptors each pod runs at once, and the CPUs it asks for.
+   * - ``--memory``
+     - ``mem`` (``8G`` becomes ``8Gi``)
+     - Memory each pod asks for.
+
+The pods need to reach the bucket. ``--secret`` names a Kubernetes Secret
+whose keys become their environment, such as ``AWS_ACCESS_KEY_ID`` and
+``AWS_SECRET_ACCESS_KEY`` (and ``AWS_ENDPOINT_URL`` for MinIO).
+``--service-account`` gives them a service account instead, for a cluster
+that grants bucket access through one (GKE Workload Identity, EKS IAM
+roles). ``--volume CLAIM:/path`` mounts a PersistentVolumeClaim, such as
+a met archive the ``mets`` directory points into.
+
+``--dry-run`` prints the Job instead of starting it. Save it, change what
+the options do not reach (a node selector for spot nodes, tolerations),
+and start it with ``kubectl create -f job.yaml``.
+
+Kubernetes retries a task from the worker's exit code: a stopped task
+(3) up to three times, and a pod taken back with its node (a spot node)
+as often as it happens. A task whose simulations failed (1) is not
+retried, since it would fail the same way; nor is anything after a wrong
+command line (2), which stops the whole Job. Fix the cause and submit
+again: finished simulations are skipped, so only the rest run. The Job,
+and its pods' logs, stay on the cluster for a week.
+
 What each pod runs
 ------------------
 

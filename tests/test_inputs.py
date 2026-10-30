@@ -3,7 +3,8 @@
 import fsspec
 import pytest
 
-from pystiltctl.inputs import is_local, pull, push
+from pystiltctl.inputs import is_local, local_path, pull, push
+from tests.conftest import CONFIG
 
 
 def test_push_copies_inputs_and_tables_not_output(project, bucket):
@@ -16,7 +17,7 @@ def test_push_copies_inputs_and_tables_not_output(project, bucket):
 def test_pull_restores_what_push_copied(project, bucket, tmp_path):
     push(project, bucket)
     directory = pull(bucket, tmp_path / "pulled")
-    assert (directory / "config.yaml").read_text() == "n_hours: -24\n"
+    assert (directory / "config.yaml").read_text() == CONFIG
     assert (
         directory / "tables" / "kernels.parquet"
     ).read_bytes() == b"not really parquet"
@@ -58,3 +59,8 @@ def test_pull_refuses_a_url_with_no_project(bucket, tmp_path):
 )
 def test_is_local(location, local):
     assert is_local(location) is local
+
+
+def test_local_path_drops_file_protocol():
+    assert str(local_path("file:///data/p")) == "/data/p"
+    assert str(local_path("/data/p")) == "/data/p"
