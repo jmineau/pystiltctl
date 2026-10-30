@@ -55,14 +55,42 @@ def project_name(location: str | Path) -> str:
     Return a project's name, the last part of its folder or URL.
 
     PYSTILT names a project after its folder, so a pod that pulls the
-    inputs into a folder of this name runs a project of the same name.
+    inputs into a folder of this name runs a project of the same name. A
+    folder on this machine is named by where it really is, so ``.``, a
+    path through ``..`` and a symlink to it all give the same name.
 
     Examples
     --------
     >>> project_name("s3://bucket/projects/my_project/")
     'my_project'
+    >>> project_name("file:///data/my_project/")
+    'my_project'
     """
+    if is_local(location):
+        return local_path(location).resolve().name
     return str(location).rstrip("/").rsplit("/", 1)[-1]
+
+
+def project_key(project: str | Path) -> str:
+    """
+    Return *project* in the form every spelling of one project shares.
+
+    A folder becomes its real path (``..`` collapsed, symlinks followed); a
+    URL loses its trailing slashes and gets a lowercase scheme.
+    ``pystiltctl submit`` writes this into the Job, and ``status`` compares
+    projects through it.
+
+    Examples
+    --------
+    >>> project_key("S3://bucket/projects/my_project/")
+    's3://bucket/projects/my_project'
+    >>> project_key("file:///data/../data/my_project/")
+    '/data/my_project'
+    """
+    if is_local(project):
+        return str(local_path(project).resolve())
+    scheme, sep, rest = str(project).partition("://")
+    return f"{scheme.lower()}{sep}{rest.rstrip('/')}"
 
 
 def push(project: str | Path, url: str) -> list[str]:
