@@ -2,7 +2,8 @@
 Where a project's runs stand: its Jobs on the cluster, and its simulations.
 
 The Jobs come from ``kubectl``, found by the ``pystiltctl/project`` label
-that :func:`pystiltctl.job.manifest` puts on them. The simulations come
+that :func:`pystiltctl.job.manifest` puts on them and kept when their
+``pystiltctl/project-url`` annotation is the project. The simulations come
 from ``stilt status --json``, which reads the output directory: PYSTILT
 decides what is finished, from the files.
 """
@@ -15,11 +16,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from pystiltctl.inputs import is_local, local_path, pull
-from pystiltctl.job import PROJECT_LABEL, label_value
+from pystiltctl.inputs import is_local, local_path, project_name, pull
+from pystiltctl.job import PROJECT_ANNOTATION, PROJECT_LABEL, label_value
 
 
 def count_indexes(indexes: str | None) -> int:
@@ -76,9 +78,38 @@ def job_summary(job: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def project_jobs(name: str, *, namespace: str | None = None) -> list[dict[str, Any]]:
+def project_key(project: str) -> str:
     """
-    Return the summaries of a project's Jobs, oldest first.
+    Return *project* in the form two spellings of one project share.
+
+    ``pystiltctl submit`` writes the project into the Job as it was typed,
+    so ``status`` compares projects through this: a folder as its path, a
+    URL without trailing slashes and with a lowercase scheme.
+
+    Examples
+    --------
+    >>> project_key("S3://bucket/projects/my_project/")
+    's3://bucket/projects/my_project'
+    >>> project_key("file:///data/my_project/")
+    '/data/my_project'
+    """
+    if is_local(project):
+        return str(local_path(project))
+    scheme, sep, rest = project.partition("://")
+    return f"{scheme.lower()}{sep}{rest.rstrip('/')}"
+
+
+def project_jobs(
+    project: str, *, namespace: str | None = None
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """
+    Return the summaries of *project*'s Jobs, oldest first, and the Jobs left out.
+
+    The label ``kubectl`` selects by is only the project's folder name, so
+    two projects can share it; a Job is kept only if its project annotation
+    is *project* (see :func:`project_key`). A Job with the label but no
+    annotation cannot be told from another project's, so it is left out:
+    the second value lists the names of those.
 
     Raises
     ------
@@ -95,7 +126,7 @@ def project_jobs(name: str, *, namespace: str | None = None) -> list[dict[str, A
         "get",
         "jobs",
         "-l",
-        f"{PROJECT_LABEL}={label_value(name)}",
+        f"{PROJECT_LABEL}={label_value(project_name(project))}",
         "-o",
         "json",
     ]
@@ -106,8 +137,14 @@ def project_jobs(name: str, *, namespace: str | None = None) -> list[dict[str, A
         raise RuntimeError(
             result.stderr.strip() or f"kubectl exited with {result.returncode}"
         )
-    jobs = [job_summary(item) for item in json.loads(result.stdout)["items"]]
-    return sorted(jobs, key=lambda j: j["created"] or "")
+    jobs, unclaimed = [], []
+    for item in json.loads(result.stdout)["items"]:
+        claimed = item["metadata"].get("annotations", {}).get(PROJECT_ANNOTATION)
+        if claimed is None:
+            unclaimed.append(item["metadata"]["name"])
+        elif project_key(claimed) == project_key(project):
+            jobs.append(job_summary(item))
+    return sorted(jobs, key=lambda j: j["created"] or ""), unclaimed
 
 
 def simulations(project: str, *, output: str | None = None) -> dict[str, Any]:
@@ -153,7 +190,11 @@ def _counts(counts: dict[str, int]) -> str:
     return "  ".join(f"{name}={n}" for name, n in counts.items())
 
 
-def report(data: dict[str, Any], jobs: list[dict[str, Any]] | str) -> str:
+def report(
+    data: dict[str, Any],
+    jobs: list[dict[str, Any]] | str,
+    unclaimed: Sequence[str] = (),
+) -> str:
     """
     Return the text ``pystiltctl status`` prints.
 
@@ -162,7 +203,9 @@ def report(data: dict[str, Any], jobs: list[dict[str, Any]] | str) -> str:
     data : dict
         :func:`simulations`' result.
     jobs : list of dict, or str
-        :func:`project_jobs`' result, or why the Jobs could not be listed.
+        :func:`project_jobs`' first result, or why the Jobs could not be listed.
+    unclaimed : sequence of str
+        :func:`project_jobs`' second result: Jobs it left out.
     """
     lines = [f"Project: {data['project']}", f"Output: {data['output']}"]
     lines.append(f"Simulations:  {_counts(data['simulations'])}")
@@ -186,4 +229,10 @@ def report(data: dict[str, Any], jobs: list[dict[str, Any]] | str) -> str:
             if job["failed"]:
                 tasks += f", {job['failed']} failed (tasks {job['failed_indexes']})"
             lines.append(f"  {job['name']}  {state}  {tasks}  started {job['created']}")
+    if unclaimed:
+        lines.append(
+            f"Not counted: {', '.join(unclaimed)}. They carry this project's label "
+            f"but no {PROJECT_ANNOTATION} annotation, so they may belong to another "
+            "project."
+        )
     return "\n".join(lines)

@@ -125,9 +125,13 @@ The simulation counts are ``stilt status``'s, read from the output
 directory, so they are right whatever the Jobs did. ``failed`` counts
 failed simulations by reason; each one's ``.failure.yaml``, under
 ``logs/`` in the output directory, says why. The Jobs are the ones
-``pystiltctl submit`` started for this project (by the
-``pystiltctl/project`` label), with how many of their tasks are done,
-running, and failed. A failed task is one whose simulations failed:
+``pystiltctl submit`` started for this project (those whose
+``pystiltctl/project-url`` annotation is this project's URL), with how many
+of their tasks are done, running, and failed. Two projects with the same
+folder name, such as ``s3://lab-a/projects/winter`` and
+``s3://lab-b/runs/2025/winter``, each see only their own Jobs. A Job with
+the project's label but no such annotation cannot be told from another
+project's, so ``status`` does not count it and lists it as "Not counted". A failed task is one whose simulations failed:
 ``kubectl logs`` on its pod shows which. ``--json`` prints the same for a
 program to read.
 

@@ -2,13 +2,14 @@
 
 import json
 import subprocess
+from types import SimpleNamespace
 
 import pytest
 from typer.testing import CliRunner
 
-from pystiltctl import status
+from pystiltctl import job, status
 from pystiltctl.cli import app
-from pystiltctl.inputs import push
+from pystiltctl.inputs import project_name, push
 
 #: A Job as `kubectl get job -o json` shows it, part way through.
 RUNNING = {
@@ -76,30 +77,67 @@ def test_job_summary_failed_and_complete():
     )
 
 
+def annotated(item, project):
+    """Return a Job as `pystiltctl submit` made it for *project*."""
+    metadata = {**item["metadata"], "annotations": {job.PROJECT_ANNOTATION: project}}
+    return {**item, "metadata": metadata}
+
+
 @pytest.fixture
-def kubectl(monkeypatch):
-    """Answer `kubectl get jobs` with two Jobs, and record the call."""
-    calls = []
+def cluster(monkeypatch):
+    """
+    Stand in for kubectl.
+
+    `get jobs -l key=value` answers with the Jobs in ``cluster.jobs`` that
+    carry the label, as the API server would.
+    """
+    cluster = SimpleNamespace(jobs=[], calls=[])
     real_run = subprocess.run
 
     def run(args, **kwargs):
         if args[0] != "/usr/bin/kubectl":
             return real_run(args, **kwargs)
-        calls.append(args)
-        items = {"items": [COMPLETE, FAILED]}
-        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(items), stderr="")
+        cluster.calls.append(args)
+        key, _, value = args[args.index("-l") + 1].partition("=")
+        items = [
+            item
+            for item in cluster.jobs
+            if item["metadata"].get("labels", {}).get(key) == value
+        ]
+        return subprocess.CompletedProcess(
+            args, 0, stdout=json.dumps({"items": items}), stderr=""
+        )
 
     monkeypatch.setattr(status.shutil, "which", lambda name: "/usr/bin/kubectl")
     monkeypatch.setattr(status.subprocess, "run", run)
-    return calls
+    return cluster
 
 
-def test_project_jobs_by_label_oldest_first(kubectl):
-    jobs = status.project_jobs("my_project", namespace="runs")
+def submitted(project, name):
+    """Return the Job `pystiltctl submit` would create for *project*, named *name*."""
+    spec = job.JobSpec(project, project_name(project), tasks=2, parallelism=2)
+    manifest = job.manifest(spec)
+    metadata = {k: v for k, v in manifest["metadata"].items() if k != "generateName"}
+    return {**manifest, "metadata": {**metadata, "name": name}}
+
+
+@pytest.fixture
+def kubectl(cluster, bucket):
+    """Answer `kubectl get jobs` with two Jobs of ``bucket``'s project."""
+    labels = {job.PROJECT_LABEL: "my-project"}
+    for item in (COMPLETE, FAILED):
+        metadata = {**item["metadata"], "labels": labels}
+        cluster.jobs.append(annotated({**item, "metadata": metadata}, bucket))
+    return cluster.calls
+
+
+def test_project_jobs_by_label_oldest_first(kubectl, bucket):
+    jobs, unclaimed = status.project_jobs(bucket, namespace="runs")
     assert [j["name"] for j in jobs] == [
         "stilt-my-project-x7k2p",
         "stilt-my-project-a1b2c",
     ]
+    assert unclaimed == []
     assert kubectl == [
         [
             "/usr/bin/kubectl",
@@ -113,6 +151,55 @@ def test_project_jobs_by_label_oldest_first(kubectl):
             "runs",
         ]
     ]
+
+
+def test_project_jobs_of_projects_with_one_folder_name(cluster):
+    """Two projects, one label: each sees only its own Jobs (#12)."""
+    a, b = "s3://lab-a/projects/winter", "s3://lab-b/runs/2025/winter"
+    cluster.jobs += [submitted(a, "stilt-winter-0"), submitted(b, "stilt-winter-1")]
+    assert (
+        cluster.jobs[0]["metadata"]["labels"] == cluster.jobs[1]["metadata"]["labels"]
+    )
+    for project, name in [(a, "stilt-winter-0"), (b, "stilt-winter-1")]:
+        jobs, unclaimed = status.project_jobs(project)
+        assert [j["name"] for j in jobs] == [name]
+        assert unclaimed == []
+
+
+def test_project_jobs_of_labels_that_differ_only_by_case(cluster):
+    """`SLV_2015` and `slv-2015` get the label `slv-2015`, so check the URL too."""
+    a, b = "s3://lab/projects/SLV_2015", "s3://lab/projects/slv-2015"
+    cluster.jobs += [submitted(a, "stilt-slv-2015-a"), submitted(b, "stilt-slv-2015-b")]
+    assert [j["name"] for j in status.project_jobs(a)[0]] == ["stilt-slv-2015-a"]
+    assert [j["name"] for j in status.project_jobs(b)[0]] == ["stilt-slv-2015-b"]
+
+
+@pytest.mark.parametrize(
+    ("submit_as", "status_of"),
+    [
+        ("s3://lab/projects/winter/", "s3://lab/projects/winter"),
+        ("s3://lab/projects/winter", "s3://lab/projects/winter//"),
+        ("S3://lab/projects/winter", "s3://lab/projects/winter"),
+        ("/data/winter/", "/data/winter"),
+        ("file:///data/winter", "/data/winter"),
+    ],
+)
+def test_project_jobs_spelling_of_the_project_does_not_matter(
+    cluster, submit_as, status_of
+):
+    cluster.jobs.append(submitted(submit_as, "stilt-winter-0"))
+    assert [j["name"] for j in status.project_jobs(status_of)[0]] == ["stilt-winter-0"]
+
+
+def test_project_jobs_leaves_out_a_job_with_no_annotation(cluster):
+    """An older Job cannot be told from another project's: skip it, and say so."""
+    project = "s3://lab-a/projects/winter"
+    old = submitted(project, "stilt-winter-old")
+    del old["metadata"]["annotations"]
+    cluster.jobs += [old, submitted(project, "stilt-winter-1")]
+    jobs, unclaimed = status.project_jobs(project)
+    assert [j["name"] for j in jobs] == ["stilt-winter-1"]
+    assert unclaimed == ["stilt-winter-old"]
 
 
 def test_project_jobs_without_kubectl(monkeypatch):
@@ -158,6 +245,9 @@ def test_report():
     ) in text
     assert "Jobs: none on the cluster" in status.report(data, [])
     assert "Jobs: not listed. no cluster" in status.report(data, "no cluster")
+    text = status.report(data, [], ["stilt-old-x1"])
+    assert "Not counted: stilt-old-x1. They carry this project's label" in text
+    assert "Not counted" not in status.report(data, [])
 
 
 def test_cli_status_without_a_cluster(project, monkeypatch):
@@ -177,6 +267,23 @@ def test_cli_status_json(project, bucket, kubectl):
     data = json.loads(result.output)
     assert data["simulations"]["total"] == 0
     assert [j["state"] for j in data["jobs"]] == ["failed", "complete"]
+    assert data["jobs_not_counted"] == []
+
+
+def test_cli_status_says_which_jobs_it_did_not_count(project, bucket, cluster):
+    push(project, bucket)
+    old = submitted(bucket, "stilt-my-project-old")
+    del old["metadata"]["annotations"]
+    cluster.jobs += [old, submitted("s3://other/my_project", "stilt-my-project-else")]
+    args = ["status", bucket, "--output", "memory://results/output"]
+    text = CliRunner().invoke(app, args)
+    assert text.exit_code == 0, text.output
+    assert "Jobs: none on the cluster" in text.output
+    assert "Not counted: stilt-my-project-old." in text.output
+    assert "stilt-my-project-else" not in text.output
+    data = json.loads(CliRunner().invoke(app, [*args, "--json"]).output)
+    assert data["jobs"] == []
+    assert data["jobs_not_counted"] == ["stilt-my-project-old"]
 
 
 def test_cli_status_no_project(bucket):
