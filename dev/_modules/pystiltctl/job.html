@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=0e827a0c"></script>
+    <script src="../../_static/documentation_options.js?v=30edc632"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -57,7 +57,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev8+g2deba59e9" />
+  <meta name="docsearch:version" content="0.0.1.dev9+g0f3905d50" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -474,7 +474,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pystiltctl</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.inputs</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_local</span><span class="p">,</span> <span class="n">local_path</span><span class="p">,</span> <span class="n">pull</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.inputs</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_local</span><span class="p">,</span> <span class="n">local_path</span><span class="p">,</span> <span class="n">project_name</span><span class="p">,</span> <span class="n">pull</span>
 
 <span class="c1">#: Retries per task for a stopped pod (exit 3) or a crash.</span>
 <span class="n">RETRIES</span> <span class="o">=</span> <span class="mi">3</span>
@@ -698,7 +698,6 @@
         <span class="n">opened</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">)</span>
         <span class="n">execution</span> <span class="o">=</span> <span class="n">opened</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">execution</span>
         <span class="n">results</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">opened</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">is_local</span><span class="p">(</span><span class="n">project</span><span class="p">)</span> <span class="ow">and</span> <span class="n">is_local</span><span class="p">(</span><span class="n">results</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="s2">"The output directory is a path, so each pod would write its results "</span>
@@ -710,7 +709,7 @@
         <span class="n">memory</span> <span class="o">=</span> <span class="n">kubernetes_memory</span><span class="p">(</span><span class="n">execution</span><span class="o">.</span><span class="n">mem</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">JobSpec</span><span class="p">(</span>
         <span class="n">project</span><span class="o">=</span><span class="n">project</span><span class="p">,</span>
-        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">project_name</span><span class="p">(</span><span class="n">project</span><span class="p">),</span>
         <span class="n">tasks</span><span class="o">=</span><span class="n">tasks</span><span class="p">,</span>
         <span class="n">parallelism</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">parallelism</span> <span class="ow">or</span> <span class="n">execution</span><span class="o">.</span><span class="n">array_parallelism</span> <span class="ow">or</span> <span class="n">tasks</span><span class="p">,</span> <span class="n">tasks</span><span class="p">),</span>
         <span class="n">cpus</span><span class="o">=</span><span class="n">cpus</span> <span class="ow">or</span> <span class="n">execution</span><span class="o">.</span><span class="n">cpus</span><span class="p">,</span>

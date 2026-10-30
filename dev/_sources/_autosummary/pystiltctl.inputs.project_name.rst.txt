@@ -1,0 +1,6 @@
+﻿pystiltctl.inputs.project\_name
+===============================
+
+.. currentmodule:: pystiltctl.inputs
+
+.. autofunction:: project_name

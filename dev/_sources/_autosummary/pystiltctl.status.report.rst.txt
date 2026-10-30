@@ -1,0 +1,6 @@
+﻿pystiltctl.status.report
+========================
+
+.. currentmodule:: pystiltctl.status
+
+.. autofunction:: report

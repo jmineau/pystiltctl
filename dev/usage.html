@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=0e827a0c"></script>
+    <script src="_static/documentation_options.js?v=30edc632"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -60,7 +60,7 @@
     <link rel="prev" title="Installation" href="installation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev8+g2deba59e9" />
+  <meta name="docsearch:version" content="0.0.1.dev9+g0f3905d50" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -559,6 +559,29 @@ command line (2), which stops the whole Job. Fix the cause and submit
 again: finished simulations are skipped, so only the rest run. The Job,
 and its pods’ logs, stay on the cluster for a week.</p>
 </section>
+<section id="check-on-it">
+<h2>Check on it<a class="headerlink" href="#check-on-it" title="Link to this heading">#</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pystiltctl<span class="w"> </span>status<span class="w"> </span>s3://my-bucket/projects/my_project
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Project: s3://my-bucket/projects/my_project
+Output: s3://my-bucket/output
+Simulations:  total=2000  complete=1874  failed=6  interrupted=0  pending=120
+  failed: met_missing 6
+Jobs:
+  stilt-my-project-x7k2p  running  14 of 20 tasks done, 5 running, 1 failed (tasks 7)  started 2026-10-29T16:00:00Z
+</pre></div>
+</div>
+<p>The simulation counts are <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code>’s, read from the output
+directory, so they are right whatever the Jobs did. <code class="docutils literal notranslate"><span class="pre">failed</span></code> counts
+failed simulations by reason; each one’s <code class="docutils literal notranslate"><span class="pre">.failure.yaml</span></code>, under
+<code class="docutils literal notranslate"><span class="pre">logs/</span></code> in the output directory, says why. The Jobs are the ones
+<code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">submit</span></code> started for this project (by the
+<code class="docutils literal notranslate"><span class="pre">pystiltctl/project</span></code> label), with how many of their tasks are done,
+running, and failed. A failed task is one whose simulations failed:
+<code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">logs</span></code> on its pod shows which. <code class="docutils literal notranslate"><span class="pre">--json</span></code> prints the same for a
+program to read.</p>
+</section>
 <section id="what-each-pod-runs">
 <h2>What each pod runs<a class="headerlink" href="#what-each-pod-runs" title="Link to this heading">#</a></h2>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pystiltctl<span class="w"> </span>worker<span class="w"> </span>s3://my-bucket/projects/my_project<span class="w"> </span>--tasks<span class="w"> </span><span class="m">20</span>
@@ -653,6 +676,7 @@ A retry continues where it stopped.</p></td>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-container-image">The container image</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#put-the-project-on-a-bucket">Put the project on a bucket</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-it">Run it</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#check-on-it">Check on it</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-each-pod-runs">What each pod runs</a></li>
 </ul>
   </nav></div>

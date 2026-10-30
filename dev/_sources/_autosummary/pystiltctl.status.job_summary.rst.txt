@@ -1,0 +1,6 @@
+﻿pystiltctl.status.job\_summary
+==============================
+
+.. currentmodule:: pystiltctl.status
+
+.. autofunction:: job_summary

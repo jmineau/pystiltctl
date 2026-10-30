@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=0e827a0c"></script>
+    <script src="_static/documentation_options.js?v=30edc632"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -60,7 +60,7 @@
     <link rel="prev" title="Command line" href="cli.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev8+g2deba59e9" />
+  <meta name="docsearch:version" content="0.0.1.dev9+g0f3905d50" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -407,6 +407,7 @@
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.pull.html">pystiltctl.inputs.pull</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.is_local.html">pystiltctl.inputs.is_local</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.local_path.html">pystiltctl.inputs.local_path</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.project_name.html">pystiltctl.inputs.project_name</a></li>
 </ul>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.worker.run_task.html">pystiltctl.worker.run_task</a></li>
@@ -427,6 +428,13 @@
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.job.default_image.html">pystiltctl.job.default_image</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.job.kubernetes_memory.html">pystiltctl.job.kubernetes_memory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.job.label_value.html">pystiltctl.job.label_value</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.status.simulations.html">pystiltctl.status.simulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.status.project_jobs.html">pystiltctl.status.project_jobs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.status.job_summary.html">pystiltctl.status.job_summary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.status.report.html">pystiltctl.status.report</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.status.count_indexes.html">pystiltctl.status.count_indexes</a></li>
 </ul>
 </div>
 </nav></div>
@@ -504,6 +512,9 @@ functions behind it.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.local_path.html#pystiltctl.inputs.local_path" title="pystiltctl.inputs.local_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.local_path</span></code></a>(location)</p></td>
 <td><p>Return a local <em>location</em> as a path, without a <code class="docutils literal notranslate"><span class="pre">file://</span></code> in front.</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.project_name.html#pystiltctl.inputs.project_name" title="pystiltctl.inputs.project_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.project_name</span></code></a>(location)</p></td>
+<td><p>Return a project's name, the last part of its folder or URL.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -563,6 +574,29 @@ functions behind it.</p>
 </table>
 </div>
 </section>
+<section id="status">
+<h2>Status<a class="headerlink" href="#status" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.simulations.html#pystiltctl.status.simulations" title="pystiltctl.status.simulations"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.simulations</span></code></a>(project, *[, output])</p></td>
+<td><p>Return <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span> <span class="pre">--json</span></code> for <em>project</em>, a URL or a local folder.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.project_jobs.html#pystiltctl.status.project_jobs" title="pystiltctl.status.project_jobs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.project_jobs</span></code></a>(name, *[, namespace])</p></td>
+<td><p>Return the summaries of a project's Jobs, oldest first.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.job_summary.html#pystiltctl.status.job_summary" title="pystiltctl.status.job_summary"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.job_summary</span></code></a>(job)</p></td>
+<td><p>Return the facts about one Job, from <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">get</span> <span class="pre">job</span> <span class="pre">-o</span> <span class="pre">json</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.report.html#pystiltctl.status.report" title="pystiltctl.status.report"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.report</span></code></a>(data, jobs)</p></td>
+<td><p>Return the text <code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">status</span></code> prints.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.count_indexes.html#pystiltctl.status.count_indexes" title="pystiltctl.status.count_indexes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.count_indexes</span></code></a>(indexes)</p></td>
+<td><p>Return how many task indexes a Job's index list holds, such as <code class="docutils literal notranslate"><span class="pre">0-3,7</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 </section>
 
 
@@ -615,6 +649,7 @@ functions behind it.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-inputs">Project inputs</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#worker">Worker</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#kubernetes-job">Kubernetes Job</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#status">Status</a></li>
 </ul>
   </nav></div>
 

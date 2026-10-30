@@ -1,0 +1,6 @@
+﻿pystiltctl.status.count\_indexes
+================================
+
+.. currentmodule:: pystiltctl.status
+
+.. autofunction:: count_indexes

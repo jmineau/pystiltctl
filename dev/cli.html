@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=0e827a0c"></script>
+    <script src="_static/documentation_options.js?v=30edc632"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -60,7 +60,7 @@
     <link rel="prev" title="Usage" href="usage.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev8+g2deba59e9" />
+  <meta name="docsearch:version" content="0.0.1.dev9+g0f3905d50" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -504,6 +504,16 @@ for more.</p>
 </dd>
 </dl>
 </section>
+<section id="pystiltctl-status">
+<h2>pystiltctl status<a class="headerlink" href="#pystiltctl-status" title="Link to this heading">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pystiltctl status PROJECT [--output URL] [--namespace NS] [--json]
+</pre></div>
+</div>
+<p>Count a project’s simulations by state (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code>), and list the
+Jobs <code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">submit</span></code> started for it, with their tasks done,
+running, and failed. Without <code class="docutils literal notranslate"><span class="pre">kubectl</span></code>, or a cluster, it counts the
+simulations only.</p>
+</section>
 <section id="pystiltctl-worker">
 <h2>pystiltctl worker<a class="headerlink" href="#pystiltctl-worker" title="Link to this heading">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pystiltctl worker PROJECT --tasks N [--index I] [--cpus C] [--output URL] [--workdir DIR]
@@ -575,6 +585,7 @@ a folder on a mounted volume), then run <code class="docutils literal notranslat
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-push">pystiltctl push</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-submit">pystiltctl submit</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-status">pystiltctl status</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-worker">pystiltctl worker</a></li>
 </ul>
   </nav></div>
