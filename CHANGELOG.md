@@ -22,6 +22,12 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
   which adds the hours now due (8 hours behind the clock, for the met archive),
   writes `receptors.csv` back to the bucket, and runs the last day's receptors.
   `push` and `pull` carry `sites.csv`.
+
+### Fixed
+
+- The Job's rule that ignores evicted and preempted pods now gives the condition's
+  `status`, which a CronJob's Job template requires (a Job on its own got it from
+  the API server).
 - `pystiltctl status` counts a project's simulations by state (`stilt status`)
   and lists its Jobs on the cluster, with their tasks done, running and failed.
   `--json` prints the same for a program.
