@@ -1,0 +1,6 @@
+﻿pystiltctl.job.default\_image
+=============================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: default_image

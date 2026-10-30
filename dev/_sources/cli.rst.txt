@@ -14,6 +14,41 @@ pystiltctl push
 Copy a project's inputs (``config.yaml``, ``receptors.csv``, ``tables/``)
 to ``URL``, for pods to read. Files already there are replaced.
 
+pystiltctl submit
+-----------------
+
+.. code-block:: text
+
+   pystiltctl submit PROJECT [--tasks N] [--parallelism P] [--cpus C] [--memory M]
+                     [--image IMAGE] [--output URL] [--secret NAME]... [--service-account NAME]
+                     [--volume CLAIM:/path]... [--namespace NS] [--dry-run]
+
+Run a project on Kubernetes as an indexed Job of ``N`` pods, each running
+``pystiltctl worker``. ``PROJECT`` is the URL its inputs were pushed to,
+or a folder at the same path here and in the pods.
+
+``--tasks``, ``--parallelism``, ``--cpus``, ``--memory``
+   Default to ``n_workers``, ``array_parallelism`` (or all tasks),
+   ``cpus`` and ``mem`` in the ``execution`` section of ``config.yaml``.
+``--image``
+   The container image. Defaults to this version's,
+   ``ghcr.io/jmineau/pystiltctl:<version>``, or ``:main`` for a
+   development version.
+``--output``
+   The output directory, in place of the one ``config.yaml`` names. A
+   project on a bucket needs an output on a bucket.
+``--secret``
+   A Secret whose keys become the pods' environment variables. Repeat
+   for more.
+``--service-account``
+   The pods' service account.
+``--volume``
+   A PersistentVolumeClaim to mount, as ``CLAIM:/path``. Repeat for more.
+``--namespace``
+   Defaults to ``kubectl``'s current namespace.
+``--dry-run``
+   Print the Job as YAML instead of creating it.
+
 pystiltctl worker
 -----------------
 

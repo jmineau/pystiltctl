@@ -1,0 +1,6 @@
+﻿pystiltctl.job.label\_value
+===========================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: label_value

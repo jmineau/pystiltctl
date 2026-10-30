@@ -1,0 +1,6 @@
+﻿pystiltctl.job.to\_yaml
+=======================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: to_yaml

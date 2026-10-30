@@ -1,0 +1,6 @@
+﻿pystiltctl.job.job\_spec
+========================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: job_spec

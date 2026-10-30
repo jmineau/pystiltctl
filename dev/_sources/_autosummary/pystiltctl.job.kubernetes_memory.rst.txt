@@ -1,0 +1,6 @@
+﻿pystiltctl.job.kubernetes\_memory
+=================================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: kubernetes_memory

@@ -1,0 +1,6 @@
+﻿pystiltctl.job.create
+=====================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: create

@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=b7f37435"></script>
+    <script src="_static/documentation_options.js?v=0e827a0c"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -60,7 +60,7 @@
     <link rel="prev" title="Usage" href="usage.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev7+gfee516a59" />
+  <meta name="docsearch:version" content="0.0.1.dev8+g2deba59e9" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -470,6 +470,40 @@
 <p>Copy a project’s inputs (<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">tables/</span></code>)
 to <code class="docutils literal notranslate"><span class="pre">URL</span></code>, for pods to read. Files already there are replaced.</p>
 </section>
+<section id="pystiltctl-submit">
+<h2>pystiltctl submit<a class="headerlink" href="#pystiltctl-submit" title="Link to this heading">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pystiltctl submit PROJECT [--tasks N] [--parallelism P] [--cpus C] [--memory M]
+                  [--image IMAGE] [--output URL] [--secret NAME]... [--service-account NAME]
+                  [--volume CLAIM:/path]... [--namespace NS] [--dry-run]
+</pre></div>
+</div>
+<p>Run a project on Kubernetes as an indexed Job of <code class="docutils literal notranslate"><span class="pre">N</span></code> pods, each running
+<code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">worker</span></code>. <code class="docutils literal notranslate"><span class="pre">PROJECT</span></code> is the URL its inputs were pushed to,
+or a folder at the same path here and in the pods.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">--tasks</span></code>, <code class="docutils literal notranslate"><span class="pre">--parallelism</span></code>, <code class="docutils literal notranslate"><span class="pre">--cpus</span></code>, <code class="docutils literal notranslate"><span class="pre">--memory</span></code></dt><dd><p>Default to <code class="docutils literal notranslate"><span class="pre">n_workers</span></code>, <code class="docutils literal notranslate"><span class="pre">array_parallelism</span></code> (or all tasks),
+<code class="docutils literal notranslate"><span class="pre">cpus</span></code> and <code class="docutils literal notranslate"><span class="pre">mem</span></code> in the <code class="docutils literal notranslate"><span class="pre">execution</span></code> section of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--image</span></code></dt><dd><p>The container image. Defaults to this version’s,
+<code class="docutils literal notranslate"><span class="pre">ghcr.io/jmineau/pystiltctl:&lt;version&gt;</span></code>, or <code class="docutils literal notranslate"><span class="pre">:main</span></code> for a
+development version.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--output</span></code></dt><dd><p>The output directory, in place of the one <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> names. A
+project on a bucket needs an output on a bucket.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--secret</span></code></dt><dd><p>A Secret whose keys become the pods’ environment variables. Repeat
+for more.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--service-account</span></code></dt><dd><p>The pods’ service account.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--volume</span></code></dt><dd><p>A PersistentVolumeClaim to mount, as <code class="docutils literal notranslate"><span class="pre">CLAIM:/path</span></code>. Repeat for more.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--namespace</span></code></dt><dd><p>Defaults to <code class="docutils literal notranslate"><span class="pre">kubectl</span></code>’s current namespace.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--dry-run</span></code></dt><dd><p>Print the Job as YAML instead of creating it.</p>
+</dd>
+</dl>
+</section>
 <section id="pystiltctl-worker">
 <h2>pystiltctl worker<a class="headerlink" href="#pystiltctl-worker" title="Link to this heading">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pystiltctl worker PROJECT --tasks N [--index I] [--cpus C] [--output URL] [--workdir DIR]
@@ -540,6 +574,7 @@ a folder on a mounted volume), then run <code class="docutils literal notranslat
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-push">pystiltctl push</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-submit">pystiltctl submit</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-worker">pystiltctl worker</a></li>
 </ul>
   </nav></div>

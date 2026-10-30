@@ -1,0 +1,22 @@
+﻿pystiltctl.job.Volume
+=====================
+
+.. currentmodule:: pystiltctl.job
+
+.. autoclass:: Volume
+   :no-members:
+
+
+
+
+
+
+.. rubric:: Methods
+
+.. autosummary::
+   :toctree:
+
+   ~Volume.parse
+
+
+

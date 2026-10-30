@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pystiltctl.job &#8212; pystiltctl dev</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=ba117b66" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+
+    <script src="../../_static/documentation_options.js?v=0e827a0c"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/pystiltctl/job';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/pystiltctl/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.0.1.dev8+g2deba59e9" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">pystiltctl dev</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../usage.html">
+    Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../cli.html">
+    Command line
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../contributing.html">
+    Contributing
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/pystiltctl" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../usage.html">
+    Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../cli.html">
+    Command line
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../contributing.html">
+    Contributing
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/pystiltctl" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">pystiltctl.job</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for pystiltctl.job</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""</span>
+<span class="sd">Write and start the Kubernetes Job that runs a project.</span>
+
+<span class="sd">A project runs as one indexed Job: ``completions`` tasks, each a pod that</span>
+<span class="sd">runs ``pystiltctl worker``, which runs ``stilt run --task I/N``. Kubernetes</span>
+<span class="sd">retries a task from its exit code (``podFailurePolicy``):</span>
+
+<span class="sd">- 2, a wrong command line, fails the whole Job, since every task would</span>
+<span class="sd">  fail the same way;</span>
+<span class="sd">- 1, some simulations failed, fails that task only, since running it again</span>
+<span class="sd">  repeats the failure until the cause is fixed;</span>
+<span class="sd">- 3, stopped, is retried, up to :data:`RETRIES` times per task;</span>
+<span class="sd">- a pod evicted or preempted (a spot node taken back) is retried without</span>
+<span class="sd">  counting against that.</span>
+
+<span class="sd">Nothing here decides which simulations are finished: a task that runs</span>
+<span class="sd">again skips the ones whose results exist.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pystiltctl</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.inputs</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_local</span><span class="p">,</span> <span class="n">local_path</span><span class="p">,</span> <span class="n">pull</span>
+
+<span class="c1">#: Retries per task for a stopped pod (exit 3) or a crash.</span>
+<span class="n">RETRIES</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="c1">#: How long a finished Job, and its pods' logs, stay on the cluster: a week.</span>
+<span class="n">KEEP_FINISHED</span> <span class="o">=</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">24</span> <span class="o">*</span> <span class="mi">3600</span>
+<span class="c1">#: The label every pystiltctl Job and pod carries, with the project's name.</span>
+<span class="n">PROJECT_LABEL</span> <span class="o">=</span> <span class="s2">"pystiltctl/project"</span>
+<span class="c1">#: The annotation holding the project's URL, for ``pystiltctl status``.</span>
+<span class="n">PROJECT_ANNOTATION</span> <span class="o">=</span> <span class="s2">"pystiltctl/project-url"</span>
+<span class="c1">#: Where each pod keeps its inputs and its runs' workdirs: an ``emptyDir``.</span>
+<span class="n">SCRATCH</span> <span class="o">=</span> <span class="s2">"/scratch"</span>
+<span class="c1">#: The image's repository.</span>
+<span class="n">IMAGE_REPOSITORY</span> <span class="o">=</span> <span class="s2">"ghcr.io/jmineau/pystiltctl"</span>
+
+
+<div class="viewcode-block" id="default_image">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.default_image.html#pystiltctl.job.default_image">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">default_image</span><span class="p">(</span><span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">pystiltctl</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the image matching this pystiltctl.</span>
+
+<span class="sd">    A release runs its own image; anything else (a development version)</span>
+<span class="sd">    runs ``:main``.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; default_image("0.2.0")</span>
+<span class="sd">    'ghcr.io/jmineau/pystiltctl:0.2.0'</span>
+<span class="sd">    &gt;&gt;&gt; default_image("0.2.1.dev3+g1a2b3c4")</span>
+<span class="sd">    'ghcr.io/jmineau/pystiltctl:main'</span>
+<span class="sd">    """</span>
+    <span class="n">released</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\d+\.\d+\.\d+"</span><span class="p">,</span> <span class="n">version</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">IMAGE_REPOSITORY</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">version</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">released</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'main'</span><span class="si">}</span><span class="s2">"</span></div>
+
+
+
+<div class="viewcode-block" id="kubernetes_memory">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.kubernetes_memory.html#pystiltctl.job.kubernetes_memory">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">kubernetes_memory</span><span class="p">(</span><span class="n">mem</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return a Slurm memory size, such as ``8G``, as a Kubernetes quantity.</span>
+
+<span class="sd">    Slurm's ``K``, ``M``, ``G`` and ``T`` count in 1024s, and a bare number</span>
+<span class="sd">    is megabytes; Kubernetes writes those as ``Ki``, ``Mi``, ``Gi`` and</span>
+<span class="sd">    ``Ti``. A size already in Kubernetes' form is returned as it is.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; kubernetes_memory("8G")</span>
+<span class="sd">    '8Gi'</span>
+<span class="sd">    &gt;&gt;&gt; kubernetes_memory("4000")</span>
+<span class="sd">    '4000Mi'</span>
+<span class="sd">    &gt;&gt;&gt; kubernetes_memory("512Mi")</span>
+<span class="sd">    '512Mi'</span>
+<span class="sd">    """</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\s*(\d+)\s*([KMGT]?)B?\s*"</span><span class="p">,</span> <span class="n">mem</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">match</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">mem</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">number</span><span class="p">,</span> <span class="n">unit</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">number</span><span class="si">}{</span><span class="p">(</span><span class="n">unit</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'M'</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">i"</span></div>
+
+
+
+<div class="viewcode-block" id="label_value">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.label_value.html#pystiltctl.job.label_value">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">label_value</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return *name* as a Kubernetes label value and name prefix.</span>
+
+<span class="sd">    Lowercase letters, digits and hyphens, at most 40 characters, starting</span>
+<span class="sd">    and ending with a letter or digit.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; label_value("SLV_2015 winter")</span>
+<span class="sd">    'slv-2015-winter'</span>
+<span class="sd">    """</span>
+    <span class="n">slug</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^a-z0-9]+"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)[:</span><span class="mi">40</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">slug</span> <span class="ow">or</span> <span class="s2">"project"</span></div>
+
+
+
+<div class="viewcode-block" id="Volume">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.Volume.html#pystiltctl.job.Volume">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Volume</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    A PersistentVolumeClaim mounted in every pod.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    claim : str</span>
+<span class="sd">        The claim's name.</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Where it is mounted in the pod.</span>
+<span class="sd">    """</span>
+
+    <span class="n">claim</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span>
+
+<div class="viewcode-block" id="Volume.parse">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.Volume.parse.html#pystiltctl.job.Volume.parse">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">parse</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Volume</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Read ``CLAIM:PATH``, as ``--volume`` takes it.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; Volume.parse("hrrr-arl:/met")</span>
+<span class="sd">        Volume(claim='hrrr-arl', path='/met')</span>
+<span class="sd">        """</span>
+        <span class="n">claim</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">":"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">sep</span> <span class="ow">and</span> <span class="n">claim</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A volume is CLAIM:/path, such as hrrr-arl:/met; got </span><span class="si">{</span><span class="n">text</span><span class="si">!r}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">claim</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="JobSpec">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.JobSpec.html#pystiltctl.job.JobSpec">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">JobSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    What the Job for a project runs, and with what.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    project : str</span>
+<span class="sd">        The project the pods run: a URL, or a folder on a mounted volume.</span>
+<span class="sd">    name : str</span>
+<span class="sd">        The project's name, for the Job's name and labels.</span>
+<span class="sd">    tasks : int</span>
+<span class="sd">        How many tasks the receptors are split into (``completions``).</span>
+<span class="sd">    parallelism : int</span>
+<span class="sd">        Most pods running at once.</span>
+<span class="sd">    cpus : int</span>
+<span class="sd">        Receptors each pod runs at once, and the CPUs it asks for.</span>
+<span class="sd">    memory : str or None</span>
+<span class="sd">        Memory each pod asks for, as a Kubernetes quantity.</span>
+<span class="sd">    image : str</span>
+<span class="sd">        The container image.</span>
+<span class="sd">    output : str or None</span>
+<span class="sd">        The output directory, in place of the one ``config.yaml`` names.</span>
+<span class="sd">    secrets : tuple of str</span>
+<span class="sd">        Secrets whose keys become the pods' environment variables, such as</span>
+<span class="sd">        a bucket's credentials.</span>
+<span class="sd">    service_account : str or None</span>
+<span class="sd">        The pods' service account, for clusters that grant bucket access</span>
+<span class="sd">        through one.</span>
+<span class="sd">    volumes : tuple of Volume</span>
+<span class="sd">        PersistentVolumeClaims to mount, such as a met archive.</span>
+<span class="sd">    namespace : str or None</span>
+<span class="sd">        The namespace to run in; the current one if None.</span>
+<span class="sd">    """</span>
+
+    <span class="n">project</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">tasks</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">parallelism</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">cpus</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">memory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">image</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">default_image</span><span class="p">)</span>
+    <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">secrets</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">service_account</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">volumes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Volume</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">namespace</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="job_spec">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.job_spec.html#pystiltctl.job.job_spec">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">job_spec</span><span class="p">(</span>
+    <span class="n">project</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tasks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">parallelism</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cpus</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">memory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">image</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">secrets</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">service_account</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">volumes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Volume</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">namespace</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">JobSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the Job for *project*, from its ``config.yaml`` and these overrides.</span>
+
+<span class="sd">    What is not given comes from the ``execution`` section of the</span>
+<span class="sd">    project's ``config.yaml``, the same settings a Slurm run uses:</span>
+<span class="sd">    ``n_workers`` tasks, ``array_parallelism`` pods at once (all of them if</span>
+<span class="sd">    unset), ``cpus`` per pod, and ``mem`` per pod.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    project : str</span>
+<span class="sd">        The project the pods run: a URL its inputs were pushed to, or a</span>
+<span class="sd">        folder that is at the same path here and in the pods.</span>
+<span class="sd">    **overrides</span>
+<span class="sd">        The fields of :class:`JobSpec` to set instead of the project's.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        If there is no project at *project*.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the results would stay inside the pods: the project is on a</span>
+<span class="sd">        bucket but its output directory is not.</span>
+<span class="sd">    """</span>
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+        <span class="n">directory</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">local_path</span><span class="p">(</span><span class="n">project</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">is_local</span><span class="p">(</span><span class="n">project</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">pull</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"project"</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">opened</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">)</span>
+        <span class="n">execution</span> <span class="o">=</span> <span class="n">opened</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">execution</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">opened</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_local</span><span class="p">(</span><span class="n">project</span><span class="p">)</span> <span class="ow">and</span> <span class="n">is_local</span><span class="p">(</span><span class="n">results</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"The output directory is a path, so each pod would write its results "</span>
+            <span class="s2">"to its own disk and lose them. Set output to a bucket in config.yaml, "</span>
+            <span class="s2">"or give --output s3://..."</span>
+        <span class="p">)</span>
+    <span class="n">tasks</span> <span class="o">=</span> <span class="n">tasks</span> <span class="ow">or</span> <span class="n">execution</span><span class="o">.</span><span class="n">n_workers</span>
+    <span class="k">if</span> <span class="n">memory</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">execution</span><span class="o">.</span><span class="n">mem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">memory</span> <span class="o">=</span> <span class="n">kubernetes_memory</span><span class="p">(</span><span class="n">execution</span><span class="o">.</span><span class="n">mem</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">JobSpec</span><span class="p">(</span>
+        <span class="n">project</span><span class="o">=</span><span class="n">project</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">tasks</span><span class="o">=</span><span class="n">tasks</span><span class="p">,</span>
+        <span class="n">parallelism</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">parallelism</span> <span class="ow">or</span> <span class="n">execution</span><span class="o">.</span><span class="n">array_parallelism</span> <span class="ow">or</span> <span class="n">tasks</span><span class="p">,</span> <span class="n">tasks</span><span class="p">),</span>
+        <span class="n">cpus</span><span class="o">=</span><span class="n">cpus</span> <span class="ow">or</span> <span class="n">execution</span><span class="o">.</span><span class="n">cpus</span><span class="p">,</span>
+        <span class="n">memory</span><span class="o">=</span><span class="n">memory</span><span class="p">,</span>
+        <span class="n">image</span><span class="o">=</span><span class="n">image</span> <span class="ow">or</span> <span class="n">default_image</span><span class="p">(),</span>
+        <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">,</span>
+        <span class="n">secrets</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">secrets</span><span class="p">),</span>
+        <span class="n">service_account</span><span class="o">=</span><span class="n">service_account</span><span class="p">,</span>
+        <span class="n">volumes</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">volumes</span><span class="p">),</span>
+        <span class="n">namespace</span><span class="o">=</span><span class="n">namespace</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">worker_args</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the command line each pod runs."""</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"pystiltctl"</span><span class="p">,</span> <span class="s2">"worker"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">project</span><span class="p">,</span> <span class="s2">"--tasks"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">tasks</span><span class="p">)]</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--cpus"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">cpus</span><span class="p">),</span> <span class="s2">"--workdir"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">SCRATCH</span><span class="si">}</span><span class="s2">/project"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">output</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--output"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">output</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">args</span>
+
+
+<div class="viewcode-block" id="manifest">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.manifest.html#pystiltctl.job.manifest">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">manifest</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the indexed Job that runs *spec*, as a Kubernetes manifest.</span>
+
+<span class="sd">    The Job's name is ``stilt-&lt;project&gt;-`` and a suffix Kubernetes picks,</span>
+<span class="sd">    so the same project can be submitted again. Its exit-code rules are</span>
+<span class="sd">    described in this module's docstring.</span>
+<span class="sd">    """</span>
+    <span class="n">slug</span> <span class="o">=</span> <span class="n">label_value</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"app.kubernetes.io/name"</span><span class="p">:</span> <span class="s2">"pystiltctl"</span><span class="p">,</span> <span class="n">PROJECT_LABEL</span><span class="p">:</span> <span class="n">slug</span><span class="p">}</span>
+    <span class="n">resources</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"requests"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"cpu"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">cpus</span><span class="p">)}}</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">memory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">resources</span><span class="p">[</span><span class="s2">"requests"</span><span class="p">][</span><span class="s2">"memory"</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">memory</span>
+        <span class="n">resources</span><span class="p">[</span><span class="s2">"limits"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"memory"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">memory</span><span class="p">}</span>
+    <span class="n">container</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"stilt"</span><span class="p">,</span>
+        <span class="s2">"image"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">image</span><span class="p">,</span>
+        <span class="s2">"args"</span><span class="p">:</span> <span class="n">worker_args</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span>
+        <span class="s2">"env"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"PYSTILT_COMPUTE_ROOT"</span><span class="p">,</span> <span class="s2">"value"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">SCRATCH</span><span class="si">}</span><span class="s2">/runs"</span><span class="p">}],</span>
+        <span class="s2">"resources"</span><span class="p">:</span> <span class="n">resources</span><span class="p">,</span>
+        <span class="s2">"volumeMounts"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"scratch"</span><span class="p">,</span> <span class="s2">"mountPath"</span><span class="p">:</span> <span class="n">SCRATCH</span><span class="p">}]</span>
+        <span class="o">+</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"volume-</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"mountPath"</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">path</span><span class="p">}</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">volumes</span><span class="p">)</span>
+        <span class="p">],</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">secrets</span><span class="p">:</span>
+        <span class="n">container</span><span class="p">[</span><span class="s2">"envFrom"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"secretRef"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">}}</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">spec</span><span class="o">.</span><span class="n">secrets</span><span class="p">]</span>
+    <span class="n">pod</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"restartPolicy"</span><span class="p">:</span> <span class="s2">"Never"</span><span class="p">,</span>
+        <span class="s2">"containers"</span><span class="p">:</span> <span class="p">[</span><span class="n">container</span><span class="p">],</span>
+        <span class="s2">"volumes"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"scratch"</span><span class="p">,</span> <span class="s2">"emptyDir"</span><span class="p">:</span> <span class="p">{}}]</span>
+        <span class="o">+</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"volume-</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"persistentVolumeClaim"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"claimName"</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">claim</span><span class="p">}}</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">volumes</span><span class="p">)</span>
+        <span class="p">],</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">service_account</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pod</span><span class="p">[</span><span class="s2">"serviceAccountName"</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">service_account</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"generateName"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"stilt-</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">-"</span><span class="p">,</span>
+        <span class="s2">"labels"</span><span class="p">:</span> <span class="n">labels</span><span class="p">,</span>
+        <span class="s2">"annotations"</span><span class="p">:</span> <span class="p">{</span><span class="n">PROJECT_ANNOTATION</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">project</span><span class="p">},</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">namespace</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">metadata</span><span class="p">[</span><span class="s2">"namespace"</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">namespace</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_exit</span><span class="p">(</span><span class="n">action</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">code</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the rule that takes *action* when the worker exits with *code*."""</span>
+        <span class="n">rule</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"containerName"</span><span class="p">:</span> <span class="s2">"stilt"</span><span class="p">,</span> <span class="s2">"operator"</span><span class="p">:</span> <span class="s2">"In"</span><span class="p">,</span> <span class="s2">"values"</span><span class="p">:</span> <span class="p">[</span><span class="n">code</span><span class="p">]}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"action"</span><span class="p">:</span> <span class="n">action</span><span class="p">,</span> <span class="s2">"onExitCodes"</span><span class="p">:</span> <span class="n">rule</span><span class="p">}</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"apiVersion"</span><span class="p">:</span> <span class="s2">"batch/v1"</span><span class="p">,</span>
+        <span class="s2">"kind"</span><span class="p">:</span> <span class="s2">"Job"</span><span class="p">,</span>
+        <span class="s2">"metadata"</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
+        <span class="s2">"spec"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"completionMode"</span><span class="p">:</span> <span class="s2">"Indexed"</span><span class="p">,</span>
+            <span class="s2">"completions"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">tasks</span><span class="p">,</span>
+            <span class="s2">"parallelism"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">parallelism</span><span class="p">,</span>
+            <span class="s2">"backoffLimitPerIndex"</span><span class="p">:</span> <span class="n">RETRIES</span><span class="p">,</span>
+            <span class="s2">"podFailurePolicy"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"rules"</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailJob"</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                    <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailIndex"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                    <span class="p">{</span>
+                        <span class="s2">"action"</span><span class="p">:</span> <span class="s2">"Ignore"</span><span class="p">,</span>
+                        <span class="s2">"onPodConditions"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"DisruptionTarget"</span><span class="p">}],</span>
+                    <span class="p">},</span>
+                <span class="p">]</span>
+            <span class="p">},</span>
+            <span class="s2">"ttlSecondsAfterFinished"</span><span class="p">:</span> <span class="n">KEEP_FINISHED</span><span class="p">,</span>
+            <span class="s2">"template"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"metadata"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"labels"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">labels</span><span class="p">)},</span> <span class="s2">"spec"</span><span class="p">:</span> <span class="n">pod</span><span class="p">},</span>
+        <span class="p">},</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="to_yaml">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.to_yaml.html#pystiltctl.job.to_yaml">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_yaml</span><span class="p">(</span><span class="n">job</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return *job* as YAML, in the order it was written."""</span>
+    <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">job</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="create">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.create.html#pystiltctl.job.create">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="n">job</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Create *job* on the cluster ``kubectl`` points at, and return its name.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        If ``kubectl`` is not installed.</span>
+<span class="sd">    RuntimeError</span>
+<span class="sd">        If ``kubectl`` refuses the Job; the message is its error.</span>
+<span class="sd">    """</span>
+    <span class="n">kubectl</span> <span class="o">=</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"kubectl"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">kubectl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">"kubectl is not installed, or not on PATH."</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">kubectl</span><span class="p">,</span> <span class="s2">"create"</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="s2">"-o"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">],</span>
+        <span class="nb">input</span><span class="o">=</span><span class="n">to_yaml</span><span class="p">(</span><span class="n">job</span><span class="p">),</span>
+        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">"kubectl exited with </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">"job.batch/"</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

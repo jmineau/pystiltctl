@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=b7f37435"></script>
+    <script src="_static/documentation_options.js?v=0e827a0c"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -60,7 +60,7 @@
     <link rel="prev" title="Command line" href="cli.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev7+gfee516a59" />
+  <meta name="docsearch:version" content="0.0.1.dev8+g2deba59e9" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -406,12 +406,27 @@
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.push.html">pystiltctl.inputs.push</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.pull.html">pystiltctl.inputs.pull</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.is_local.html">pystiltctl.inputs.is_local</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.local_path.html">pystiltctl.inputs.local_path</a></li>
 </ul>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.worker.run_task.html">pystiltctl.worker.run_task</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.worker.task_index.html">pystiltctl.worker.task_index</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.worker.project_directory.html">pystiltctl.worker.project_directory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.worker.stilt_command.html">pystiltctl.worker.stilt_command</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.job.JobSpec.html">pystiltctl.job.JobSpec</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="_autosummary/pystiltctl.job.Volume.html">pystiltctl.job.Volume</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/pystiltctl.job.Volume.parse.html">pystiltctl.job.Volume.parse</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.job.job_spec.html">pystiltctl.job.job_spec</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.job.manifest.html">pystiltctl.job.manifest</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.job.create.html">pystiltctl.job.create</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.job.to_yaml.html">pystiltctl.job.to_yaml</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.job.default_image.html">pystiltctl.job.default_image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.job.kubernetes_memory.html">pystiltctl.job.kubernetes_memory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.job.label_value.html">pystiltctl.job.label_value</a></li>
 </ul>
 </div>
 </nav></div>
@@ -486,6 +501,9 @@ functions behind it.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.is_local.html#pystiltctl.inputs.is_local" title="pystiltctl.inputs.is_local"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.is_local</span></code></a>(location)</p></td>
 <td><p>Whether <em>location</em> is a path on this machine rather than a URL.</p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.local_path.html#pystiltctl.inputs.local_path" title="pystiltctl.inputs.local_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.local_path</span></code></a>(location)</p></td>
+<td><p>Return a local <em>location</em> as a path, without a <code class="docutils literal notranslate"><span class="pre">file://</span></code> in front.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -505,6 +523,41 @@ functions behind it.</p>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.worker.stilt_command.html#pystiltctl.worker.stilt_command" title="pystiltctl.worker.stilt_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">worker.stilt_command</span></code></a>(directory, task, n_tasks, *)</p></td>
 <td><p>Return the <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code> command line for task <em>task</em> of <em>n_tasks</em>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="kubernetes-job">
+<h2>Kubernetes Job<a class="headerlink" href="#kubernetes-job" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.job.JobSpec.html#pystiltctl.job.JobSpec" title="pystiltctl.job.JobSpec"><code class="xref py py-obj docutils literal notranslate"><span class="pre">job.JobSpec</span></code></a>(project, name, tasks, parallelism)</p></td>
+<td><p>What the Job for a project runs, and with what.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.job.Volume.html#pystiltctl.job.Volume" title="pystiltctl.job.Volume"><code class="xref py py-obj docutils literal notranslate"><span class="pre">job.Volume</span></code></a>(claim, path)</p></td>
+<td><p>A PersistentVolumeClaim mounted in every pod.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.job.job_spec.html#pystiltctl.job.job_spec" title="pystiltctl.job.job_spec"><code class="xref py py-obj docutils literal notranslate"><span class="pre">job.job_spec</span></code></a>(project, *[, tasks, ...])</p></td>
+<td><p>Return the Job for <em>project</em>, from its <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and these overrides.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.job.manifest.html#pystiltctl.job.manifest" title="pystiltctl.job.manifest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">job.manifest</span></code></a>(spec)</p></td>
+<td><p>Return the indexed Job that runs <em>spec</em>, as a Kubernetes manifest.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.job.create.html#pystiltctl.job.create" title="pystiltctl.job.create"><code class="xref py py-obj docutils literal notranslate"><span class="pre">job.create</span></code></a>(job)</p></td>
+<td><p>Create <em>job</em> on the cluster <code class="docutils literal notranslate"><span class="pre">kubectl</span></code> points at, and return its name.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.job.to_yaml.html#pystiltctl.job.to_yaml" title="pystiltctl.job.to_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">job.to_yaml</span></code></a>(job)</p></td>
+<td><p>Return <em>job</em> as YAML, in the order it was written.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.job.default_image.html#pystiltctl.job.default_image" title="pystiltctl.job.default_image"><code class="xref py py-obj docutils literal notranslate"><span class="pre">job.default_image</span></code></a>([version])</p></td>
+<td><p>Return the image matching this pystiltctl.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.job.kubernetes_memory.html#pystiltctl.job.kubernetes_memory" title="pystiltctl.job.kubernetes_memory"><code class="xref py py-obj docutils literal notranslate"><span class="pre">job.kubernetes_memory</span></code></a>(mem)</p></td>
+<td><p>Return a Slurm memory size, such as <code class="docutils literal notranslate"><span class="pre">8G</span></code>, as a Kubernetes quantity.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.job.label_value.html#pystiltctl.job.label_value" title="pystiltctl.job.label_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">job.label_value</span></code></a>(name)</p></td>
+<td><p>Return <em>name</em> as a Kubernetes label value and name prefix.</p></td>
 </tr>
 </tbody>
 </table>
@@ -561,6 +614,7 @@ functions behind it.</p>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-inputs">Project inputs</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#worker">Worker</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#kubernetes-job">Kubernetes Job</a></li>
 </ul>
   </nav></div>
 

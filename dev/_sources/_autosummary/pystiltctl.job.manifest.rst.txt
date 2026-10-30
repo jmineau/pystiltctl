@@ -1,0 +1,6 @@
+﻿pystiltctl.job.manifest
+=======================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: manifest

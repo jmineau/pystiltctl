@@ -1,0 +1,6 @@
+﻿pystiltctl.inputs.local\_path
+=============================
+
+.. currentmodule:: pystiltctl.inputs
+
+.. autofunction:: local_path

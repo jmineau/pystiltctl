@@ -1,0 +1,15 @@
+﻿pystiltctl.job.JobSpec
+======================
+
+.. currentmodule:: pystiltctl.job
+
+.. autoclass:: JobSpec
+   :no-members:
+
+
+
+
+
+
+
+
