@@ -59,7 +59,10 @@ pystiltctl status
 Count a project's simulations by state (``stilt status``), and list the
 Jobs ``pystiltctl submit`` started for it, with their tasks done,
 running, and failed. Without ``kubectl``, or a cluster, it counts the
-simulations only.
+simulations only. For a project on a bucket, the output directory must be
+a bucket too, as for ``submit``: a path would be a folder on this
+machine, not where the pods wrote. ``status`` then exits with 2 and asks
+for ``--output``, which names the bucket the project was submitted with.
 
 pystiltctl worker
 -----------------
