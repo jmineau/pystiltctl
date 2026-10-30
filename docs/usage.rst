@@ -166,6 +166,43 @@ past day by hand, run ``pystiltctl tick PROJECT --now 2026-10-01T00:00``.
 Scheduling a project again replaces its CronJob; ``kubectl delete cronjob
 stilt-<project>`` stops it.
 
+Footprints on a web map
+-----------------------
+
+``--render`` draws each finished footprint for a web map, after each
+hour's run:
+
+.. code-block:: bash
+
+   pystiltctl schedule s3://my-bucket/projects/towers --volume met:/met \
+       --render s3://my-site/footprints/towers
+
+Each footprint becomes a PNG and a JSON beside it, in a folder per day,
+with an ``index.json`` that lists the day's footprints:
+
+.. code-block:: text
+
+   s3://my-site/footprints/towers/2026-10-29/index.json
+   s3://my-site/footprints/towers/2026-10-29/202610291000_-111.8476_40.7663_35.png
+   s3://my-site/footprints/towers/2026-10-29/202610291000_-111.8476_40.7663_35.json
+
+The image is the footprint summed over time, on one log color scale for
+every footprint (1e-5 to 1e-1, in the footprint's units), with the cells
+below the scale left transparent. Its rows are spaced as a web map's, so
+a map can stretch it between its corners. ``bounds`` in the JSON is
+those corners, ``[[south, west], [north, east]]``, as Leaflet takes them:
+
+.. code-block:: javascript
+
+   const base = "https://storage.googleapis.com/my-site/footprints/towers";
+   const day = "2026-10-29";
+   const items = await (await fetch(`${base}/${day}/index.json`)).json();
+   const latest = items[items.length - 1];
+   L.imageOverlay(`${base}/${day}/${latest.receptor}.png`, latest.bounds).addTo(map);
+
+The folder must be readable by the browser: public, with CORS allowing
+your site's address. A footprint already drawn is not drawn again.
+
 Check on it
 -----------
 

@@ -133,3 +133,7 @@ def test_cli_worker_without_an_index(project, monkeypatch, execs):
     result = CliRunner().invoke(app, ["worker", str(project), "--tasks", "2"])
     assert result.exit_code == 2
     assert "JOB_COMPLETION_INDEX" in result.output
+
+
+def test_run_returns_the_commands_exit_code():
+    assert worker.run([sys.executable, "-c", "raise SystemExit(3)"]) == 3

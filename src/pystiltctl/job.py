@@ -371,16 +371,18 @@ def manifest(spec: JobSpec) -> dict[str, Any]:
     }
 
 
-def tick_args(spec: JobSpec, delay: int) -> list[str]:
+def tick_args(spec: JobSpec, delay: int, render: str | None = None) -> list[str]:
     """Return the command line a schedule's pod runs each hour."""
     args = ["pystiltctl", "tick", spec.project, "--delay", str(delay)]
     args += ["--cpus", str(spec.cpus), "--workdir", f"{SCRATCH}/project"]
     if spec.output is not None:
         args += ["--output", spec.output]
+    if render is not None:
+        args += ["--render", render]
     return args
 
 
-def cron_job(spec: JobSpec, delay: int) -> dict[str, Any]:
+def cron_job(spec: JobSpec, delay: int, render: str | None = None) -> dict[str, Any]:
     """
     Return the CronJob that runs ``pystiltctl tick`` for *spec* every hour.
 
@@ -390,7 +392,7 @@ def cron_job(spec: JobSpec, delay: int) -> dict[str, Any]:
     CronJob is named ``stilt-<project>``, so scheduling a project again
     replaces it.
     """
-    body = _job_body(spec, tick_args(spec, delay), completions=1, parallelism=1)
+    body = _job_body(spec, tick_args(spec, delay, render), completions=1, parallelism=1)
     return {
         "apiVersion": "batch/v1",
         "kind": "CronJob",

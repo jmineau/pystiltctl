@@ -25,6 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "fsspec>=2024.2",
+    "matplotlib>=3.8",  # footprint images for web maps (pystiltctl.render)
     "pystilt>=0.1.0a26",
     "typer>=0.9",
 ]

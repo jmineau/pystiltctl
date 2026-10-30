@@ -115,6 +115,12 @@ Namespace = Annotated[
 DryRun = Annotated[
     bool, typer.Option("--dry-run", help="Print the manifest instead of starting it.")
 ]
+Render = Annotated[
+    str | None,
+    typer.Option(
+        help="Draw the footprints for a web map here, such as s3://my-site/footprints."
+    ),
+]
 Delay = Annotated[
     int,
     typer.Option(
@@ -192,6 +198,7 @@ def submit(
 def schedule(
     project: Project,
     delay: Delay = schedules.DELAY_HOURS,
+    render: Render = None,
     cpus: Cpus = None,
     memory: Memory = None,
     image: Image = None,
@@ -232,7 +239,7 @@ def schedule(
         )
     except (ValueError, FileNotFoundError) as error:
         _fail(str(error))
-    manifest = job.cron_job(spec, delay)
+    manifest = job.cron_job(spec, delay, render)
     if dry_run:
         typer.echo(job.to_yaml(manifest), nl=False)
         return
@@ -260,6 +267,7 @@ def tick(
         int | None, typer.Option(min=1, help="Receptors to run at once.")
     ] = None,
     output: Output = None,
+    render: Render = None,
     workdir: Annotated[
         Path, typer.Option(help="Where a URL's inputs are copied.")
     ] = worker.WORKDIR,
@@ -267,17 +275,25 @@ def tick(
     """
     Add the hours now due for the project's sites, then run its last day.
 
-    What each pod of a schedule runs. Exits with stilt run's code.
+    What each pod of a schedule runs. With --render, then draws the day's
+    finished footprints for a web map. Exits with stilt run's code.
     """
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:
-        schedules.tick(
-            project, delay=delay, now=now, cpus=cpus, output=output, workdir=workdir
+        code = schedules.tick(
+            project,
+            delay=delay,
+            now=now,
+            cpus=cpus,
+            output=output,
+            render=render,
+            workdir=workdir,
         )
     except (ValueError, FileNotFoundError) as error:
         _fail(str(error))
     except OSError as error:
         _fail(f"cannot copy the project's inputs from {project}: {error}", EXIT_RETRY)
+    raise typer.Exit(code=code)
 
 
 @app.command(name="status")

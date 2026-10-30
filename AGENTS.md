@@ -49,11 +49,11 @@ complete, 1 some failed, 2 bad command line, 3 stopped).
     their `podFailurePolicy`, never a loop here.
   - `schedule.py`: `tick`, each hour's pod: `sites.csv` receptors via `add_receptors`,
     `receptors.csv` put back, then `stilt run --receptors` on the last day.
+  - `render.py`: PNG + JSON per footprint for web maps (web Mercator rows, fixed log scale).
   - `status.py`: `stilt status --json` plus the Jobs labeled `pystiltctl/project`.
 - `tests/`: pytest suite; `tests/kubernetes/`, the end-to-end test on kind (its README).
 - `docs/`: Sphinx site (PyData theme). `docs/api.rst` lists the API by topic; each class gets a page with tables of its attributes and methods, and each member a page of its own (`docs/_templates/autosummary/`, `docs/_ext/api_pages.py`).
   Its examples run when the docs build (see [Examples in the docs](#examples-in-the-docs)).
-- `dev/`: the maintainer's local notes, excluded from git through `.git/info/exclude`.
 - `Dockerfile`: the image every pod runs (how to build it is in its header):
   `uv.lock` with the `s3` and `gcs` extras on `python:3.13-slim`, `tini` as
   process 1; PYSTILT's wheel carries a static `hycs_std`. `image.yml` (not a
