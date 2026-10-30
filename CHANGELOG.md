@@ -17,6 +17,9 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
   tasks, CPUs and memory from `config.yaml`'s `execution` section unless given.
   A stopped task is retried, a preempted pod is retried without counting, and
   a task whose simulations failed is not. `--dry-run` prints the Job.
+- `pystiltctl status` counts a project's simulations by state (`stilt status`)
+  and lists its Jobs on the cluster, with their tasks done, running and failed.
+  `--json` prints the same for a program.
 - The `s3` and `gcs` extras, for `s3://` and `gs://` buckets.
 - A container image, `ghcr.io/jmineau/pystiltctl`, with PYSTILT, pystiltctl and
   the bucket libraries: `:latest` for the latest release, `:main` for main.

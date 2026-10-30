@@ -104,6 +104,32 @@ command line (2), which stops the whole Job. Fix the cause and submit
 again: finished simulations are skipped, so only the rest run. The Job,
 and its pods' logs, stay on the cluster for a week.
 
+Check on it
+-----------
+
+.. code-block:: bash
+
+   pystiltctl status s3://my-bucket/projects/my_project
+
+.. code-block:: text
+
+   Project: s3://my-bucket/projects/my_project
+   Output: s3://my-bucket/output
+   Simulations:  total=2000  complete=1874  failed=6  interrupted=0  pending=120
+     failed: met_missing 6
+   Jobs:
+     stilt-my-project-x7k2p  running  14 of 20 tasks done, 5 running, 1 failed (tasks 7)  started 2026-10-29T16:00:00Z
+
+The simulation counts are ``stilt status``'s, read from the output
+directory, so they are right whatever the Jobs did. ``failed`` counts
+failed simulations by reason; each one's ``.failure.yaml``, under
+``logs/`` in the output directory, says why. The Jobs are the ones
+``pystiltctl submit`` started for this project (by the
+``pystiltctl/project`` label), with how many of their tasks are done,
+running, and failed. A failed task is one whose simulations failed:
+``kubectl logs`` on its pod shows which. ``--json`` prints the same for a
+program to read.
+
 What each pod runs
 ------------------
 

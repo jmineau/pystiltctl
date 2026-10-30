@@ -14,7 +14,7 @@ import os
 import sys
 from pathlib import Path
 
-from pystiltctl.inputs import is_local, local_path, pull
+from pystiltctl.inputs import is_local, local_path, project_name, pull
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +57,7 @@ def project_directory(project: str, workdir: str | Path) -> Path:
     """
     if is_local(project):
         return local_path(project)
-    name = project.rstrip("/").rsplit("/", 1)[-1]
-    return pull(project, Path(workdir) / name)
+    return pull(project, Path(workdir) / project_name(project))
 
 
 def stilt_command(

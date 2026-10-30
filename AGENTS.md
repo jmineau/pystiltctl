@@ -62,6 +62,9 @@ Rules that keep the line:
     settings (through `stilt.Project`), `manifest` writes the Job as a dict, and
     `create` hands it to `kubectl create`. Retries are the Job's `podFailurePolicy`
     on the worker's exit code; there is no retry loop here.
+  - `status.py`: `stilt status --json` (a subprocess, on the pulled inputs) and the
+    project's Jobs from `kubectl get jobs -l pystiltctl/project=...`. Completion is
+    PYSTILT's count; the Jobs only say what ran.
   - `worker.py`: what a pod runs: pull the inputs, then `os.execv` into
     `python -m stilt run --task I/N`, so the stop signal and the exit code are
     `stilt`'s own.

@@ -49,6 +49,18 @@ or a folder at the same path here and in the pods.
 ``--dry-run``
    Print the Job as YAML instead of creating it.
 
+pystiltctl status
+-----------------
+
+.. code-block:: text
+
+   pystiltctl status PROJECT [--output URL] [--namespace NS] [--json]
+
+Count a project's simulations by state (``stilt status``), and list the
+Jobs ``pystiltctl submit`` started for it, with their tasks done,
+running, and failed. Without ``kubectl``, or a cluster, it counts the
+simulations only.
+
 pystiltctl worker
 -----------------
 
