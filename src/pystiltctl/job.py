@@ -342,7 +342,12 @@ def _job_body(
             "rules": [
                 on_exit("FailJob", 2),
                 on_exit("FailIndex", 1),
-                {"action": "Ignore", "onPodConditions": [{"type": "DisruptionTarget"}]},
+                # `status` is required in a CronJob's template; the API server
+                # fills it in only for a Job created on its own.
+                {
+                    "action": "Ignore",
+                    "onPodConditions": [{"type": "DisruptionTarget", "status": "True"}],
+                },
             ]
         },
         "ttlSecondsAfterFinished": KEEP_FINISHED,
