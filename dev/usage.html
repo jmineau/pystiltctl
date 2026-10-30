@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=924d223f"></script>
+    <script src="_static/documentation_options.js?v=b7f37435"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -60,7 +60,7 @@
     <link rel="prev" title="Installation" href="installation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev6+gc0d62d769" />
+  <meta name="docsearch:version" content="0.0.1.dev7+gfee516a59" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -464,6 +464,19 @@
 one share of the receptors, <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span> <span class="pre">I/N</span></code>, and writes its
 results straight to a bucket. PYSTILT decides what is finished from those
 files, so running a project again only fills in what is missing.</p>
+<section id="the-container-image">
+<h2>The container image<a class="headerlink" href="#the-container-image" title="Link to this heading">#</a></h2>
+<p>Every pod runs the pystiltctl image. It has PYSTILT (with HYSPLIT),
+pystiltctl, and what <code class="docutils literal notranslate"><span class="pre">s3://</span></code> and <code class="docutils literal notranslate"><span class="pre">gs://</span></code> buckets need:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/jmineau/pystiltctl:latest<span class="w">   </span><span class="c1"># the latest release</span>
+docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/jmineau/pystiltctl:main<span class="w">     </span><span class="c1"># the latest code on main</span>
+</pre></div>
+</div>
+<p>To build it yourself, from a clone of the repository:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>build<span class="w"> </span>--build-arg<span class="w"> </span><span class="nv">VERSION</span><span class="o">=</span><span class="m">0</span>.1.0<span class="w"> </span>-t<span class="w"> </span>pystiltctl<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
 <section id="put-the-project-on-a-bucket">
 <h2>Put the project on a bucket<a class="headerlink" href="#put-the-project-on-a-bucket" title="Link to this heading">#</a></h2>
 <p>Pods cannot see your computer, so the project’s inputs go to a bucket
@@ -577,6 +590,7 @@ A retry continues where it stopped.</p></td>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-container-image">The container image</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#put-the-project-on-a-bucket">Put the project on a bucket</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-each-pod-runs">What each pod runs</a></li>
 </ul>
