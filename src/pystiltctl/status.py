@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from pystiltctl.inputs import is_local, local_path, project_key, project_name, pull
-from pystiltctl.job import PROJECT_ANNOTATION, PROJECT_LABEL, label_value
+from pystiltctl.job import PROJECT_ANNOTATION, PROJECT_LABEL, job_spec, label_value
 
 
 def count_indexes(indexes: str | None) -> int:
@@ -137,9 +137,20 @@ def simulations(project: str, *, output: str | None = None) -> dict[str, Any]:
     ------
     FileNotFoundError
         If there is no project at *project*.
+    ValueError
+        If the project is on a bucket and *output* is not given, but the
+        output directory in ``config.yaml`` is a path, as for
+        :func:`pystiltctl.job.job_spec`: the pods' results are not on this
+        machine, so there is nothing here to count. Give *output*.
     RuntimeError
         If ``stilt status`` fails; the message is its error.
     """
+    if not is_local(project) and output is None:
+        # The check ``submit`` makes, in the one place that makes it, so that
+        # status refuses the config's path as submit does, with the same
+        # message. An --output given is the reader's choice (a bucket, or a
+        # local copy of one): count it.
+        job_spec(project)
     with tempfile.TemporaryDirectory() as tmp:
         directory = (
             local_path(project)

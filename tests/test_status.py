@@ -309,6 +309,47 @@ def test_simulations_of_a_pushed_project(project, bucket):
     assert data["simulations"]["total"] == 0
 
 
+def test_simulations_refuses_output_left_in_the_pods(project, bucket):
+    """A bucket project whose output is a path has no results here to count (#13)."""
+    push(project, bucket)  # config.yaml has no output, so ./output
+    with pytest.raises(ValueError, match="output directory is a path"):
+        status.simulations(bucket)
+
+
+def test_cli_status_refuses_what_submit_refuses(project, bucket):
+    push(project, bucket)
+    submit = CliRunner().invoke(app, ["submit", bucket, "--dry-run"])
+    result = CliRunner().invoke(app, ["status", bucket])
+    assert submit.exit_code == result.exit_code == 2
+    assert result.output == submit.output
+    assert "--output s3://" in result.output
+
+
+def test_cli_status_counts_the_output_given(project, bucket, tmp_path):
+    """--output is the reader's choice: a bucket, or a local copy of one (#13)."""
+    push(project, bucket)  # config.yaml has no output, so ./output
+    copy = tmp_path / "copy_of_output"
+    copy.mkdir()
+    for given in ("memory://results/output", str(copy)):
+        result = CliRunner().invoke(app, ["status", bucket, "--output", given])
+        assert result.exit_code == 0, result.output
+        assert f"Output: {given}" in result.output
+
+
+def test_cli_status_counts_a_bucket_output_in_config(project, bucket, tmp_path):
+    config = project / "config.yaml"
+    config.write_text(config.read_text() + "output: memory://results/output\n")
+    push(project, bucket)
+    result = CliRunner().invoke(app, ["status", bucket])
+    assert result.exit_code == 0, result.output
+    assert "Output: memory://results/output" in result.output
+    copy = tmp_path / "copy_of_output"
+    copy.mkdir()
+    result = CliRunner().invoke(app, ["status", bucket, "--output", str(copy)])
+    assert result.exit_code == 0, result.output
+    assert f"Output: {copy}" in result.output
+
+
 def test_simulations_no_project(bucket):
     with pytest.raises(FileNotFoundError):
         status.simulations(bucket)

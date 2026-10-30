@@ -195,7 +195,7 @@ def status_command(
     """
     try:
         data = status.simulations(project, output=output)
-    except FileNotFoundError as error:
+    except (ValueError, FileNotFoundError) as error:
         _fail(str(error))
     except RuntimeError as error:
         _fail(f"stilt status failed: {error}", EXIT_RETRY)
