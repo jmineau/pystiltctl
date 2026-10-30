@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import logging
 import os
+import signal
+import subprocess
 import sys
 from pathlib import Path
 
@@ -106,6 +108,30 @@ def become(command: list[str]) -> None:
     sys.stdout.flush()
     sys.stderr.flush()
     os.execv(command[0], command)
+
+
+def run(command: list[str]) -> int:
+    """
+    Run *command* and return its exit code, passing this process's stop signals on to it.
+
+    For when something must happen after ``stilt`` finishes, so this
+    process cannot :func:`become` it. A stop signal (``SIGTERM`` from
+    Kubernetes, or ``SIGINT``) is sent on to the command, which stops its
+    runs cleanly and exits with 3.
+    """
+    logger.info("Running %s", " ".join(command[2:]))
+    child = subprocess.Popen(command)
+
+    def forward(signum: int, frame: object) -> None:
+        """Send the signal this process got on to the command."""
+        child.send_signal(signum)
+
+    previous = {s: signal.signal(s, forward) for s in (signal.SIGTERM, signal.SIGINT)}
+    try:
+        return child.wait()
+    finally:
+        for s, handler in previous.items():
+            signal.signal(s, handler)
 
 
 def run_task(

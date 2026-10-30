@@ -274,3 +274,31 @@ def test_cli_tick_says_which_way_a_failed_pull_went(bucket, tmp_path, monkeypatc
     result = CliRunner().invoke(app, ["tick", bucket, "--workdir", str(tmp_path)])
     assert result.exit_code == 3
     assert "cannot copy the project's inputs from memory://" in result.output
+
+
+def test_tick_with_render_runs_stilt_then_draws(
+    sited, bucket, tmp_path, monkeypatch, execs
+):
+    ran, drew = [], []
+    monkeypatch.setattr(schedule, "run", lambda command: ran.append(command) or 1)
+    monkeypatch.setattr(
+        schedule.renderer,
+        "render",
+        lambda directory, url, ids, output=None: drew.append((url, len(ids))),
+    )
+    push(sited, bucket)
+    code = schedule.tick(
+        bucket, now=NOW, render="memory://site/footprints", workdir=tmp_path
+    )
+    assert code == 1
+    assert execs == []
+    assert "--receptors" in ran[0]
+    assert drew == [("memory://site/footprints", 2 * schedule.WINDOW_HOURS)]
+
+
+def test_cron_job_passes_render_on(sited):
+    spec = job.job_spec(str(sited))
+    args = job.cron_job(spec, delay=8, render="s3://site/f")["spec"]["jobTemplate"][
+        "spec"
+    ]["template"]["spec"]["containers"][0]["args"]
+    assert args[-2:] == ["--render", "s3://site/f"]
