@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=f01eff12"></script>
+    <script src="_static/documentation_options.js?v=1fdc1fa9"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -56,11 +56,11 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Command line" href="cli.html" />
+    <link rel="next" title="Try It On Your Computer" href="kind.html" />
     <link rel="prev" title="Installation" href="installation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev10+g70161810c" />
+  <meta name="docsearch:version" content="0.0.1.dev11+g9e3e63089" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -152,6 +152,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="#" aria-current="page">
     Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="kind.html">
+    Try It On Your Computer
   </a>
 </li>
 
@@ -301,6 +308,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="#" aria-current="page">
     Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="kind.html">
+    Try It On Your Computer
   </a>
 </li>
 
@@ -463,7 +477,8 @@
 <p>pystiltctl runs a PYSTILT project on a Kubernetes cluster. Each pod runs
 one share of the receptors, <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span> <span class="pre">I/N</span></code>, and writes its
 results straight to a bucket. PYSTILT decides what is finished from those
-files, so running a project again only fills in what is missing.</p>
+files, so running a project again only fills in what is missing.
+<a class="reference internal" href="kind.html"><span class="doc">Try It On Your Computer</span></a> runs a small project this way on your own computer.</p>
 <section id="the-container-image">
 <h2>The container image<a class="headerlink" href="#the-container-image" title="Link to this heading">#</a></h2>
 <p>Every pod runs the pystiltctl image. It has PYSTILT (with HYSPLIT),
@@ -581,6 +596,11 @@ failed simulations by reason; each one’s <code class="docutils literal notrans
 running, and failed. A failed task is one whose simulations failed:
 <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">logs</span></code> on its pod shows which. <code class="docutils literal notranslate"><span class="pre">--json</span></code> prints the same for a
 program to read.</p>
+<p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> reads the header of the first met file to find the
+results, so it needs the met where you run it, at the path
+<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> names. A met that the pods download (<code class="docutils literal notranslate"><span class="pre">download:</span> <span class="pre">hrrr</span></code>)
+needs nothing. A met on a volume must be at the same path on your
+computer too.</p>
 </section>
 <section id="what-each-pod-runs">
 <h2>What each pod runs<a class="headerlink" href="#what-each-pod-runs" title="Link to this heading">#</a></h2>
@@ -646,11 +666,11 @@ A retry continues where it stopped.</p></td>
       </div>
     </a>
     <a class="right-next"
-       href="cli.html"
+       href="kind.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Command line</p>
+        <p class="prev-next-title">Try It On Your Computer</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

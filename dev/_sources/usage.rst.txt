@@ -5,6 +5,7 @@ pystiltctl runs a PYSTILT project on a Kubernetes cluster. Each pod runs
 one share of the receptors, ``stilt run --task I/N``, and writes its
 results straight to a bucket. PYSTILT decides what is finished from those
 files, so running a project again only fills in what is missing.
+:doc:`kind` runs a small project this way on your own computer.
 
 The container image
 -------------------
@@ -129,6 +130,12 @@ failed simulations by reason; each one's ``.failure.yaml``, under
 running, and failed. A failed task is one whose simulations failed:
 ``kubectl logs`` on its pod shows which. ``--json`` prints the same for a
 program to read.
+
+``stilt status`` reads the header of the first met file to find the
+results, so it needs the met where you run it, at the path
+``config.yaml`` names. A met that the pods download (``download: hrrr``)
+needs nothing. A met on a volume must be at the same path on your
+computer too.
 
 What each pod runs
 ------------------
