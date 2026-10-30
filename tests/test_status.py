@@ -128,6 +128,22 @@ def test_simulations_of_a_pushed_project(project, bucket):
     assert data["simulations"]["total"] == 0
 
 
+def test_simulations_refuses_output_left_in_the_pods(project, bucket):
+    """A bucket project whose output is a path has no results here to count (#13)."""
+    push(project, bucket)  # config.yaml has no output, so ./output
+    with pytest.raises(ValueError, match="output directory is a path"):
+        status.simulations(bucket)
+
+
+def test_cli_status_refuses_what_submit_refuses(project, bucket):
+    push(project, bucket)
+    submit = CliRunner().invoke(app, ["submit", bucket, "--dry-run"])
+    result = CliRunner().invoke(app, ["status", bucket])
+    assert submit.exit_code == result.exit_code == 2
+    assert result.output == submit.output
+    assert "--output s3://" in result.output
+
+
 def test_simulations_no_project(bucket):
     with pytest.raises(FileNotFoundError):
         status.simulations(bucket)
