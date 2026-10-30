@@ -31,3 +31,24 @@ def project(tmp_path):
 def bucket():
     """A URL on fsspec's in-memory store, unique to the test."""
     return f"memory://bucket-{uuid.uuid4().hex}/projects/my_project"
+
+
+@pytest.fixture
+def execs(monkeypatch):
+    """Record the command the worker would become, instead of becoming it."""
+    from pystiltctl import worker
+
+    calls = []
+    monkeypatch.setattr(worker.os, "execv", lambda path, args: calls.append(args))
+    return calls
+
+
+@pytest.fixture
+def sited(project):
+    """The project with two sites, one with a name and an altitude reference."""
+    (project / "sites.csv").write_text(
+        "name,longitude,latitude,altitude,altitude_ref\n"
+        "wbb,-111.8476,40.7663,35,agl\n"
+        "dbk,-112.1155,40.5385,5,\n"
+    )
+    return project

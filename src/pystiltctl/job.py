@@ -270,16 +270,34 @@ def worker_args(spec: JobSpec) -> list[str]:
     return args
 
 
-def manifest(spec: JobSpec) -> dict[str, Any]:
-    """
-    Return the indexed Job that runs *spec*, as a Kubernetes manifest.
+def _labels(spec: JobSpec) -> dict[str, str]:
+    """Return the labels every object for *spec*'s project carries."""
+    return {
+        "app.kubernetes.io/name": "pystiltctl",
+        PROJECT_LABEL: label_value(spec.name),
+    }
 
-    The Job's name is ``stilt-<project>-`` and a suffix Kubernetes picks,
-    so the same project can be submitted again. Its exit-code rules are
-    described in this module's docstring.
+
+def _metadata(spec: JobSpec, **name: str) -> dict[str, Any]:
+    """Return an object's metadata: *name* (``name`` or ``generateName``), labels, namespace."""
+    metadata: dict[str, Any] = {
+        **name,
+        "labels": _labels(spec),
+        "annotations": {PROJECT_ANNOTATION: spec.project},
+    }
+    if spec.namespace is not None:
+        metadata["namespace"] = spec.namespace
+    return metadata
+
+
+def _job_body(
+    spec: JobSpec, args: list[str], completions: int, parallelism: int
+) -> dict[str, Any]:
     """
-    slug = label_value(spec.name)
-    labels = {"app.kubernetes.io/name": "pystiltctl", PROJECT_LABEL: slug}
+    Return the ``spec`` of an indexed Job whose pods run *args*.
+
+    The exit-code rules are described in this module's docstring.
+    """
     resources: dict[str, Any] = {"requests": {"cpu": str(spec.cpus)}}
     if spec.memory is not None:
         resources["requests"]["memory"] = spec.memory
@@ -287,7 +305,7 @@ def manifest(spec: JobSpec) -> dict[str, Any]:
     container: dict[str, Any] = {
         "name": "stilt",
         "image": spec.image,
-        "args": worker_args(spec),
+        "args": args,
         "env": [{"name": "PYSTILT_COMPUTE_ROOT", "value": f"{SCRATCH}/runs"}],
         "resources": resources,
         "volumeMounts": [{"name": "scratch", "mountPath": SCRATCH}]
@@ -309,13 +327,6 @@ def manifest(spec: JobSpec) -> dict[str, Any]:
     }
     if spec.service_account is not None:
         pod["serviceAccountName"] = spec.service_account
-    metadata: dict[str, Any] = {
-        "generateName": f"stilt-{slug}-",
-        "labels": labels,
-        "annotations": {PROJECT_ANNOTATION: spec.project},
-    }
-    if spec.namespace is not None:
-        metadata["namespace"] = spec.namespace
 
     def on_exit(action: str, code: int) -> dict[str, Any]:
         """Return the rule that takes *action* when the worker exits with *code*."""
@@ -323,26 +334,70 @@ def manifest(spec: JobSpec) -> dict[str, Any]:
         return {"action": action, "onExitCodes": rule}
 
     return {
+        "completionMode": "Indexed",
+        "completions": completions,
+        "parallelism": parallelism,
+        "backoffLimitPerIndex": RETRIES,
+        "podFailurePolicy": {
+            "rules": [
+                on_exit("FailJob", 2),
+                on_exit("FailIndex", 1),
+                {"action": "Ignore", "onPodConditions": [{"type": "DisruptionTarget"}]},
+            ]
+        },
+        "ttlSecondsAfterFinished": KEEP_FINISHED,
+        "template": {"metadata": {"labels": _labels(spec)}, "spec": pod},
+    }
+
+
+def manifest(spec: JobSpec) -> dict[str, Any]:
+    """
+    Return the indexed Job that runs *spec*, as a Kubernetes manifest.
+
+    The Job's name is ``stilt-<project>-`` and a suffix Kubernetes picks,
+    so the same project can be submitted again. Its exit-code rules are
+    described in this module's docstring.
+    """
+    return {
         "apiVersion": "batch/v1",
         "kind": "Job",
-        "metadata": metadata,
+        "metadata": _metadata(spec, generateName=f"stilt-{label_value(spec.name)}-"),
+        "spec": _job_body(spec, worker_args(spec), spec.tasks, spec.parallelism),
+    }
+
+
+def tick_args(spec: JobSpec, delay: int) -> list[str]:
+    """Return the command line a schedule's pod runs each hour."""
+    args = ["pystiltctl", "tick", spec.project, "--delay", str(delay)]
+    args += ["--cpus", str(spec.cpus), "--workdir", f"{SCRATCH}/project"]
+    if spec.output is not None:
+        args += ["--output", spec.output]
+    return args
+
+
+def cron_job(spec: JobSpec, delay: int) -> dict[str, Any]:
+    """
+    Return the CronJob that runs ``pystiltctl tick`` for *spec* every hour.
+
+    One pod at a time (a tick that is still running delays the next), at
+    15 minutes past the hour. Its Jobs carry the project's label, so
+    ``pystiltctl status`` lists them, and the last day's are kept. The
+    CronJob is named ``stilt-<project>``, so scheduling a project again
+    replaces it.
+    """
+    body = _job_body(spec, tick_args(spec, delay), completions=1, parallelism=1)
+    return {
+        "apiVersion": "batch/v1",
+        "kind": "CronJob",
+        "metadata": _metadata(spec, name=f"stilt-{label_value(spec.name)}"),
         "spec": {
-            "completionMode": "Indexed",
-            "completions": spec.tasks,
-            "parallelism": spec.parallelism,
-            "backoffLimitPerIndex": RETRIES,
-            "podFailurePolicy": {
-                "rules": [
-                    on_exit("FailJob", 2),
-                    on_exit("FailIndex", 1),
-                    {
-                        "action": "Ignore",
-                        "onPodConditions": [{"type": "DisruptionTarget"}],
-                    },
-                ]
-            },
-            "ttlSecondsAfterFinished": KEEP_FINISHED,
-            "template": {"metadata": {"labels": dict(labels)}, "spec": pod},
+            "schedule": "15 * * * *",
+            "timeZone": "Etc/UTC",
+            "concurrencyPolicy": "Forbid",
+            "startingDeadlineSeconds": 1800,
+            "successfulJobsHistoryLimit": 24,
+            "failedJobsHistoryLimit": 24,
+            "jobTemplate": {"metadata": {"labels": _labels(spec)}, "spec": body},
         },
     }
 
@@ -363,12 +418,33 @@ def create(job: dict[str, Any]) -> str:
     RuntimeError
         If ``kubectl`` refuses the Job; the message is its error.
     """
+    return _kubectl("create", job)
+
+
+def apply(manifest: dict[str, Any]) -> str:
+    """
+    Create *manifest*, or update it if it exists, and return its name.
+
+    Used for a schedule's CronJob, which has a fixed name.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``kubectl`` is not installed.
+    RuntimeError
+        If ``kubectl`` refuses it; the message is its error.
+    """
+    return _kubectl("apply", manifest)
+
+
+def _kubectl(verb: str, manifest: dict[str, Any]) -> str:
+    """Run ``kubectl <verb> -f -`` on *manifest* and return the object's name."""
     kubectl = shutil.which("kubectl")
     if kubectl is None:
         raise FileNotFoundError("kubectl is not installed, or not on PATH.")
     result = subprocess.run(
-        [kubectl, "create", "-f", "-", "-o", "name"],
-        input=to_yaml(job),
+        [kubectl, verb, "-f", "-", "-o", "name"],
+        input=to_yaml(manifest),
         capture_output=True,
         text=True,
         check=False,
@@ -377,4 +453,4 @@ def create(job: dict[str, Any]) -> str:
         raise RuntimeError(
             result.stderr.strip() or f"kubectl exited with {result.returncode}"
         )
-    return result.stdout.strip().removeprefix("job.batch/")
+    return result.stdout.strip().split("/", 1)[-1]

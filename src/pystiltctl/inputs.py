@@ -2,7 +2,8 @@
 Copy a project's inputs to and from a bucket.
 
 A PYSTILT project's inputs are its ``config.yaml``, its ``receptors.csv``
-and its ``tables/`` folder. Pods on a cluster read them from a bucket (or
+and its ``tables/`` folder, and a ``sites.csv`` when the project runs on a
+schedule (:mod:`pystiltctl.schedule`). Pods on a cluster read them from a bucket (or
 any folder fsspec can reach), so they are copied there first with
 :func:`push`, and each pod copies them back to its own disk with
 :func:`pull`. The output directory is not copied: PYSTILT writes results
@@ -22,6 +23,8 @@ logger = logging.getLogger(__name__)
 INPUT_FILES = ("config.yaml", "receptors.csv")
 #: The folder of extra input tables (``project.add_table``), copied when present.
 TABLES = "tables"
+#: The places a schedule adds a receptor for each hour, copied when present.
+SITES = "sites.csv"
 
 
 def is_local(location: str | Path) -> bool:
@@ -70,7 +73,7 @@ def push(project: str | Path, url: str) -> list[str]:
     Copy a project's inputs to *url*.
 
     Copies ``config.yaml``, ``receptors.csv`` and, when the project has
-    one, ``tables/``. Files already at *url* are replaced; files there that
+    them, ``tables/`` and ``sites.csv``. Files already at *url* are replaced; files there that
     the project no longer has are left alone. Nothing under the project's
     output directory is copied.
 
@@ -102,9 +105,10 @@ def push(project: str | Path, url: str) -> list[str]:
     root = root.rstrip("/")
     fs.makedirs(root, exist_ok=True)
     copied = []
-    for name in INPUT_FILES:
-        fs.put_file(str(project / name), f"{root}/{name}")
-        copied.append(name)
+    for name in (*INPUT_FILES, SITES):
+        if (project / name).is_file():
+            fs.put_file(str(project / name), f"{root}/{name}")
+            copied.append(name)
     for path in sorted((project / TABLES).rglob("*")):
         if path.is_file():
             name = path.relative_to(project).as_posix()
@@ -121,8 +125,8 @@ def pull(url: str, directory: str | Path) -> Path:
     """
     Copy a project's inputs from *url* into *directory*.
 
-    The reverse of :func:`push`: ``config.yaml``, ``receptors.csv`` and
-    ``tables/``, when *url* has one.
+    The reverse of :func:`push`: ``config.yaml``, ``receptors.csv``, and
+    ``tables/`` and ``sites.csv`` when *url* has them.
 
     Parameters
     ----------
@@ -150,6 +154,8 @@ def pull(url: str, directory: str | Path) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     for name in INPUT_FILES:
         fs.get_file(f"{root}/{name}", str(directory / name))
+    if fs.isfile(f"{root}/{SITES}"):
+        fs.get_file(f"{root}/{SITES}", str(directory / SITES))
     if fs.isdir(f"{root}/{TABLES}"):
         for remote in fs.find(f"{root}/{TABLES}"):
             local = directory / remote.removeprefix(f"{root}/")
@@ -157,3 +163,20 @@ def pull(url: str, directory: str | Path) -> Path:
             fs.get_file(remote, str(local))
     logger.info("Copied the inputs at %s to %s", url, directory)
     return directory
+
+
+def put(directory: str | Path, url: str, name: str) -> None:
+    """
+    Copy one file of a project folder back to *url*, such as a grown ``receptors.csv``.
+
+    Parameters
+    ----------
+    directory : str or Path
+        The local project folder.
+    url : str
+        The project's location, as :func:`push` copied it there.
+    name : str
+        The file, relative to the project folder.
+    """
+    fs, root = fsspec.core.url_to_fs(url)
+    fs.put_file(str(Path(directory) / name), f"{root.rstrip('/')}/{name}")

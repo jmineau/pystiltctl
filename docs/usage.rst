@@ -105,6 +105,67 @@ command line (2), which stops the whole Job. Fix the cause and submit
 again: finished simulations are skipped, so only the rest run. The Job,
 and its pods' logs, stay on the cluster for a week.
 
+Run it every hour
+-----------------
+
+A project can also run on its own, every hour, for fixed sites such as
+towers. Its ``sites.csv`` lists them, one per line:
+
+.. code-block:: text
+
+   name,longitude,latitude,altitude
+   wbb,-111.8476,40.7663,35
+   dbk,-112.1155,40.5385,5
+
+``altitude`` is meters above ground (add an ``altitude_ref`` column with
+``msl`` for above sea level); other columns, such as ``name``, are yours.
+Use met that downloads itself, cropped to your region, on a volume that
+keeps it between hours:
+
+.. code-block:: yaml
+
+   # config.yaml
+   mets:
+     hrrr:
+       download: hrrr
+       directory: /met
+       subgrid_enable: true
+       subgrid_bounds: {xmin: -114.0, xmax: -110.0, ymin: 39.0, ymax: 42.0}
+
+Then push the project and schedule it:
+
+.. code-block:: bash
+
+   pystiltctl push ./towers s3://my-bucket/projects/towers
+   pystiltctl schedule s3://my-bucket/projects/towers --secret bucket-creds --volume met:/met
+
+That starts a Kubernetes CronJob. Once an hour, at 15 past, one pod runs
+``pystiltctl tick``, which:
+
+1. adds a receptor for each site at each hour of the last day that is at
+   least ``--delay`` hours old (8 by default) to ``receptors.csv``, and
+   writes it back to the bucket;
+2. runs the receptors of that day. Finished ones are skipped, so it runs
+   the new hour, and any hour that failed before.
+
+The delay is how long the met takes to appear. NOAA's HRRR archive posts
+each 6-hour block about 40 minutes after it ends, and a backward run also
+needs the hour after its receptor, so an hour's met is complete at most
+about 7 hours 40 minutes later. An hour whose met was not there yet fails,
+and the next tick tries it again, for a day.
+
+The met volume keeps each downloaded file, cropped, so a 6-hour block is
+downloaded once (3.4 GB from NOAA; the crop is much smaller) and used by
+the ticks that follow. One pod runs at a time, so any volume works.
+
+Once a schedule runs, the ``receptors.csv`` on the bucket is the
+schedule's: ``pystiltctl push`` would replace it with your copy, and the
+hours already added would be added again by the next tick, but their
+results are not lost, since they are on the output bucket. To fill in a
+past day by hand, run ``pystiltctl tick PROJECT --now 2026-10-01T00:00``.
+Scheduling a project again replaces its CronJob; ``kubectl delete cronjob
+stilt-<project>`` stops it.
+
 Check on it
 -----------
 
