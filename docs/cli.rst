@@ -64,7 +64,11 @@ slash, the case of ``S3://``, ``.``, ``..`` and a symlink to the folder
 do not matter): another
 project whose folder has the same name is not mixed in. ``--json`` adds
 ``jobs_not_counted``, the names of Jobs left out for the reason given
-in :doc:`usage`.
+in :doc:`usage`. For a project on a bucket, the output directory must be
+a bucket too, as for ``submit``: a path in ``config.yaml`` would be a
+folder on this machine, not where the pods wrote. ``status`` then exits
+with 2 and asks for ``--output``, which names the bucket the project was
+submitted with (or a folder here that holds a copy of it).
 
 pystiltctl worker
 -----------------
