@@ -1,0 +1,6 @@
+﻿pystiltctl.inputs.project\_key
+==============================
+
+.. currentmodule:: pystiltctl.inputs
+
+.. autofunction:: project_key

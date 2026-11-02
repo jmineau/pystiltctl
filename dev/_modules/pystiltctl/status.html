@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=b7e1a054"></script>
+    <script src="../../_static/documentation_options.js?v=bd477ba4"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev14+g0a78d1a62" />
+  <meta name="docsearch:version" content="0.0.1.dev15+ga6d625ecb" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -459,7 +459,8 @@
 <span class="sd">Where a project's runs stand: its Jobs on the cluster, and its simulations.</span>
 
 <span class="sd">The Jobs come from ``kubectl``, found by the ``pystiltctl/project`` label</span>
-<span class="sd">that :func:`pystiltctl.job.manifest` puts on them. The simulations come</span>
+<span class="sd">that :func:`pystiltctl.job.manifest` puts on them and kept when their</span>
+<span class="sd">``pystiltctl/project-url`` annotation is the project. The simulations come</span>
 <span class="sd">from ``stilt status --json``, which reads the output directory: PYSTILT</span>
 <span class="sd">decides what is finished, from the files.</span>
 <span class="sd">"""</span>
@@ -472,11 +473,12 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.inputs</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_local</span><span class="p">,</span> <span class="n">local_path</span><span class="p">,</span> <span class="n">pull</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.job</span><span class="w"> </span><span class="kn">import</span> <span class="n">PROJECT_LABEL</span><span class="p">,</span> <span class="n">label_value</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.inputs</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_local</span><span class="p">,</span> <span class="n">local_path</span><span class="p">,</span> <span class="n">project_key</span><span class="p">,</span> <span class="n">project_name</span><span class="p">,</span> <span class="n">pull</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.job</span><span class="w"> </span><span class="kn">import</span> <span class="n">PROJECT_ANNOTATION</span><span class="p">,</span> <span class="n">PROJECT_LABEL</span><span class="p">,</span> <span class="n">label_value</span>
 
 
 <div class="viewcode-block" id="count_indexes">
@@ -541,9 +543,17 @@
 
 <div class="viewcode-block" id="project_jobs">
 <a class="viewcode-back" href="../../_autosummary/pystiltctl.status.project_jobs.html#pystiltctl.status.project_jobs">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">project_jobs</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">namespace</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">project_jobs</span><span class="p">(</span>
+    <span class="n">project</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">namespace</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the summaries of a project's Jobs, oldest first.</span>
+<span class="sd">    Return the summaries of *project*'s Jobs, oldest first, and the Jobs left out.</span>
+
+<span class="sd">    The label ``kubectl`` selects by is only the project's folder name, so</span>
+<span class="sd">    two projects can share it; a Job is kept only if its project annotation</span>
+<span class="sd">    is *project* (see :func:`project_key`). A Job with the label but no</span>
+<span class="sd">    annotation cannot be told from another project's, so it is left out:</span>
+<span class="sd">    the second value lists the names of those.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -560,7 +570,7 @@
         <span class="s2">"get"</span><span class="p">,</span>
         <span class="s2">"jobs"</span><span class="p">,</span>
         <span class="s2">"-l"</span><span class="p">,</span>
-        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">PROJECT_LABEL</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">label_value</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">PROJECT_LABEL</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">label_value</span><span class="p">(</span><span class="n">project_name</span><span class="p">(</span><span class="n">project</span><span class="p">))</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
         <span class="s2">"-o"</span><span class="p">,</span>
         <span class="s2">"json"</span><span class="p">,</span>
     <span class="p">]</span>
@@ -571,8 +581,14 @@
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
             <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">"kubectl exited with </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
-    <span class="n">jobs</span> <span class="o">=</span> <span class="p">[</span><span class="n">job_summary</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="p">)[</span><span class="s2">"items"</span><span class="p">]]</span>
-    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">jobs</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">j</span><span class="p">:</span> <span class="n">j</span><span class="p">[</span><span class="s2">"created"</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span></div>
+    <span class="n">jobs</span><span class="p">,</span> <span class="n">unclaimed</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="p">)[</span><span class="s2">"items"</span><span class="p">]:</span>
+        <span class="n">claimed</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s2">"metadata"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"annotations"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">PROJECT_ANNOTATION</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">claimed</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">unclaimed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"metadata"</span><span class="p">][</span><span class="s2">"name"</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">project_key</span><span class="p">(</span><span class="n">claimed</span><span class="p">)</span> <span class="o">==</span> <span class="n">project_key</span><span class="p">(</span><span class="n">project</span><span class="p">):</span>
+            <span class="n">jobs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">job_summary</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">jobs</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">j</span><span class="p">:</span> <span class="n">j</span><span class="p">[</span><span class="s2">"created"</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">),</span> <span class="n">unclaimed</span></div>
 
 
 
@@ -624,7 +640,11 @@
 
 <div class="viewcode-block" id="report">
 <a class="viewcode-back" href="../../_autosummary/pystiltctl.status.report.html#pystiltctl.status.report">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">jobs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">jobs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">unclaimed</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the text ``pystiltctl status`` prints.</span>
 
@@ -633,7 +653,9 @@
 <span class="sd">    data : dict</span>
 <span class="sd">        :func:`simulations`' result.</span>
 <span class="sd">    jobs : list of dict, or str</span>
-<span class="sd">        :func:`project_jobs`' result, or why the Jobs could not be listed.</span>
+<span class="sd">        :func:`project_jobs`' first result, or why the Jobs could not be listed.</span>
+<span class="sd">    unclaimed : sequence of str</span>
+<span class="sd">        :func:`project_jobs`' second result: Jobs it left out.</span>
 <span class="sd">    """</span>
     <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"Project: </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">'project'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Output: </span><span class="si">{</span><span class="n">data</span><span class="p">[</span><span class="s1">'output'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
     <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Simulations:  </span><span class="si">{</span><span class="n">_counts</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">'simulations'</span><span class="p">])</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
@@ -657,6 +679,12 @@
             <span class="k">if</span> <span class="n">job</span><span class="p">[</span><span class="s2">"failed"</span><span class="p">]:</span>
                 <span class="n">tasks</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">", </span><span class="si">{</span><span class="n">job</span><span class="p">[</span><span class="s1">'failed'</span><span class="p">]</span><span class="si">}</span><span class="s2"> failed (tasks </span><span class="si">{</span><span class="n">job</span><span class="p">[</span><span class="s1">'failed_indexes'</span><span class="p">]</span><span class="si">}</span><span class="s2">)"</span>
             <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">job</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">state</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">tasks</span><span class="si">}</span><span class="s2">  started </span><span class="si">{</span><span class="n">job</span><span class="p">[</span><span class="s1">'created'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">unclaimed</span><span class="p">:</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Not counted: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">unclaimed</span><span class="p">)</span><span class="si">}</span><span class="s2">. They carry this project's label "</span>
+            <span class="sa">f</span><span class="s2">"but no </span><span class="si">{</span><span class="n">PROJECT_ANNOTATION</span><span class="si">}</span><span class="s2"> annotation, so they may belong to another "</span>
+            <span class="s2">"project."</span>
+        <span class="p">)</span>
     <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span></div>
 
 </pre></div>

@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=b7e1a054"></script>
+    <script src="../../_static/documentation_options.js?v=bd477ba4"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev14+g0a78d1a62" />
+  <meta name="docsearch:version" content="0.0.1.dev15+ga6d625ecb" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -520,14 +520,45 @@
 <span class="sd">    Return a project's name, the last part of its folder or URL.</span>
 
 <span class="sd">    PYSTILT names a project after its folder, so a pod that pulls the</span>
-<span class="sd">    inputs into a folder of this name runs a project of the same name.</span>
+<span class="sd">    inputs into a folder of this name runs a project of the same name. A</span>
+<span class="sd">    folder on this machine is named by where it really is, so ``.``, a</span>
+<span class="sd">    path through ``..`` and a symlink to it all give the same name.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; project_name("s3://bucket/projects/my_project/")</span>
 <span class="sd">    'my_project'</span>
+<span class="sd">    &gt;&gt;&gt; project_name("file:///data/my_project/")</span>
+<span class="sd">    'my_project'</span>
 <span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">is_local</span><span class="p">(</span><span class="n">location</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">local_path</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">name</span>
     <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="project_key">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.inputs.project_key.html#pystiltctl.inputs.project_key">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">project_key</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return *project* in the form every spelling of one project shares.</span>
+
+<span class="sd">    A folder becomes its real path (``..`` collapsed, symlinks followed); a</span>
+<span class="sd">    URL loses its trailing slashes and gets a lowercase scheme.</span>
+<span class="sd">    ``pystiltctl submit`` writes this into the Job, and ``status`` compares</span>
+<span class="sd">    projects through it.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; project_key("S3://bucket/projects/my_project/")</span>
+<span class="sd">    's3://bucket/projects/my_project'</span>
+<span class="sd">    &gt;&gt;&gt; project_key("file:///data/../data/my_project/")</span>
+<span class="sd">    '/data/my_project'</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">is_local</span><span class="p">(</span><span class="n">project</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">local_path</span><span class="p">(</span><span class="n">project</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+    <span class="n">scheme</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="p">)</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">"://"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">scheme</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}{</span><span class="n">sep</span><span class="si">}{</span><span class="n">rest</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">'/'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span></div>
 
 
 

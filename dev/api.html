@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=b7e1a054"></script>
+    <script src="_static/documentation_options.js?v=bd477ba4"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -56,12 +56,12 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="pystiltctl.inputs.push" href="_autosummary/pystiltctl.inputs.push.html" />
+    <link rel="next" title="pystiltctl.inputs.project_key" href="_autosummary/pystiltctl.inputs.project_key.html" />
     <link rel="prev" title="Command line" href="cli.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev14+g0a78d1a62" />
+  <meta name="docsearch:version" content="0.0.1.dev15+ga6d625ecb" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -418,6 +418,7 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.project_key.html">pystiltctl.inputs.project_key</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.push.html">pystiltctl.inputs.push</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.pull.html">pystiltctl.inputs.pull</a></li>
 <li class="toctree-l1"><a class="reference internal" href="_autosummary/pystiltctl.inputs.is_local.html">pystiltctl.inputs.is_local</a></li>
@@ -515,19 +516,22 @@ functions behind it.</p>
 <h2>Project inputs<a class="headerlink" href="#project-inputs" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.push.html#pystiltctl.inputs.push" title="pystiltctl.inputs.push"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.push</span></code></a>(project, url)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.project_key.html#pystiltctl.inputs.project_key" title="pystiltctl.inputs.project_key"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.project_key</span></code></a>(project)</p></td>
+<td><p>Return <em>project</em> in the form every spelling of one project shares.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.push.html#pystiltctl.inputs.push" title="pystiltctl.inputs.push"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.push</span></code></a>(project, url)</p></td>
 <td><p>Copy a project's inputs to <em>url</em>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.pull.html#pystiltctl.inputs.pull" title="pystiltctl.inputs.pull"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.pull</span></code></a>(url, directory)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.pull.html#pystiltctl.inputs.pull" title="pystiltctl.inputs.pull"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.pull</span></code></a>(url, directory)</p></td>
 <td><p>Copy a project's inputs from <em>url</em> into <em>directory</em>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.is_local.html#pystiltctl.inputs.is_local" title="pystiltctl.inputs.is_local"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.is_local</span></code></a>(location)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.is_local.html#pystiltctl.inputs.is_local" title="pystiltctl.inputs.is_local"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.is_local</span></code></a>(location)</p></td>
 <td><p>Whether <em>location</em> is a path on this machine rather than a URL.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.local_path.html#pystiltctl.inputs.local_path" title="pystiltctl.inputs.local_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.local_path</span></code></a>(location)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.local_path.html#pystiltctl.inputs.local_path" title="pystiltctl.inputs.local_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.local_path</span></code></a>(location)</p></td>
 <td><p>Return a local <em>location</em> as a path, without a <code class="docutils literal notranslate"><span class="pre">file://</span></code> in front.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.project_name.html#pystiltctl.inputs.project_name" title="pystiltctl.inputs.project_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.project_name</span></code></a>(location)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.inputs.project_name.html#pystiltctl.inputs.project_name" title="pystiltctl.inputs.project_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputs.project_name</span></code></a>(location)</p></td>
 <td><p>Return a project's name, the last part of its folder or URL.</p></td>
 </tr>
 </tbody>
@@ -596,13 +600,13 @@ functions behind it.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.simulations.html#pystiltctl.status.simulations" title="pystiltctl.status.simulations"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.simulations</span></code></a>(project, *[, output])</p></td>
 <td><p>Return <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span> <span class="pre">--json</span></code> for <em>project</em>, a URL or a local folder.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.project_jobs.html#pystiltctl.status.project_jobs" title="pystiltctl.status.project_jobs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.project_jobs</span></code></a>(name, *[, namespace])</p></td>
-<td><p>Return the summaries of a project's Jobs, oldest first.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.project_jobs.html#pystiltctl.status.project_jobs" title="pystiltctl.status.project_jobs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.project_jobs</span></code></a>(project, *[, namespace])</p></td>
+<td><p>Return the summaries of <em>project</em>'s Jobs, oldest first, and the Jobs left out.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.job_summary.html#pystiltctl.status.job_summary" title="pystiltctl.status.job_summary"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.job_summary</span></code></a>(job)</p></td>
 <td><p>Return the facts about one Job, from <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">get</span> <span class="pre">job</span> <span class="pre">-o</span> <span class="pre">json</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.report.html#pystiltctl.status.report" title="pystiltctl.status.report"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.report</span></code></a>(data, jobs)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.report.html#pystiltctl.status.report" title="pystiltctl.status.report"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.report</span></code></a>(data, jobs[, unclaimed])</p></td>
 <td><p>Return the text <code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">status</span></code> prints.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/pystiltctl.status.count_indexes.html#pystiltctl.status.count_indexes" title="pystiltctl.status.count_indexes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">status.count_indexes</span></code></a>(indexes)</p></td>
@@ -634,11 +638,11 @@ functions behind it.</p>
       </div>
     </a>
     <a class="right-next"
-       href="_autosummary/pystiltctl.inputs.push.html"
+       href="_autosummary/pystiltctl.inputs.project_key.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">pystiltctl.inputs.push</p>
+        <p class="prev-next-title">pystiltctl.inputs.project_key</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

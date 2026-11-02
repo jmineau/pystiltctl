@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=b7e1a054"></script>
+    <script src="_static/documentation_options.js?v=bd477ba4"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev14+g0a78d1a62" />
+  <meta name="docsearch:version" content="0.0.1.dev15+ga6d625ecb" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -592,9 +592,17 @@ Jobs:
 directory, so they are right whatever the Jobs did. <code class="docutils literal notranslate"><span class="pre">failed</span></code> counts
 failed simulations by reason; each one’s <code class="docutils literal notranslate"><span class="pre">.failure.yaml</span></code>, under
 <code class="docutils literal notranslate"><span class="pre">logs/</span></code> in the output directory, says why. The Jobs are the ones
-<code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">submit</span></code> started for this project (by the
-<code class="docutils literal notranslate"><span class="pre">pystiltctl/project</span></code> label), with how many of their tasks are done,
-running, and failed. A failed task is one whose simulations failed:
+<code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">submit</span></code> started for this project (those whose
+<code class="docutils literal notranslate"><span class="pre">pystiltctl/project-url</span></code> annotation is this project: its URL, or its real
+path for a folder), with how many
+of their tasks are done, running, and failed. Two projects with the same
+folder name, such as <code class="docutils literal notranslate"><span class="pre">s3://lab-a/projects/winter</span></code> and
+<code class="docutils literal notranslate"><span class="pre">s3://lab-b/runs/2025/winter</span></code>, each see only their own Jobs. A folder may
+be written as <code class="docutils literal notranslate"><span class="pre">.</span></code>, through <code class="docutils literal notranslate"><span class="pre">..</span></code> or through a symlink: <code class="docutils literal notranslate"><span class="pre">submit</span></code> and
+<code class="docutils literal notranslate"><span class="pre">status</span></code> both use its real path. A Job with the project’s label but no
+such annotation cannot be told from another project’s, so <code class="docutils literal notranslate"><span class="pre">status</span></code> does not
+count it and lists it as “Not counted”. A failed task is one whose
+simulations failed:
 <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">logs</span></code> on its pod shows which. <code class="docutils literal notranslate"><span class="pre">--json</span></code> prints the same for a
 program to read.</p>
 <p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> reads the header of the first met file to find the

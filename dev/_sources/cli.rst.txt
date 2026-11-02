@@ -59,7 +59,12 @@ pystiltctl status
 Count a project's simulations by state (``stilt status``), and list the
 Jobs ``pystiltctl submit`` started for it, with their tasks done,
 running, and failed. Without ``kubectl``, or a cluster, it counts the
-simulations only.
+simulations only. ``PROJECT`` need not be spelled as it was for ``submit`` (a trailing
+slash, the case of ``S3://``, ``.``, ``..`` and a symlink to the folder
+do not matter): another
+project whose folder has the same name is not mixed in. ``--json`` adds
+``jobs_not_counted``, the names of Jobs left out for the reason given
+in :doc:`usage`.
 
 pystiltctl worker
 -----------------

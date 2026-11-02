@@ -12,6 +12,7 @@ Project inputs
 .. autosummary::
    :toctree: _autosummary
 
+   inputs.project_key
    inputs.push
    inputs.pull
    inputs.is_local
