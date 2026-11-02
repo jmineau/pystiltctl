@@ -200,15 +200,16 @@ def status_command(
     except RuntimeError as error:
         _fail(f"stilt status failed: {error}", EXIT_RETRY)
     try:
-        jobs: list[dict] | str = status.project_jobs(
-            inputs.project_name(project), namespace=namespace
-        )
+        jobs: list[dict] | str
+        jobs, unclaimed = status.project_jobs(project, namespace=namespace)
     except (FileNotFoundError, RuntimeError) as error:
-        jobs = str(error)
+        jobs, unclaimed = str(error), []
     if as_json:
-        typer.echo(json.dumps({**data, "jobs": jobs}, indent=2))
+        typer.echo(
+            json.dumps({**data, "jobs": jobs, "jobs_not_counted": unclaimed}, indent=2)
+        )
     else:
-        typer.echo(status.report(data, jobs))
+        typer.echo(status.report(data, jobs, unclaimed))
 
 
 @app.command(name="worker")
