@@ -139,6 +139,12 @@ simulations failed:
 ``kubectl logs`` on its pod shows which. ``--json`` prints the same for a
 program to read.
 
+A project on a bucket needs its output on a bucket too, in
+``config.yaml`` or as ``--output``; give ``status`` the same ``--output``
+you gave ``submit``. With a path in ``config.yaml`` and no ``--output``,
+``status`` exits with 2 and says so, as ``submit`` does, instead of counting
+an empty folder here.
+
 ``stilt status`` reads the header of the first met file to find the
 results, so it needs the met where you run it, at the path
 ``config.yaml`` names. A met that the pods download (``download: hrrr``)
