@@ -42,7 +42,10 @@ complete, 1 some failed, 2 bad command line, 3 stopped).
 
 - `src/pystiltctl/`: the package (`py.typed` ships, so annotations are public API).
   - `cli.py`: the `pystiltctl` command (typer); each command calls one module.
-  - `inputs.py`: `push`/`pull` copy the inputs to and from a bucket (fsspec), never the output.
+  - `inputs.py`: `push`/`pull` copy the inputs to and from a bucket (fsspec), never the
+    output. fsspec's `isfile`/`isdir`/`exists` catch every exception and return False, so
+    checking existence this way cannot tell a missing file from a bucket error; use
+    `fs.info` and catch only `FileNotFoundError` where that distinction matters.
   - `worker.py`: what a pod runs: pull, then `os.execv` into `python -m stilt run
     --task I/N`, so the stop signal and the exit code are `stilt`'s own.
   - `job.py`: the indexed Job and the CronJob, defaults from `execution`; retries are
