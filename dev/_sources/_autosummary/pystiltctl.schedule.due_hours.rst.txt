@@ -1,0 +1,6 @@
+﻿pystiltctl.schedule.due\_hours
+==============================
+
+.. currentmodule:: pystiltctl.schedule
+
+.. autofunction:: due_hours

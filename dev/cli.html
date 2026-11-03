@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=495788e2"></script>
+    <script src="_static/documentation_options.js?v=1d04e6b4"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev16+g7907844bb" />
+  <meta name="docsearch:version" content="0.0.1.dev17+gd19083bc9" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -519,6 +519,33 @@ for more.</p>
 </dd>
 </dl>
 </section>
+<section id="pystiltctl-schedule">
+<h2>pystiltctl schedule<a class="headerlink" href="#pystiltctl-schedule" title="Link to this heading">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pystiltctl schedule PROJECT [--delay HOURS] [--cpus C] [--memory M] [--image IMAGE]
+                    [--output URL] [--secret NAME]... [--service-account NAME]
+                    [--volume CLAIM:/path]... [--namespace NS] [--dry-run]
+</pre></div>
+</div>
+<p>Run a project every hour for the sites in its <code class="docutils literal notranslate"><span class="pre">sites.csv</span></code>: a CronJob
+whose pod runs <code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">tick</span></code> at 15 past each hour, one at a time.
+The other options are <code class="docutils literal notranslate"><span class="pre">submit</span></code>’s. <code class="docutils literal notranslate"><span class="pre">--delay</span></code> (8) is how many hours
+behind the clock it runs, so the met is there. It checks every row of
+<code class="docutils literal notranslate"><span class="pre">sites.csv</span></code> first and exits with 2, naming the line, rather than apply a
+CronJob whose every tick would fail.</p>
+</section>
+<section id="pystiltctl-tick">
+<h2>pystiltctl tick<a class="headerlink" href="#pystiltctl-tick" title="Link to this heading">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pystiltctl tick PROJECT [--delay HOURS] [--now TIME] [--cpus C] [--output URL] [--workdir DIR]
+</pre></div>
+</div>
+<p>What each hourly pod runs: add a receptor per site for each hour of the
+last day that is <code class="docutils literal notranslate"><span class="pre">--delay</span></code> hours old, write <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> back,
+then <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--receptors</span></code> on that day. <code class="docutils literal notranslate"><span class="pre">--now</span></code> (UTC, such as
+<code class="docutils literal notranslate"><span class="pre">2026-10-01T00:00</span></code>) acts as if it were that time, to fill in a past day.
+Exits with <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>’s code. A bad row in <code class="docutils literal notranslate"><span class="pre">sites.csv</span></code> exits with 2
+(the Job stops); a failed copy to or from the bucket exits with 3 (it is
+tried again), and the message says which way it went.</p>
+</section>
 <section id="pystiltctl-status">
 <h2>pystiltctl status<a class="headerlink" href="#pystiltctl-status" title="Link to this heading">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pystiltctl status PROJECT [--output URL] [--namespace NS] [--json]
@@ -609,6 +636,8 @@ a folder on a mounted volume), then run <code class="docutils literal notranslat
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-push">pystiltctl push</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-submit">pystiltctl submit</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-schedule">pystiltctl schedule</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-tick">pystiltctl tick</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-status">pystiltctl status</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pystiltctl-worker">pystiltctl worker</a></li>
 </ul>

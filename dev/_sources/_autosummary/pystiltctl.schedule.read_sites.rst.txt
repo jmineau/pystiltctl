@@ -1,0 +1,6 @@
+﻿pystiltctl.schedule.read\_sites
+===============================
+
+.. currentmodule:: pystiltctl.schedule
+
+.. autofunction:: read_sites

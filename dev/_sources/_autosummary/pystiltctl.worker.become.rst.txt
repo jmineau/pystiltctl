@@ -1,0 +1,6 @@
+﻿pystiltctl.worker.become
+========================
+
+.. currentmodule:: pystiltctl.worker
+
+.. autofunction:: become

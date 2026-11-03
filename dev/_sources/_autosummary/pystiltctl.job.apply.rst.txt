@@ -1,0 +1,6 @@
+﻿pystiltctl.job.apply
+====================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: apply

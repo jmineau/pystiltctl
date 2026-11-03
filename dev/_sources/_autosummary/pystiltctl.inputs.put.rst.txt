@@ -1,0 +1,6 @@
+﻿pystiltctl.inputs.put
+=====================
+
+.. currentmodule:: pystiltctl.inputs
+
+.. autofunction:: put

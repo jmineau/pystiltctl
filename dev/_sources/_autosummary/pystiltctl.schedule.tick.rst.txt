@@ -1,0 +1,6 @@
+﻿pystiltctl.schedule.tick
+========================
+
+.. currentmodule:: pystiltctl.schedule
+
+.. autofunction:: tick

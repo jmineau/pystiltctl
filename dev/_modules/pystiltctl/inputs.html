@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=495788e2"></script>
+    <script src="../../_static/documentation_options.js?v=1d04e6b4"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev16+g7907844bb" />
+  <meta name="docsearch:version" content="0.0.1.dev17+gd19083bc9" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -459,7 +459,8 @@
 <span class="sd">Copy a project's inputs to and from a bucket.</span>
 
 <span class="sd">A PYSTILT project's inputs are its ``config.yaml``, its ``receptors.csv``</span>
-<span class="sd">and its ``tables/`` folder. Pods on a cluster read them from a bucket (or</span>
+<span class="sd">and its ``tables/`` folder, and a ``sites.csv`` when the project runs on a</span>
+<span class="sd">schedule (:mod:`pystiltctl.schedule`). Pods on a cluster read them from a bucket (or</span>
 <span class="sd">any folder fsspec can reach), so they are copied there first with</span>
 <span class="sd">:func:`push`, and each pod copies them back to its own disk with</span>
 <span class="sd">:func:`pull`. The output directory is not copied: PYSTILT writes results</span>
@@ -479,6 +480,8 @@
 <span class="n">INPUT_FILES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"config.yaml"</span><span class="p">,</span> <span class="s2">"receptors.csv"</span><span class="p">)</span>
 <span class="c1">#: The folder of extra input tables (``project.add_table``), copied when present.</span>
 <span class="n">TABLES</span> <span class="o">=</span> <span class="s2">"tables"</span>
+<span class="c1">#: The places a schedule adds a receptor for each hour, copied when present.</span>
+<span class="n">SITES</span> <span class="o">=</span> <span class="s2">"sites.csv"</span>
 
 
 <div class="viewcode-block" id="is_local">
@@ -569,7 +572,7 @@
 <span class="sd">    Copy a project's inputs to *url*.</span>
 
 <span class="sd">    Copies ``config.yaml``, ``receptors.csv`` and, when the project has</span>
-<span class="sd">    one, ``tables/``. Files already at *url* are replaced; files there that</span>
+<span class="sd">    them, ``tables/`` and ``sites.csv``. Files already at *url* are replaced; files there that</span>
 <span class="sd">    the project no longer has are left alone. Nothing under the project's</span>
 <span class="sd">    output directory is copied.</span>
 
@@ -601,9 +604,10 @@
     <span class="n">root</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
     <span class="n">fs</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">copied</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">INPUT_FILES</span><span class="p">:</span>
-        <span class="n">fs</span><span class="o">.</span><span class="n">put_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">project</span> <span class="o">/</span> <span class="n">name</span><span class="p">),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="n">copied</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">INPUT_FILES</span><span class="p">,</span> <span class="n">SITES</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">project</span> <span class="o">/</span> <span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="n">fs</span><span class="o">.</span><span class="n">put_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">project</span> <span class="o">/</span> <span class="n">name</span><span class="p">),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">copied</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">project</span> <span class="o">/</span> <span class="n">TABLES</span><span class="p">)</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">"*"</span><span class="p">)):</span>
         <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="n">name</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">project</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
@@ -623,8 +627,8 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Copy a project's inputs from *url* into *directory*.</span>
 
-<span class="sd">    The reverse of :func:`push`: ``config.yaml``, ``receptors.csv`` and</span>
-<span class="sd">    ``tables/``, when *url* has one.</span>
+<span class="sd">    The reverse of :func:`push`: ``config.yaml``, ``receptors.csv``, and</span>
+<span class="sd">    ``tables/`` and ``sites.csv`` when *url* has them.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -652,6 +656,8 @@
     <span class="n">directory</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">INPUT_FILES</span><span class="p">:</span>
         <span class="n">fs</span><span class="o">.</span><span class="n">get_file</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">name</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">SITES</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span>
+        <span class="n">fs</span><span class="o">.</span><span class="n">get_file</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">SITES</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">SITES</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">TABLES</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">remote</span> <span class="ow">in</span> <span class="n">fs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">TABLES</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span>
             <span class="n">local</span> <span class="o">=</span> <span class="n">directory</span> <span class="o">/</span> <span class="n">remote</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/"</span><span class="p">)</span>
@@ -659,6 +665,26 @@
             <span class="n">fs</span><span class="o">.</span><span class="n">get_file</span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">))</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Copied the inputs at </span><span class="si">%s</span><span class="s2"> to </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">directory</span></div>
+
+
+
+<div class="viewcode-block" id="put">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.inputs.put.html#pystiltctl.inputs.put">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">put</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Copy one file of a project folder back to *url*, such as a grown ``receptors.csv``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    directory : str or Path</span>
+<span class="sd">        The local project folder.</span>
+<span class="sd">    url : str</span>
+<span class="sd">        The project's location, as :func:`push` copied it there.</span>
+<span class="sd">    name : str</span>
+<span class="sd">        The file, relative to the project folder.</span>
+<span class="sd">    """</span>
+    <span class="n">fs</span><span class="p">,</span> <span class="n">root</span> <span class="o">=</span> <span class="n">fsspec</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">url_to_fs</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">fs</span><span class="o">.</span><span class="n">put_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span><span class="p">),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">'/'</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
 
 </pre></div>
 

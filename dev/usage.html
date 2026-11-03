@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=495788e2"></script>
+    <script src="_static/documentation_options.js?v=1d04e6b4"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev16+g7907844bb" />
+  <meta name="docsearch:version" content="0.0.1.dev17+gd19083bc9" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -575,6 +575,61 @@ command line (2), which stops the whole Job. Fix the cause and submit
 again: finished simulations are skipped, so only the rest run. The Job,
 and its pods’ logs, stay on the cluster for a week.</p>
 </section>
+<section id="run-it-every-hour">
+<h2>Run it every hour<a class="headerlink" href="#run-it-every-hour" title="Link to this heading">#</a></h2>
+<p>A project can also run on its own, every hour, for fixed sites such as
+towers. Its <code class="docutils literal notranslate"><span class="pre">sites.csv</span></code> lists them, one per line:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>name,longitude,latitude,altitude
+wbb,-111.8476,40.7663,35
+dbk,-112.1155,40.5385,5
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">altitude</span></code> is meters above ground (add an <code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code> column with
+<code class="docutils literal notranslate"><span class="pre">msl</span></code> for above sea level); other columns, such as <code class="docutils literal notranslate"><span class="pre">name</span></code>, are yours.
+<code class="docutils literal notranslate"><span class="pre">schedule</span></code> and <code class="docutils literal notranslate"><span class="pre">tick</span></code> read the file with PYSTILT’s own checks, and a
+mistake (a latitude of 95, an empty value) stops them with the line it is
+on. A file saved from Excel as “CSV UTF-8” is fine.
+Use met that downloads itself, cropped to your region, on a volume that
+keeps it between hours:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># config.yaml</span>
+<span class="nt">mets</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">download</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hrrr</span>
+<span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/met</span>
+<span class="w">    </span><span class="nt">subgrid_enable</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">subgrid_bounds</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="nv">-114.0</span><span class="p p-Indicator">,</span><span class="nt"> xmax</span><span class="p">:</span><span class="w"> </span><span class="nv">-110.0</span><span class="p p-Indicator">,</span><span class="nt"> ymin</span><span class="p">:</span><span class="w"> </span><span class="nv">39.0</span><span class="p p-Indicator">,</span><span class="nt"> ymax</span><span class="p">:</span><span class="w"> </span><span class="nv">42.0</span><span class="p p-Indicator">}</span>
+</pre></div>
+</div>
+<p>Then push the project and schedule it:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pystiltctl<span class="w"> </span>push<span class="w"> </span>./towers<span class="w"> </span>s3://my-bucket/projects/towers
+pystiltctl<span class="w"> </span>schedule<span class="w"> </span>s3://my-bucket/projects/towers<span class="w"> </span>--secret<span class="w"> </span>bucket-creds<span class="w"> </span>--volume<span class="w"> </span>met:/met
+</pre></div>
+</div>
+<p>That starts a Kubernetes CronJob. Once an hour, at 15 past, one pod runs
+<code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">tick</span></code>, which:</p>
+<ol class="arabic simple">
+<li><p>adds a receptor for each site at each hour of the last day that is at
+least <code class="docutils literal notranslate"><span class="pre">--delay</span></code> hours old (8 by default) to <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, and
+writes it back to the bucket;</p></li>
+<li><p>runs the receptors of that day. Finished ones are skipped, so it runs
+the new hour, and any hour that failed before.</p></li>
+</ol>
+<p>The delay is how long the met takes to appear. NOAA’s HRRR archive posts
+each 6-hour block about 40 minutes after it ends, and a backward run also
+needs the hour after its receptor, so an hour’s met is complete at most
+about 7 hours 40 minutes later. An hour whose met was not there yet fails,
+and the next tick tries it again, for a day.</p>
+<p>The met volume keeps each downloaded file, cropped, so a 6-hour block is
+downloaded once (3.4 GB from NOAA; the crop is much smaller) and used by
+the ticks that follow. One pod runs at a time, so any volume works.</p>
+<p>Once a schedule runs, the <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> on the bucket is the
+schedule’s: <code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">push</span></code> would replace it with your copy, and the
+hours already added would be added again by the next tick, but their
+results are not lost, since they are on the output bucket. To fill in a
+past day by hand, run <code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">tick</span> <span class="pre">PROJECT</span> <span class="pre">--now</span> <span class="pre">2026-10-01T00:00</span></code>.
+Scheduling a project again replaces its CronJob; <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">delete</span> <span class="pre">cronjob</span>
+<span class="pre">stilt-&lt;project&gt;</span></code> stops it.</p>
+</section>
 <section id="check-on-it">
 <h2>Check on it<a class="headerlink" href="#check-on-it" title="Link to this heading">#</a></h2>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pystiltctl<span class="w"> </span>status<span class="w"> </span>s3://my-bucket/projects/my_project
@@ -710,6 +765,7 @@ A retry continues where it stopped.</p></td>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-container-image">The container image</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#put-the-project-on-a-bucket">Put the project on a bucket</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-it">Run it</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-it-every-hour">Run it every hour</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#check-on-it">Check on it</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-each-pod-runs">What each pod runs</a></li>
 </ul>

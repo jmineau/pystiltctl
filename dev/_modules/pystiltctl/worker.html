@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=495788e2"></script>
+    <script src="../../_static/documentation_options.js?v=1d04e6b4"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev16+g7907844bb" />
+  <meta name="docsearch:version" content="0.0.1.dev17+gd19083bc9" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -527,37 +527,53 @@
 <a class="viewcode-back" href="../../_autosummary/pystiltctl.worker.stilt_command.html#pystiltctl.worker.stilt_command">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">stilt_command</span><span class="p">(</span>
     <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">task</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">n_tasks</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">task</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">n_tasks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
+    <span class="n">receptors</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">cpus</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the ``stilt run`` command line for task *task* of *n_tasks*.</span>
+<span class="sd">    Return the ``stilt run`` command line for a share of a project.</span>
 
-<span class="sd">    It runs PYSTILT with this Python, so the ``stilt`` it runs is the one</span>
-<span class="sd">    installed beside pystiltctl.</span>
+<span class="sd">    The share is task *task* of *n_tasks* (``--task I/N``), the receptors</span>
+<span class="sd">    listed in the file *receptors* (``--receptors``), or both. It runs</span>
+<span class="sd">    PYSTILT with this Python, so the ``stilt`` it runs is the one installed</span>
+<span class="sd">    beside pystiltctl.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; stilt_command("/work/my_project", 3, 20, cpus=4)[2:]</span>
 <span class="sd">    ['stilt', 'run', '/work/my_project', '--task', '3/20', '--cpus', '4']</span>
+<span class="sd">    &gt;&gt;&gt; stilt_command("/work/my_project", receptors="/work/ids.txt")[2:]</span>
+<span class="sd">    ['stilt', 'run', '/work/my_project', '--receptors', '/work/ids.txt']</span>
 <span class="sd">    """</span>
-    <span class="n">command</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span>
-        <span class="s2">"-m"</span><span class="p">,</span>
-        <span class="s2">"stilt"</span><span class="p">,</span>
-        <span class="s2">"run"</span><span class="p">,</span>
-        <span class="nb">str</span><span class="p">(</span><span class="n">directory</span><span class="p">),</span>
-        <span class="s2">"--task"</span><span class="p">,</span>
-        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_tasks</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-    <span class="p">]</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="p">[</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s2">"-m"</span><span class="p">,</span> <span class="s2">"stilt"</span><span class="p">,</span> <span class="s2">"run"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">directory</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">task</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--task"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_tasks</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">receptors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--receptors"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptors</span><span class="p">)]</span>
     <span class="k">if</span> <span class="n">cpus</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">command</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--cpus"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">cpus</span><span class="p">)]</span>
     <span class="k">if</span> <span class="n">output</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">command</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--output"</span><span class="p">,</span> <span class="n">output</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">command</span></div>
+
+
+
+<div class="viewcode-block" id="become">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.worker.become.html#pystiltctl.worker.become">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">become</span><span class="p">(</span><span class="n">command</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Replace this process with *command*, so its exit code and signals are this pod's.</span>
+
+<span class="sd">    This function does not return.</span>
+<span class="sd">    """</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Running </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">command</span><span class="p">[</span><span class="mi">2</span><span class="p">:]))</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">execv</span><span class="p">(</span><span class="n">command</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">command</span><span class="p">)</span></div>
 
 
 
@@ -603,11 +619,7 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">task</span> <span class="o">&lt;</span> <span class="n">n_tasks</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Task </span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2"> is not one of 0 to </span><span class="si">{</span><span class="n">n_tasks</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
     <span class="n">directory</span> <span class="o">=</span> <span class="n">project_directory</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">workdir</span><span class="p">)</span>
-    <span class="n">command</span> <span class="o">=</span> <span class="n">stilt_command</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">n_tasks</span><span class="p">,</span> <span class="n">cpus</span><span class="o">=</span><span class="n">cpus</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Running </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">command</span><span class="p">[</span><span class="mi">2</span><span class="p">:]))</span>
-    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
-    <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">execv</span><span class="p">(</span><span class="n">command</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">command</span><span class="p">)</span></div>
+    <span class="n">become</span><span class="p">(</span><span class="n">stilt_command</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">n_tasks</span><span class="p">,</span> <span class="n">cpus</span><span class="o">=</span><span class="n">cpus</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">))</span></div>
 
 </pre></div>
 

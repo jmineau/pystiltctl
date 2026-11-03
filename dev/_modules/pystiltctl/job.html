@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=495788e2"></script>
+    <script src="../../_static/documentation_options.js?v=1d04e6b4"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev16+g7907844bb" />
+  <meta name="docsearch:version" content="0.0.1.dev17+gd19083bc9" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -748,18 +748,39 @@
     <span class="k">return</span> <span class="n">args</span>
 
 
-<div class="viewcode-block" id="manifest">
-<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.manifest.html#pystiltctl.job.manifest">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">manifest</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the indexed Job that runs *spec*, as a Kubernetes manifest.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_labels</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the labels every object for *spec*'s project carries."""</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"app.kubernetes.io/name"</span><span class="p">:</span> <span class="s2">"pystiltctl"</span><span class="p">,</span>
+        <span class="n">PROJECT_LABEL</span><span class="p">:</span> <span class="n">label_value</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+    <span class="p">}</span>
 
-<span class="sd">    The Job's name is ``stilt-&lt;project&gt;-`` and a suffix Kubernetes picks,</span>
-<span class="sd">    so the same project can be submitted again. Its exit-code rules are</span>
-<span class="sd">    described in this module's docstring.</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_annotations</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the annotations every object for *spec*'s project carries."""</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">PROJECT_ANNOTATION</span><span class="p">:</span> <span class="n">project_key</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">project</span><span class="p">)}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_metadata</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">,</span> <span class="o">**</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return an object's metadata: *name* (``name`` or ``generateName``), labels, namespace."""</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="o">**</span><span class="n">name</span><span class="p">,</span>
+        <span class="s2">"labels"</span><span class="p">:</span> <span class="n">_labels</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span>
+        <span class="s2">"annotations"</span><span class="p">:</span> <span class="n">_annotations</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">namespace</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">metadata</span><span class="p">[</span><span class="s2">"namespace"</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">namespace</span>
+    <span class="k">return</span> <span class="n">metadata</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_job_body</span><span class="p">(</span>
+    <span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">completions</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">parallelism</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the ``spec`` of an indexed Job whose pods run *args*.</span>
+
+<span class="sd">    The exit-code rules are described in this module's docstring.</span>
 <span class="sd">    """</span>
-    <span class="n">slug</span> <span class="o">=</span> <span class="n">label_value</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-    <span class="n">labels</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"app.kubernetes.io/name"</span><span class="p">:</span> <span class="s2">"pystiltctl"</span><span class="p">,</span> <span class="n">PROJECT_LABEL</span><span class="p">:</span> <span class="n">slug</span><span class="p">}</span>
     <span class="n">resources</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"requests"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"cpu"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">cpus</span><span class="p">)}}</span>
     <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">memory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">resources</span><span class="p">[</span><span class="s2">"requests"</span><span class="p">][</span><span class="s2">"memory"</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">memory</span>
@@ -767,7 +788,7 @@
     <span class="n">container</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"stilt"</span><span class="p">,</span>
         <span class="s2">"image"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">image</span><span class="p">,</span>
-        <span class="s2">"args"</span><span class="p">:</span> <span class="n">worker_args</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span>
+        <span class="s2">"args"</span><span class="p">:</span> <span class="n">args</span><span class="p">,</span>
         <span class="s2">"env"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"PYSTILT_COMPUTE_ROOT"</span><span class="p">,</span> <span class="s2">"value"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">SCRATCH</span><span class="si">}</span><span class="s2">/runs"</span><span class="p">}],</span>
         <span class="s2">"resources"</span><span class="p">:</span> <span class="n">resources</span><span class="p">,</span>
         <span class="s2">"volumeMounts"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"scratch"</span><span class="p">,</span> <span class="s2">"mountPath"</span><span class="p">:</span> <span class="n">SCRATCH</span><span class="p">}]</span>
@@ -789,13 +810,6 @@
     <span class="p">}</span>
     <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">service_account</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">pod</span><span class="p">[</span><span class="s2">"serviceAccountName"</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">service_account</span>
-    <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">"generateName"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"stilt-</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">-"</span><span class="p">,</span>
-        <span class="s2">"labels"</span><span class="p">:</span> <span class="n">labels</span><span class="p">,</span>
-        <span class="s2">"annotations"</span><span class="p">:</span> <span class="p">{</span><span class="n">PROJECT_ANNOTATION</span><span class="p">:</span> <span class="n">project_key</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">project</span><span class="p">)},</span>
-    <span class="p">}</span>
-    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">namespace</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">metadata</span><span class="p">[</span><span class="s2">"namespace"</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">namespace</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">on_exit</span><span class="p">(</span><span class="n">action</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">code</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return the rule that takes *action* when the worker exits with *code*."""</span>
@@ -803,26 +817,88 @@
         <span class="k">return</span> <span class="p">{</span><span class="s2">"action"</span><span class="p">:</span> <span class="n">action</span><span class="p">,</span> <span class="s2">"onExitCodes"</span><span class="p">:</span> <span class="n">rule</span><span class="p">}</span>
 
     <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"completionMode"</span><span class="p">:</span> <span class="s2">"Indexed"</span><span class="p">,</span>
+        <span class="s2">"completions"</span><span class="p">:</span> <span class="n">completions</span><span class="p">,</span>
+        <span class="s2">"parallelism"</span><span class="p">:</span> <span class="n">parallelism</span><span class="p">,</span>
+        <span class="s2">"backoffLimitPerIndex"</span><span class="p">:</span> <span class="n">RETRIES</span><span class="p">,</span>
+        <span class="s2">"podFailurePolicy"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"rules"</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailJob"</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailIndex"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                <span class="c1"># `status` is required in a CronJob's template; the API server</span>
+                <span class="c1"># fills it in only for a Job created on its own.</span>
+                <span class="p">{</span>
+                    <span class="s2">"action"</span><span class="p">:</span> <span class="s2">"Ignore"</span><span class="p">,</span>
+                    <span class="s2">"onPodConditions"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"DisruptionTarget"</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">:</span> <span class="s2">"True"</span><span class="p">}],</span>
+                <span class="p">},</span>
+            <span class="p">]</span>
+        <span class="p">},</span>
+        <span class="s2">"ttlSecondsAfterFinished"</span><span class="p">:</span> <span class="n">KEEP_FINISHED</span><span class="p">,</span>
+        <span class="s2">"template"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"metadata"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"labels"</span><span class="p">:</span> <span class="n">_labels</span><span class="p">(</span><span class="n">spec</span><span class="p">)},</span> <span class="s2">"spec"</span><span class="p">:</span> <span class="n">pod</span><span class="p">},</span>
+    <span class="p">}</span>
+
+
+<div class="viewcode-block" id="manifest">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.manifest.html#pystiltctl.job.manifest">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">manifest</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the indexed Job that runs *spec*, as a Kubernetes manifest.</span>
+
+<span class="sd">    The Job's name is ``stilt-&lt;project&gt;-`` and a suffix Kubernetes picks,</span>
+<span class="sd">    so the same project can be submitted again. Its exit-code rules are</span>
+<span class="sd">    described in this module's docstring.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="p">{</span>
         <span class="s2">"apiVersion"</span><span class="p">:</span> <span class="s2">"batch/v1"</span><span class="p">,</span>
         <span class="s2">"kind"</span><span class="p">:</span> <span class="s2">"Job"</span><span class="p">,</span>
-        <span class="s2">"metadata"</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
+        <span class="s2">"metadata"</span><span class="p">:</span> <span class="n">_metadata</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">generateName</span><span class="o">=</span><span class="sa">f</span><span class="s2">"stilt-</span><span class="si">{</span><span class="n">label_value</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">-"</span><span class="p">),</span>
+        <span class="s2">"spec"</span><span class="p">:</span> <span class="n">_job_body</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">worker_args</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span> <span class="n">spec</span><span class="o">.</span><span class="n">tasks</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">parallelism</span><span class="p">),</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">tick_args</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">,</span> <span class="n">delay</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the command line a schedule's pod runs each hour."""</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"pystiltctl"</span><span class="p">,</span> <span class="s2">"tick"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">project</span><span class="p">,</span> <span class="s2">"--delay"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">delay</span><span class="p">)]</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--cpus"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">cpus</span><span class="p">),</span> <span class="s2">"--workdir"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">SCRATCH</span><span class="si">}</span><span class="s2">/project"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">output</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--output"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">output</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">args</span>
+
+
+<div class="viewcode-block" id="cron_job">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.cron_job.html#pystiltctl.job.cron_job">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">cron_job</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">,</span> <span class="n">delay</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the CronJob that runs ``pystiltctl tick`` for *spec* every hour.</span>
+
+<span class="sd">    One pod at a time (a tick that is still running delays the next), at</span>
+<span class="sd">    15 minutes past the hour. Its Jobs carry the project's label, so</span>
+<span class="sd">    ``pystiltctl status`` lists them, and the last day's are kept. The</span>
+<span class="sd">    CronJob is named ``stilt-&lt;project&gt;``, so scheduling a project again</span>
+<span class="sd">    replaces it.</span>
+<span class="sd">    """</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="n">_job_body</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">tick_args</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">delay</span><span class="p">),</span> <span class="n">completions</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">parallelism</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"apiVersion"</span><span class="p">:</span> <span class="s2">"batch/v1"</span><span class="p">,</span>
+        <span class="s2">"kind"</span><span class="p">:</span> <span class="s2">"CronJob"</span><span class="p">,</span>
+        <span class="s2">"metadata"</span><span class="p">:</span> <span class="n">_metadata</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">"stilt-</span><span class="si">{</span><span class="n">label_value</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">),</span>
         <span class="s2">"spec"</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">"completionMode"</span><span class="p">:</span> <span class="s2">"Indexed"</span><span class="p">,</span>
-            <span class="s2">"completions"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">tasks</span><span class="p">,</span>
-            <span class="s2">"parallelism"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">parallelism</span><span class="p">,</span>
-            <span class="s2">"backoffLimitPerIndex"</span><span class="p">:</span> <span class="n">RETRIES</span><span class="p">,</span>
-            <span class="s2">"podFailurePolicy"</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">"rules"</span><span class="p">:</span> <span class="p">[</span>
-                    <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailJob"</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
-                    <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailIndex"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-                    <span class="p">{</span>
-                        <span class="s2">"action"</span><span class="p">:</span> <span class="s2">"Ignore"</span><span class="p">,</span>
-                        <span class="s2">"onPodConditions"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"DisruptionTarget"</span><span class="p">}],</span>
-                    <span class="p">},</span>
-                <span class="p">]</span>
+            <span class="s2">"schedule"</span><span class="p">:</span> <span class="s2">"15 * * * *"</span><span class="p">,</span>
+            <span class="s2">"timeZone"</span><span class="p">:</span> <span class="s2">"Etc/UTC"</span><span class="p">,</span>
+            <span class="s2">"concurrencyPolicy"</span><span class="p">:</span> <span class="s2">"Forbid"</span><span class="p">,</span>
+            <span class="s2">"startingDeadlineSeconds"</span><span class="p">:</span> <span class="mi">1800</span><span class="p">,</span>
+            <span class="s2">"successfulJobsHistoryLimit"</span><span class="p">:</span> <span class="mi">24</span><span class="p">,</span>
+            <span class="s2">"failedJobsHistoryLimit"</span><span class="p">:</span> <span class="mi">24</span><span class="p">,</span>
+            <span class="s2">"jobTemplate"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="c1"># Kubernetes copies this to each Job; `status` finds the</span>
+                <span class="c1"># project's Jobs by the annotation.</span>
+                <span class="s2">"metadata"</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">"labels"</span><span class="p">:</span> <span class="n">_labels</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span>
+                    <span class="s2">"annotations"</span><span class="p">:</span> <span class="n">_annotations</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span>
+                <span class="p">},</span>
+                <span class="s2">"spec"</span><span class="p">:</span> <span class="n">body</span><span class="p">,</span>
             <span class="p">},</span>
-            <span class="s2">"ttlSecondsAfterFinished"</span><span class="p">:</span> <span class="n">KEEP_FINISHED</span><span class="p">,</span>
-            <span class="s2">"template"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"metadata"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"labels"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">labels</span><span class="p">)},</span> <span class="s2">"spec"</span><span class="p">:</span> <span class="n">pod</span><span class="p">},</span>
         <span class="p">},</span>
     <span class="p">}</span></div>
 
@@ -849,12 +925,37 @@
 <span class="sd">    RuntimeError</span>
 <span class="sd">        If ``kubectl`` refuses the Job; the message is its error.</span>
 <span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">_kubectl</span><span class="p">(</span><span class="s2">"create"</span><span class="p">,</span> <span class="n">job</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="apply">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.apply.html#pystiltctl.job.apply">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Create *manifest*, or update it if it exists, and return its name.</span>
+
+<span class="sd">    Used for a schedule's CronJob, which has a fixed name.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        If ``kubectl`` is not installed.</span>
+<span class="sd">    RuntimeError</span>
+<span class="sd">        If ``kubectl`` refuses it; the message is its error.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">_kubectl</span><span class="p">(</span><span class="s2">"apply"</span><span class="p">,</span> <span class="n">manifest</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_kubectl</span><span class="p">(</span><span class="n">verb</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Run ``kubectl &lt;verb&gt; -f -`` on *manifest* and return the object's name."""</span>
     <span class="n">kubectl</span> <span class="o">=</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"kubectl"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">kubectl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">"kubectl is not installed, or not on PATH."</span><span class="p">)</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-        <span class="p">[</span><span class="n">kubectl</span><span class="p">,</span> <span class="s2">"create"</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="s2">"-o"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">],</span>
-        <span class="nb">input</span><span class="o">=</span><span class="n">to_yaml</span><span class="p">(</span><span class="n">job</span><span class="p">),</span>
+        <span class="p">[</span><span class="n">kubectl</span><span class="p">,</span> <span class="n">verb</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="s2">"-o"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">],</span>
+        <span class="nb">input</span><span class="o">=</span><span class="n">to_yaml</span><span class="p">(</span><span class="n">manifest</span><span class="p">),</span>
         <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
@@ -863,8 +964,7 @@
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
             <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">"kubectl exited with </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">"job.batch/"</span><span class="p">)</span></div>
-
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 </pre></div>
 
                 </article>
