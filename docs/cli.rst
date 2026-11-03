@@ -61,7 +61,9 @@ pystiltctl schedule
 Run a project every hour for the sites in its ``sites.csv``: a CronJob
 whose pod runs ``pystiltctl tick`` at 15 past each hour, one at a time.
 The other options are ``submit``'s. ``--delay`` (8) is how many hours
-behind the clock it runs, so the met is there.
+behind the clock it runs, so the met is there. It checks every row of
+``sites.csv`` first and exits with 2, naming the line, rather than apply a
+CronJob whose every tick would fail.
 
 pystiltctl tick
 ---------------
@@ -74,7 +76,9 @@ What each hourly pod runs: add a receptor per site for each hour of the
 last day that is ``--delay`` hours old, write ``receptors.csv`` back,
 then ``stilt run --receptors`` on that day. ``--now`` (UTC, such as
 ``2026-10-01T00:00``) acts as if it were that time, to fill in a past day.
-Exits with ``stilt run``'s code.
+Exits with ``stilt run``'s code. A bad row in ``sites.csv`` exits with 2
+(the Job stops); a failed copy to or from the bucket exits with 3 (it is
+tried again), and the message says which way it went.
 
 pystiltctl status
 -----------------

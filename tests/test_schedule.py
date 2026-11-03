@@ -54,6 +54,53 @@ def test_read_sites_refuses_a_bad_file(project, text):
         schedule.read_sites(project)
 
 
+@pytest.mark.parametrize(
+    ("text", "message"),
+    [
+        ("longitude,latitude,altitude\n-111.8,40.7\n", r"line 2: no altitude\."),
+        ("longitude,latitude,altitude\n-111.8,40.7,\n", r"line 2: no altitude\."),
+        ("longitude,latitude,altitude\n-111.8,nan,35\n", r"line 2: .*not all numbers"),
+        (
+            "longitude,latitude,altitude\n-111.8,40.7,35\n-111.8,95,35\n",
+            r"line 3: latitude must be within \[-90, 90\]",
+        ),
+        ("longitude,latitude,altitude\n-211.8,40.7,35\n", r"line 2: longitude must"),
+        ("longitude,latitude,altitude\n-111.8,40.7,-5\n", r"line 2: .*altitudes must"),
+        (
+            "longitude,latitude,altitude,altitude_ref\n-111.8,40.7,35,above\n",
+            r"line 2: altitude_ref: .*'agl' or 'msl'",
+        ),
+    ],
+)
+def test_read_sites_names_the_row_it_refuses(project, text, message):
+    (project / "sites.csv").write_text(text)
+    with pytest.raises(ValueError, match=f"sites.csv {message}"):
+        schedule.read_sites(project)
+
+
+def test_read_sites_accepts_a_file_saved_with_a_bom(project):
+    """Excel's "CSV UTF-8" puts a byte order mark before the first column name."""
+    (project / "sites.csv").write_text(
+        "longitude,latitude,altitude\n-111.8,40.7,35\n", encoding="utf-8-sig"
+    )
+    assert schedule.read_sites(project) == [
+        {"longitude": -111.8, "latitude": 40.7, "altitude": 35.0}
+    ]
+
+
+@pytest.mark.parametrize("command", ["schedule", "tick"])
+def test_cli_refuses_a_bad_site_with_its_line(project, execs, command):
+    (project / "sites.csv").write_text(
+        "longitude,latitude,altitude\n-111.8,40.7,35\n-111.8,95,35\n"
+    )
+    args = [command, str(project), *(["--dry-run"] if command == "schedule" else [])]
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 2
+    assert "sites.csv line 3: latitude must be within [-90, 90]" in result.output
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert execs == []
+
+
 def test_hourly_receptors_are_each_site_each_hour(sited):
     hours = schedule.due_hours(NOW)[-2:]
     receptors = schedule.hourly_receptors(schedule.read_sites(sited), hours)
@@ -199,3 +246,31 @@ def test_cli_tick_with_a_time(sited, bucket, tmp_path, execs):
     assert result.exit_code == 0, result.output
     assert receptor_rows(bucket)[-1].split(",")[0] == "2021-01-15 04:00:00"
     assert "--receptors" in execs[0]
+
+
+def test_cli_tick_says_which_way_a_failed_copy_went(
+    sited, bucket, tmp_path, monkeypatch
+):
+    """A tick that cannot write receptors.csv back must not blame the inputs."""
+    push(sited, bucket)
+
+    def refuse(*args):
+        raise PermissionError("access denied")
+
+    monkeypatch.setattr(schedule, "put", refuse)
+    args = ["tick", bucket, "--now", "2021-01-15T12:00", "--workdir", str(tmp_path)]
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 3
+    assert "cannot copy receptors.csv back to memory://" in result.output
+    assert "access denied" in result.output
+    assert "inputs" not in result.output
+
+
+def test_cli_tick_says_which_way_a_failed_pull_went(bucket, tmp_path, monkeypatch):
+    def refuse(*args):
+        raise PermissionError("access denied")
+
+    monkeypatch.setattr(schedule, "project_directory", refuse)
+    result = CliRunner().invoke(app, ["tick", bucket, "--workdir", str(tmp_path)])
+    assert result.exit_code == 3
+    assert "cannot copy the project's inputs from memory://" in result.output

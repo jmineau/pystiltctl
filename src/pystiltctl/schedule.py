@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import math
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -75,7 +76,9 @@ def read_sites(directory: str | Path) -> list[dict[str, Any]]:
     FileNotFoundError
         If the project has no ``sites.csv``.
     ValueError
-        If a column is missing, a value is not a number, or there are no rows.
+        If a column is missing, a value is empty or not a number, PYSTILT
+        refuses the place (a latitude beyond 90, say), or there are no rows.
+        The message names the line.
     """
     path = Path(directory) / SITES
     if not path.is_file():
@@ -83,23 +86,59 @@ def read_sites(directory: str | Path) -> list[dict[str, Any]]:
             f"{Path(directory).name} has no {SITES}: a schedule needs the places "
             "to add a receptor for each hour (longitude, latitude, altitude)."
         )
-    with path.open(newline="") as file:
+    with path.open(newline="", encoding="utf-8-sig") as file:
         rows = list(csv.DictReader(file))
     missing = [c for c in SITE_COLUMNS if rows and c not in rows[0]]
     if not rows or missing:
         raise ValueError(f"{SITES} needs rows with columns {', '.join(SITE_COLUMNS)}.")
     sites: list[dict[str, Any]] = []
     for line, row in enumerate(rows, start=2):
+        # A short row has None for what it lacks.
+        empty = [c for c in SITE_COLUMNS if not (row[c] or "").strip()]
+        if empty:
+            raise ValueError(f"{SITES} line {line}: no {', '.join(empty)}.")
         try:
             site: dict[str, Any] = {c: float(row[c]) for c in SITE_COLUMNS}
         except ValueError:
+            numbers = {c: row[c] for c in SITE_COLUMNS}
             raise ValueError(
-                f"{SITES} line {line}: {row} is not all numbers."
+                f"{SITES} line {line}: {numbers} is not all numbers."
             ) from None
         if row.get("altitude_ref"):
             site["altitude_ref"] = row["altitude_ref"].strip()
+        try:
+            _check_site(site)
+        except ValueError as error:
+            raise ValueError(f"{SITES} line {line}: {_reason(error)}") from None
         sites.append(site)
     return sites
+
+
+def _check_site(site: dict[str, Any]) -> None:
+    """
+    Raise ``ValueError`` if PYSTILT would refuse a receptor at *site*.
+
+    The check is PYSTILT's own: a receptor is built, so a latitude of 95 or
+    an ``altitude_ref`` it does not know fails here, when the schedule is
+    made, and not in every tick.
+    """
+    if not all(math.isfinite(site[c]) for c in SITE_COLUMNS):
+        raise ValueError("not all numbers.")
+    stilt.PointReceptor(time=datetime(2000, 1, 1), **site)
+
+
+def _reason(error: ValueError) -> str:
+    """Return what PYSTILT's validation says, without pydantic's framing."""
+    errors = getattr(error, "errors", None)
+    if not callable(errors):
+        return str(error)
+    reasons = []
+    for item in errors():
+        where = ".".join(str(part) for part in item["loc"])
+        reasons.append(
+            f"{where + ': ' if where else ''}{item['msg']}".replace("Value error, ", "")
+        )
+    return "; ".join(reasons)
 
 
 def hourly_receptors(
@@ -148,14 +187,29 @@ def tick(
         If there is no project, or it has no ``sites.csv``.
     ValueError
         If ``sites.csv`` cannot be read.
+    OSError
+        If the project's inputs cannot be copied from *project*, or
+        ``receptors.csv`` back to it; the message says which.
     """
     now = now or datetime.now(UTC).replace(tzinfo=None)
-    directory = project_directory(project, workdir)
+    try:
+        directory = project_directory(project, workdir)
+    except FileNotFoundError:
+        raise
+    except OSError as error:
+        raise OSError(
+            f"cannot copy the project's inputs from {project}: {error}"
+        ) from error
     receptors = hourly_receptors(read_sites(directory), due_hours(now, delay))
     added = stilt.Project(directory, output=output).add_receptors(receptors)
     logger.info("Added %d receptors, through %s", len(added), receptors[-1].time)
     if added and not is_local(project):
-        put(directory, project, "receptors.csv")
+        try:
+            put(directory, project, "receptors.csv")
+        except OSError as error:
+            raise OSError(
+                f"cannot copy receptors.csv back to {project}: {error}"
+            ) from error
     ids = Path(workdir) / f"{directory.name}-due.txt"
     ids.parent.mkdir(parents=True, exist_ok=True)
     ids.write_text("".join(f"{r.id}\n" for r in receptors))

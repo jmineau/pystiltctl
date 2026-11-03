@@ -277,7 +277,7 @@ def tick(
     except (ValueError, FileNotFoundError) as error:
         _fail(str(error))
     except OSError as error:
-        _fail(f"cannot copy the project's inputs from {project}: {error}", EXIT_RETRY)
+        _fail(str(error), EXIT_RETRY)
 
 
 @app.command(name="status")

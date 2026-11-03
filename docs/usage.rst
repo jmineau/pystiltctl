@@ -119,6 +119,9 @@ towers. Its ``sites.csv`` lists them, one per line:
 
 ``altitude`` is meters above ground (add an ``altitude_ref`` column with
 ``msl`` for above sea level); other columns, such as ``name``, are yours.
+``schedule`` and ``tick`` read the file with PYSTILT's own checks, and a
+mistake (a latitude of 95, an empty value) stops them with the line it is
+on. A file saved from Excel as "CSV UTF-8" is fine.
 Use met that downloads itself, cropped to your region, on a volume that
 keeps it between hours:
 
