@@ -23,6 +23,7 @@ import io
 import json
 import logging
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -70,26 +71,44 @@ def bounds(foot: xr.DataArray) -> list[list[float]]:
     ]
 
 
+def _bands(lats: np.ndarray, south: float, north: float, rows: int) -> np.ndarray:
+    """
+    Return the grid row (index into *lats*, north first) each of *rows* image rows shows.
+
+    The image rows are equal bands of web Mercator's y between *north* and
+    *south*; each takes the grid row nearest its middle.
+    """
+    edges = np.linspace(mercator_y(north), mercator_y(south), rows + 1)
+    middles = np.degrees(
+        2 * np.arctan(np.exp((edges[:-1] + edges[1:]) / 2)) - np.pi / 2
+    )
+    return np.abs(lats[None, :] - middles[:, None]).argmin(axis=1)
+
+
 def image(foot: xr.DataArray) -> np.ndarray:
     """
     Return the footprint as an RGBA image, north at the top, rows in web Mercator.
 
     The footprint is summed over ``time`` when it has that dimension. Each
     image row is a band of equal height on a web map, and takes the value
-    of the grid row whose latitude is nearest its middle.
+    of the grid row whose latitude is nearest its middle. The image has one
+    row per grid row, unless that would leave a grid row out (the bands are
+    taller than a cell where a wide grid is far from the equator); then it
+    has as many rows as it takes for every grid row to show.
     """
     total = foot.sum("time") if "time" in foot.dims else foot
     total = total.transpose("lat", "lon").sortby("lat", ascending=False)
     values = np.asarray(total.values, dtype=float)
     (south, _), (north, _) = bounds(total)
-    rows = values.shape[0]
-    # The middle of each of `rows` equal web-Mercator bands, north to south.
-    edges = np.linspace(mercator_y(north), mercator_y(south), rows + 1)
-    middles = np.degrees(
-        2 * np.arctan(np.exp((edges[:-1] + edges[1:]) / 2)) - np.pi / 2
-    )
     lats = total["lat"].values
-    nearest = np.abs(lats[None, :] - middles[:, None]).argmin(axis=1)
+    rows = values.shape[0]
+    nearest = _bands(lats, south, north, rows)
+    if len(set(nearest)) < rows:
+        # Every cell is at least as tall (in Mercator y) as the smallest one,
+        # so bands that high cannot step over a cell.
+        cells = np.diff(mercator_y(np.linspace(north, south, rows + 1)))
+        height = (mercator_y(north) - mercator_y(south)) / abs(cells).min()
+        nearest = _bands(lats, south, north, int(np.ceil(height)))
     values = values[nearest]
 
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -109,11 +128,28 @@ def png(foot: xr.DataArray) -> bytes:
     return buffer.getvalue()
 
 
+def utc(time: datetime) -> str:
+    """
+    Return *time* as text with its zone: UTC, ending in ``Z``.
+
+    A time with no zone is UTC, as PYSTILT's are. JavaScript reads text
+    without a zone as the viewer's local time, so the zone is written out.
+
+    Examples
+    --------
+    >>> utc(datetime(2026, 10, 29, 10))
+    '2026-10-29T10:00:00Z'
+    """
+    if time.tzinfo is not None:
+        time = time.astimezone(UTC)
+    return f"{time:%Y-%m-%dT%H:%M:%S}Z"
+
+
 def entry(receptor: Any, foot: xr.DataArray) -> dict[str, Any]:
     """Return what the JSON beside a footprint's image says about it."""
     return {
         "receptor": str(receptor.id),
-        "time": receptor.time.isoformat(),
+        "time": utc(receptor.time),
         "longitude": receptor.longitude,
         "latitude": receptor.latitude,
         "altitude": receptor.altitude,
@@ -125,6 +161,25 @@ def entry(receptor: Any, foot: xr.DataArray) -> dict[str, Any]:
     }
 
 
+def choose_variant(project: stilt.Project, variant: str | None = None) -> str:
+    """
+    Return the variant whose footprints to draw: *variant*, or the project's only one.
+
+    Raises
+    ------
+    ValueError
+        If the project has several variants and *variant* is not given.
+    """
+    if variant is not None:
+        return variant
+    if len(project.variants) != 1:
+        raise ValueError(
+            f"The project has {len(project.variants)} variants; say which to draw "
+            f"(one of {', '.join(project.variants)})."
+        )
+    return next(iter(project.variants))
+
+
 def render(
     directory: str | Path,
     url: str,
@@ -134,10 +189,14 @@ def render(
     output: str | None = None,
 ) -> list[str]:
     """
-    Draw the finished footprints of *receptor_ids* to *url*, and update each day's index.
+    Draw the finished footprints of *receptor_ids* to *url*, and add each to its day's index.
 
-    A footprint already drawn there is skipped; one not run yet, or empty,
-    is left out.
+    A footprint is drawn when its day's ``index.json`` does not list it yet;
+    one not run yet, or empty, is left out. The files of a footprint are
+    written in the order PNG, JSON, index, and the index is written after
+    each footprint, so a run that stops part way (an error, or a stop
+    signal) leaves nothing that a later run does not index: a footprint is
+    skipped only once it is in the index.
 
     Parameters
     ----------
@@ -164,20 +223,19 @@ def render(
         If the project has several variants and *variant* is not given.
     """
     project = stilt.Project(directory, output=output)
-    if variant is None:
-        if len(project.variants) != 1:
-            raise ValueError(
-                f"The project has {len(project.variants)} variants; say which to draw "
-                f"(one of {', '.join(project.variants)})."
-            )
-        variant = next(iter(project.variants))
+    variant = choose_variant(project, variant)
     fs, root = fsspec.core.url_to_fs(url)
     root = root.rstrip("/")
-    drawn: dict[str, list[dict[str, Any]]] = {}
+    indexes: dict[str, dict[str, dict[str, Any]]] = {}
+    drawn: list[str] = []
     for receptor_id in receptor_ids:
         simulation = project.simulation(receptor_id, variant)
         day = f"{root}/{simulation.receptor.time:%Y-%m-%d}"
-        if fs.exists(f"{day}/{receptor_id}.json"):
+        if day not in indexes:
+            path = f"{day}/index.json"
+            known = json.loads(fs.cat_file(path)) if fs.exists(path) else []
+            indexes[day] = {i["receptor"]: i for i in known}
+        if receptor_id in indexes[day]:
             continue
         try:
             foot = simulation.footprint
@@ -189,12 +247,11 @@ def render(
         fs.pipe_file(f"{day}/{receptor_id}.png", png(foot))
         item = entry(simulation.receptor, foot)
         fs.pipe_file(f"{day}/{receptor_id}.json", json.dumps(item).encode())
-        drawn.setdefault(day, []).append(item)
-    for day, items in drawn.items():
-        index = f"{day}/index.json"
-        known = json.loads(fs.cat_file(index)) if fs.exists(index) else []
-        merged = {i["receptor"]: i for i in [*known, *items]}
-        ordered = sorted(merged.values(), key=lambda i: (i["time"], i["receptor"]))
-        fs.pipe_file(index, json.dumps(ordered).encode())
-    logger.info("Drew %d footprints to %s", sum(map(len, drawn.values())), url)
-    return [item["receptor"] for items in drawn.values() for item in items]
+        indexes[day][receptor_id] = item
+        ordered = sorted(
+            indexes[day].values(), key=lambda i: (i["time"], i["receptor"])
+        )
+        fs.pipe_file(f"{day}/index.json", json.dumps(ordered).encode())
+        drawn.append(receptor_id)
+    logger.info("Drew %d footprints to %s", len(drawn), url)
+    return drawn

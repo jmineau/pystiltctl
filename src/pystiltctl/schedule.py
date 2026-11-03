@@ -167,7 +167,10 @@ def tick(
     does not return: it becomes ``stilt run --receptors``, whose exit code
     is the pod's. With *render*, it runs ``stilt`` and then draws the day's
     finished footprints to *render* (:func:`pystiltctl.render.render`), and
-    returns ``stilt run``'s exit code.
+    returns ``stilt run``'s exit code. A drawing that fails does not
+    replace a code other than 0: the error is logged and ``stilt``'s code is
+    returned. After a clean run it raises, so the pod does not look
+    successful with footprints missing.
 
     Parameters
     ----------
@@ -199,10 +202,12 @@ def tick(
     FileNotFoundError
         If there is no project, or it has no ``sites.csv``.
     ValueError
-        If ``sites.csv`` cannot be read.
+        If ``sites.csv`` cannot be read, or *render* is given and the project
+        has several variants (checked before ``stilt`` runs).
     OSError
         If the project's inputs cannot be copied from *project*, or
-        ``receptors.csv`` back to it; the message says which.
+        ``receptors.csv`` back to it, or (when ``stilt`` exited with 0) the
+        footprints cannot be drawn to *render*; the message says which.
     """
     now = now or datetime.now(UTC).replace(tzinfo=None)
     try:
@@ -214,7 +219,10 @@ def tick(
             f"cannot copy the project's inputs from {project}: {error}"
         ) from error
     receptors = hourly_receptors(read_sites(directory), due_hours(now, delay))
-    added = stilt.Project(directory, output=output).add_receptors(receptors)
+    stilt_project = stilt.Project(directory, output=output)
+    # Before anything runs: a project that cannot be drawn fails now, not after the day's run.
+    variant = None if render is None else renderer.choose_variant(stilt_project)
+    added = stilt_project.add_receptors(receptors)
     logger.info("Added %d receptors, through %s", len(added), receptors[-1].time)
     if added and not is_local(project):
         try:
@@ -231,5 +239,20 @@ def tick(
         become(command)
         return 0  # reached only when become is replaced, as in the tests
     code = run(command)
-    renderer.render(directory, render, [str(r.id) for r in receptors], output=output)
+    try:
+        renderer.render(
+            directory,
+            render,
+            [r.id for r in receptors],
+            variant=variant,
+            output=output,
+        )
+    except Exception as error:
+        if code != 0:
+            # stilt's code says more than a failed drawing does; keep it.
+            logger.error("Could not draw the footprints to %s", render, exc_info=True)
+            return code
+        if isinstance(error, OSError):
+            raise OSError(f"cannot draw the footprints to {render}: {error}") from error
+        raise
     return code

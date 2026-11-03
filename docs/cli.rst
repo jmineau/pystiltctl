@@ -77,8 +77,11 @@ What each hourly pod runs: add a receptor per site for each hour of the
 last day that is ``--delay`` hours old, write ``receptors.csv`` back,
 then ``stilt run --receptors`` on that day. ``--now`` (UTC, such as
 ``2026-10-01T00:00``) acts as if it were that time, to fill in a past day.
-``--render`` then draws the day's finished footprints. Exits with ``stilt
-run``'s code. A bad row in ``sites.csv`` exits with 2 (the Job stops); a
+``--render`` then draws the day's finished footprints (see :doc:`usage`).
+Exits with ``stilt run``'s code, also when the drawing fails, which is then
+logged; if the run was clean and the drawing failed, it exits with 3 (1 for a
+bug). With ``--render`` the project must have one variant, or it exits with 2
+before running. A bad row in ``sites.csv`` exits with 2 (the Job stops); a
 failed copy to or from the bucket exits with 3 (it is tried again), and the
 message says which way it went.
 

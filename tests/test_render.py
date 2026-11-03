@@ -1,7 +1,7 @@
 """Drawing footprints for a web map."""
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import fsspec
@@ -51,12 +51,14 @@ def test_image_is_summed_over_time_on_a_fixed_scale():
 
 def test_image_rows_follow_web_mercator():
     # Over 40-80 N, equal Mercator bands hold more rows of the southern grid:
-    # the north quarter of the image takes only the northmost grid row.
+    # the north of the image takes only the northmost grid rows, and the
+    # image has more rows than the grid so that no grid row is left out.
     values = np.arange(1, 9)[:, None] * np.ones((8, 1)) * 1e-3
     rgba = render.image(footprint(values, lat0=40.0, res=5.0, hours=1))
     colors = [tuple(row[0]) for row in rgba]
+    assert len(rgba) > 8
     assert colors[0] == colors[1]  # two image rows from the same grid row, in the north
-    assert len(set(colors)) < 8
+    assert len(set(colors)) == 8
 
 
 def test_png_is_a_png():
@@ -107,7 +109,7 @@ def test_render_draws_finished_footprints_and_indexes_the_day(site):
     index = json.loads(fs.cat_file(f"{day}/index.json"))
     assert [i["receptor"] for i in index] == ["r1a"]
     assert index[0]["bounds"] == [[39.75, -112.25], [40.75, -111.25]]
-    assert index[0]["time"] == "2026-10-29T10:00:00"
+    assert index[0]["time"] == "2026-10-29T10:00:00Z"
 
 
 def test_render_skips_what_it_drew_before(site):
@@ -119,3 +121,199 @@ def test_render_needs_a_variant_when_there_are_several(site, monkeypatch):
     monkeypatch.setattr(FakeProject, "variants", {"hrrr": None, "nam": None})
     with pytest.raises(ValueError, match="2 variants"):
         render.render("/project", site, ["r1a"])
+
+
+def test_time_is_written_in_utc_with_its_zone():
+    """A browser reads a time with no zone as its own local time."""
+    assert render.utc(datetime(2026, 10, 29, 10)) == "2026-10-29T10:00:00Z"
+    denver = datetime(2026, 10, 29, 4, tzinfo=timezone(timedelta(hours=-6)))
+    assert render.utc(denver) == "2026-10-29T10:00:00Z"
+    assert render.utc(datetime(2026, 10, 29, 10, tzinfo=UTC)) == "2026-10-29T10:00:00Z"
+
+
+class Hours(FakeProject):
+    """A project whose receptor ``r<H>`` is hour H of one day; ``bad`` ones cannot be read."""
+
+    bad: set[str] = set()
+
+    def simulation(self, receptor_id, variant):
+        receptor = SimpleNamespace(
+            id=receptor_id,
+            time=datetime(2026, 10, 29, int(receptor_id[1:])),
+            longitude=-111.85,
+            latitude=40.77,
+            altitude=35.0,
+        )
+        if receptor_id in self.bad:
+
+            class Corrupt(SimpleNamespace):
+                @property
+                def footprint(self):
+                    raise OSError("corrupt footprint file")
+
+            return Corrupt(receptor=receptor)
+        return SimpleNamespace(
+            receptor=receptor, footprint=footprint(np.ones((2, 2)) * 1e-3)
+        )
+
+
+@pytest.fixture
+def hours(site, monkeypatch):
+    monkeypatch.setattr(render.stilt, "Project", Hours)
+    monkeypatch.setattr(Hours, "bad", set())
+    return site
+
+
+def indexed(site):
+    """The receptors in the day's index.json, or None when there is no index."""
+    fs, root = fsspec.core.url_to_fs(site)
+    path = f"{root}/2026-10-29/index.json"
+    return (
+        [i["receptor"] for i in json.loads(fs.cat_file(path))]
+        if fs.exists(path)
+        else None
+    )
+
+
+def test_render_indexes_every_footprint_after_an_error_part_way(hours, monkeypatch):
+    """The third footprint of a tick cannot be read: the first two are already drawn."""
+    ids = ["r10", "r11", "r12", "r13"]
+    monkeypatch.setattr(Hours, "bad", {"r12"})
+    with pytest.raises(OSError, match="corrupt"):
+        render.render("/project", hours, ids)
+    monkeypatch.setattr(Hours, "bad", set())
+    render.render("/project", hours, ids)
+    assert indexed(hours) == ids
+
+
+def test_render_indexes_every_footprint_after_a_stop_before_the_index(
+    hours, monkeypatch
+):
+    """A stop signal between a footprint's files and its index entry loses nothing."""
+    ids = ["r10", "r11", "r12"]
+    fs_for = fsspec.core.url_to_fs
+    stop = {"now": True}
+
+    class StopsAtTheIndex:
+        def __init__(self, fs):
+            self.fs = fs
+
+        def __getattr__(self, name):
+            return getattr(self.fs, name)
+
+        def pipe_file(self, path, data, **kwargs):
+            if stop["now"] and path.endswith("index.json"):
+                raise KeyboardInterrupt("SIGTERM")
+            return self.fs.pipe_file(path, data, **kwargs)
+
+    monkeypatch.setattr(
+        render.fsspec.core,
+        "url_to_fs",
+        lambda url: (StopsAtTheIndex(fs_for(url)[0]), fs_for(url)[1]),
+    )
+    with pytest.raises(KeyboardInterrupt):
+        render.render("/project", hours, ids[:2])
+    stop["now"] = False
+    assert render.render("/project", hours, ids) == ids
+    assert indexed(hours) == ids
+
+
+def test_render_indexes_a_footprint_drawn_before_the_index_was_kept(hours):
+    """A day whose files have no index entry (an older run) is drawn and indexed again."""
+    fs, root = fsspec.core.url_to_fs(hours)
+    day = f"{root}/2026-10-29"
+    fs.makedirs(day)
+    fs.pipe_file(f"{day}/r10.json", b"{}")
+    assert render.render("/project", hours, ["r10"]) == ["r10"]
+    assert indexed(hours) == ["r10"]
+
+
+def test_render_keeps_the_days_earlier_entries_in_time_order(hours):
+    render.render("/project", hours, ["r12"])
+    render.render("/project", hours, ["r10", "r12", "r11"])
+    assert indexed(hours) == ["r10", "r11", "r12"]
+
+
+def test_choose_variant(site, monkeypatch):
+    project = FakeProject("/project")
+    assert render.choose_variant(project) == "hrrr"
+    assert render.choose_variant(project, "nam") == "nam"
+    monkeypatch.setattr(FakeProject, "variants", {"hrrr": None, "nam": None})
+    with pytest.raises(ValueError, match="2 variants"):
+        render.choose_variant(project)
+
+
+def mercator(lat):
+    return np.log(np.tan(np.pi / 4 + np.radians(lat) / 2))
+
+
+def shown_rows(lat0, n, res):
+    """
+    Return the grid row (north first) each image row shows, and the image's rows.
+
+    Each grid row has its own color. A row of the image is matched to the
+    grid row it looks like, using the same footprint on a grid so thin that
+    the rows are drawn one to one.
+    """
+    values = 10 ** (-4.95 + 3.9 * np.arange(n) / max(n - 1, 1))
+    foot = footprint(values[:, None] * np.ones((1, 2)), lat0=lat0, res=res, hours=1)
+    thin = footprint(values[:, None] * np.ones((1, 2)), lat0=0.0, res=1e-4, hours=1)
+    reference = render.image(thin)[:, 0, :].astype(int)
+    rgba = render.image(foot)
+    got = [
+        int(np.abs(reference - row[0].astype(int)).sum(axis=1).argmin()) for row in rgba
+    ]
+    return np.array(got), len(rgba)
+
+
+def expected(lat0, n, res, rows):
+    """For each of *rows* equal Mercator bands, the grid row (north first) it overlaps most."""
+    lat = (lat0 + res * np.arange(n))[::-1]
+    south, north = lat.min() - res / 2, lat.max() + res / 2
+    bands = np.linspace(mercator(north), mercator(south), rows + 1)
+    top, bottom = mercator(lat + res / 2), mercator(lat - res / 2)
+    overlap = np.minimum(bands[:-1, None], top) - np.maximum(bands[1:, None], bottom)
+    return overlap.argmax(axis=1)
+
+
+GRIDS = {
+    "the WBB grid": (40.3, 90, 0.01),
+    "one degree at 41 N": (40.5, 10, 0.1),
+    "20 to 60 N, 0.25 degree": (20.0, 161, 0.25),
+    "20 to 60 N, 1 degree": (20.0, 41, 1.0),
+    "70 to 85 N, 0.1 degree": (70.0, 151, 0.1),
+    "equator to 80 N, 1 degree": (0.0, 81, 1.0),
+    "60 to 20 S, 0.5 degree": (-60.0, 81, 0.5),
+}
+
+
+@pytest.mark.parametrize("grid", GRIDS.values(), ids=GRIDS.keys())
+def test_image_rows_show_the_grid_row_a_web_map_would(grid):
+    got, rows = shown_rows(*grid)
+    assert (got == expected(*grid, rows)).all()
+
+
+@pytest.mark.parametrize("grid", GRIDS.values(), ids=GRIDS.keys())
+def test_image_shows_every_grid_row(grid):
+    got, _ = shown_rows(*grid)
+    assert len(set(got)) == grid[1]
+
+
+def test_image_of_a_small_grid_has_a_row_per_grid_row():
+    """The WBB grid has no row to rescue: its image is the size it always was."""
+    assert render.image(footprint(np.ones((90, 100)), lat0=40.3, res=0.01)).shape == (
+        90,
+        100,
+        4,
+    )
+
+
+def test_image_keeps_a_lone_strong_cell_on_a_wide_grid():
+    values = np.full((161, 2), 1e-7)
+    # Grid rows (south first) the plain, one-row-per-cell image would skip.
+    plain = np.unique(expected(20.0, 161, 0.25, 161))
+    skipped = sorted(set(range(161)) - set(plain))
+    assert skipped
+    values[161 - 1 - skipped[len(skipped) // 2], :] = 5e-2
+    rgba = render.image(footprint(values, lat0=20.0, res=0.25, hours=1))
+    assert (rgba[..., 3] > 0).any()

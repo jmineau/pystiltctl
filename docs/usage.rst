@@ -192,8 +192,12 @@ with an ``index.json`` that lists the day's footprints:
 The image is the footprint summed over time, on one log color scale for
 every footprint (1e-5 to 1e-1, in the footprint's units), with the cells
 below the scale left transparent. Its rows are spaced as a web map's, so
-a map can stretch it between its corners. ``bounds`` in the JSON is
-those corners, ``[[south, west], [north, east]]``, as Leaflet takes them:
+a map can stretch it between its corners; on a grid that spans many
+degrees of latitude it has more rows than the grid, so that no grid row
+is left out. ``bounds`` in the JSON is those corners,
+``[[south, west], [north, east]]``, as Leaflet takes them. ``time`` is in
+UTC and ends in ``Z``, so a browser reads it as UTC, not as its own local
+time:
 
 .. code-block:: javascript
 
@@ -204,7 +208,16 @@ those corners, ``[[south, west], [north, east]]``, as Leaflet takes them:
    L.imageOverlay(`${base}/${day}/${latest.receptor}.png`, latest.bounds).addTo(map);
 
 The folder must be readable by the browser: public, with CORS allowing
-your site's address. A footprint already drawn is not drawn again.
+your site's address. A footprint is drawn once it is not in the day's
+``index.json``, and added to the index as soon as it is drawn, so a pod that
+stops part way loses none: the next tick draws and indexes the rest.
+
+The project needs one variant, or ``tick`` stops before it runs anything
+(exit 2). When the drawing itself fails, the exit code is still the run's:
+``stilt``'s 1 (some failed), or 3 (stopped), and the error is in the log.
+If ``stilt`` finished cleanly and only the drawing failed, ``tick`` exits
+with 3, and the Job tries it again (a bucket that was out for a minute), or
+with 1 for an error in pystiltctl itself, which is not retried.
 
 Check on it
 -----------

@@ -81,8 +81,10 @@ Images for web maps
    :toctree: _autosummary
 
    render.render
+   render.choose_variant
    render.image
    render.png
    render.bounds
    render.entry
+   render.utc
    render.mercator_y
