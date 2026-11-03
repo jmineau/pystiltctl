@@ -125,7 +125,14 @@ def test_manifest_yaml_has_no_anchors(pushed):
 
 @pytest.mark.parametrize(
     ("version", "tag"),
-    [("0.2.0", "0.2.0"), ("0.2.1.dev3+g1a2b3c4", "main"), ("0+unknown", "main")],
+    [
+        ("0.2.0", "0.2.0"),
+        ("0.2.0a1", "0.2.0a1"),
+        ("0.2.0rc2", "0.2.0rc2"),
+        ("0.2.0.post1", "0.2.0.post1"),
+        ("0.2.1.dev3+g1a2b3c4", "main"),
+        ("0+unknown", "main"),
+    ],
 )
 def test_default_image(version, tag):
     assert job.default_image(version) == f"ghcr.io/jmineau/pystiltctl:{tag}"
