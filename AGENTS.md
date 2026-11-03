@@ -193,6 +193,7 @@ when one breaks.
   maintains the branch. Never edit gh-pages by hand.
 - The version comes from git tags (setuptools-scm); there is no version string in
   the source. The maintainer cuts releases; pushing a `vX.Y.Z` tag publishes it.
+- **A release includes a pre-release or post-release tag**, not only a plain `X.Y.Z`: `image.yml` pushes an image for every `vX.Y.Z...` tag, and `job.default_image` matches that by checking `packaging.Version(v).is_devrelease` and `.local` are both falsy, not a regex on `X.Y.Z`.
 
 ## Template
 
