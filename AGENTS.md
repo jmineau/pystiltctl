@@ -49,7 +49,7 @@ complete, 1 some failed, 2 bad command line, 3 stopped).
     their `podFailurePolicy`, never a loop here.
   - `schedule.py`: `tick`, each hour's pod: `sites.csv` receptors via `add_receptors`,
     `receptors.csv` put back, then `stilt run --receptors` on the last day.
-  - `render.py`: PNG + JSON per footprint for web maps (web Mercator rows, fixed log scale); a footprint counts as drawn once it is in the day's `index.json`, which is written after each one. `tick --render` keeps `stilt`'s exit code when drawing fails.
+  - `render.py`: PNG + JSON per footprint for web maps (web Mercator rows, fixed log scale); a footprint counts as drawn once it is in the day's `index.json`, which is written after each one. Checking a day's index uses `fs.info`, not `fs.exists` (fsspec defines that to catch every exception and return False), so a bucket error raises `OSError` instead of looking like no index. `tick --render` keeps `stilt`'s exit code when drawing fails.
   - `status.py`: `stilt status --json` plus the Jobs labeled `pystiltctl/project`.
 - `tests/`: pytest suite; `tests/kubernetes/`, the end-to-end test on kind (its README).
 - `docs/`: Sphinx site (PyData theme). `docs/api.rst` lists the API by topic; each class gets a page with tables of its attributes and methods, and each member a page of its own (`docs/_templates/autosummary/`, `docs/_ext/api_pages.py`).

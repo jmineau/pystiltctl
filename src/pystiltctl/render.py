@@ -180,6 +180,22 @@ def choose_variant(project: stilt.Project, variant: str | None = None) -> str:
     return next(iter(project.variants))
 
 
+def _exists(fs: fsspec.AbstractFileSystem, path: str) -> bool:
+    """
+    Whether *path* is a file on *fs*.
+
+    Unlike ``fs.exists``, which fsspec defines to catch every exception and
+    return False, this lets anything but a missing *path* through, so a
+    refused connection, a timeout or expired credentials are not mistaken
+    for an absent index.
+    """
+    try:
+        fs.info(path)
+    except FileNotFoundError:
+        return False
+    return True
+
+
 def render(
     directory: str | Path,
     url: str,
@@ -221,6 +237,9 @@ def render(
     ------
     ValueError
         If the project has several variants and *variant* is not given.
+    OSError
+        If a day's index at *url* cannot be checked: a refused connection, a
+        timeout, a 403 or expired credentials, say.
     """
     project = stilt.Project(directory, output=output)
     variant = choose_variant(project, variant)
@@ -233,7 +252,13 @@ def render(
         day = f"{root}/{simulation.receptor.time:%Y-%m-%d}"
         if day not in indexes:
             path = f"{day}/index.json"
-            known = json.loads(fs.cat_file(path)) if fs.exists(path) else []
+            try:
+                contents = fs.cat_file(path) if _exists(fs, path) else None
+            except Exception as error:
+                if isinstance(error, OSError):
+                    raise
+                raise OSError(f"cannot check {path} for an index: {error}") from error
+            known = json.loads(contents) if contents is not None else []
             indexes[day] = {i["receptor"]: i for i in known}
         if receptor_id in indexes[day]:
             continue
