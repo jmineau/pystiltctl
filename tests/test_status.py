@@ -296,6 +296,21 @@ def test_project_jobs_leaves_out_a_job_with_no_annotation(cluster):
     assert unclaimed == ["stilt-winter-old"]
 
 
+def test_project_jobs_counts_the_jobs_a_schedule_makes(cluster):
+    """Kubernetes copies a CronJob's jobTemplate metadata to each Job it starts."""
+    project = "s3://lab-a/projects/towers/"
+    spec = job.JobSpec(project, project_name(project), tasks=1, parallelism=1)
+    template = job.cron_job(spec, delay=8)["spec"]["jobTemplate"]
+    tick = {
+        "metadata": {**template["metadata"], "name": "stilt-towers-29345715"},
+        "spec": {"completions": 1, "parallelism": 1},
+    }
+    cluster.jobs.append(tick)
+    jobs, unclaimed = status.project_jobs(project)
+    assert [j["name"] for j in jobs] == ["stilt-towers-29345715"]
+    assert unclaimed == []
+
+
 def test_project_jobs_without_kubectl(monkeypatch):
     monkeypatch.setattr(status.shutil, "which", lambda name: None)
     with pytest.raises(FileNotFoundError, match="kubectl"):

@@ -10,14 +10,6 @@ from pystiltctl.cli import app
 from pystiltctl.inputs import push
 
 
-@pytest.fixture
-def execs(monkeypatch):
-    """Record the command the worker would become, instead of becoming it."""
-    calls = []
-    monkeypatch.setattr(worker.os, "execv", lambda path, args: calls.append(args))
-    return calls
-
-
 def test_task_index_from_argument_or_environment(monkeypatch):
     monkeypatch.setenv("JOB_COMPLETION_INDEX", "7")
     assert worker.task_index() == 7

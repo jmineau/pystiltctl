@@ -132,6 +132,27 @@ jobs:
           reason=$(kubectl get "$name" -o jsonpath='{.status.conditions[?(@.type=="Failed")].reason}')
           test "$reason" = PodFailurePolicy || { echo "::error::failed for $reason"; exit 1; }
 
+      - name: A schedule's tick adds the day's hours and runs them
+        # The demo's met is from 2021, so today's hours all fail with
+        # MET_COVERAGE: the tick must still add a day of receptors to the
+        # bucket, and its Job must end by the exit-code rule (1: the task
+        # fails, no retries), as an hour whose met has not arrived would.
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ENDPOINT_URL: http://127.0.0.1:5000
+        run: |
+          uv run pystiltctl schedule s3://stilt/projects/demo \
+            --image pystiltctl:ci --secret bucket-creds --volume met:/met
+          kubectl get cronjob stilt-demo
+          kubectl create job tick-now --from=cronjob/stilt-demo
+          kubectl wait --for=condition=failed job/tick-now --timeout=600s
+          reason=$(kubectl get job/tick-now -o jsonpath='{.status.conditions[?(@.type=="Failed")].reason}')
+          test "$reason" = FailedIndexes || { echo "::error::failed for $reason"; exit 1; }
+          rows=$(uv run python -c "import s3fs; print(len(s3fs.S3FileSystem().cat_file('stilt/projects/demo/receptors.csv').splitlines()) - 1)")
+          test "$rows" = 26 || { echo "::error::receptors.csv has $rows rows, not 2 + 24"; exit 1; }
+
       - name: Show the cluster
         if: ${{ !cancelled() }}
         run: |

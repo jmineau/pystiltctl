@@ -62,37 +62,50 @@ def project_directory(project: str, workdir: str | Path) -> Path:
 
 def stilt_command(
     directory: str | Path,
-    task: int,
-    n_tasks: int,
+    task: int | None = None,
+    n_tasks: int | None = None,
     *,
+    receptors: str | Path | None = None,
     cpus: int | None = None,
     output: str | None = None,
 ) -> list[str]:
     """
-    Return the ``stilt run`` command line for task *task* of *n_tasks*.
+    Return the ``stilt run`` command line for a share of a project.
 
-    It runs PYSTILT with this Python, so the ``stilt`` it runs is the one
-    installed beside pystiltctl.
+    The share is task *task* of *n_tasks* (``--task I/N``), the receptors
+    listed in the file *receptors* (``--receptors``), or both. It runs
+    PYSTILT with this Python, so the ``stilt`` it runs is the one installed
+    beside pystiltctl.
 
     Examples
     --------
     >>> stilt_command("/work/my_project", 3, 20, cpus=4)[2:]
     ['stilt', 'run', '/work/my_project', '--task', '3/20', '--cpus', '4']
+    >>> stilt_command("/work/my_project", receptors="/work/ids.txt")[2:]
+    ['stilt', 'run', '/work/my_project', '--receptors', '/work/ids.txt']
     """
-    command = [
-        sys.executable,
-        "-m",
-        "stilt",
-        "run",
-        str(directory),
-        "--task",
-        f"{task}/{n_tasks}",
-    ]
+    command = [sys.executable, "-m", "stilt", "run", str(directory)]
+    if task is not None:
+        command += ["--task", f"{task}/{n_tasks}"]
+    if receptors is not None:
+        command += ["--receptors", str(receptors)]
     if cpus is not None:
         command += ["--cpus", str(cpus)]
     if output is not None:
         command += ["--output", output]
     return command
+
+
+def become(command: list[str]) -> None:
+    """
+    Replace this process with *command*, so its exit code and signals are this pod's.
+
+    This function does not return.
+    """
+    logger.info("Running %s", " ".join(command[2:]))
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os.execv(command[0], command)
 
 
 def run_task(
@@ -135,8 +148,4 @@ def run_task(
     if not 0 <= task < n_tasks:
         raise ValueError(f"Task {task} is not one of 0 to {n_tasks - 1}.")
     directory = project_directory(project, workdir)
-    command = stilt_command(directory, task, n_tasks, cpus=cpus, output=output)
-    logger.info("Running %s", " ".join(command[2:]))
-    sys.stdout.flush()
-    sys.stderr.flush()
-    os.execv(command[0], command)
+    become(stilt_command(directory, task, n_tasks, cpus=cpus, output=output))
