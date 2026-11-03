@@ -278,12 +278,17 @@ def _labels(spec: JobSpec) -> dict[str, str]:
     }
 
 
+def _annotations(spec: JobSpec) -> dict[str, str]:
+    """Return the annotations every object for *spec*'s project carries."""
+    return {PROJECT_ANNOTATION: project_key(spec.project)}
+
+
 def _metadata(spec: JobSpec, **name: str) -> dict[str, Any]:
     """Return an object's metadata: *name* (``name`` or ``generateName``), labels, namespace."""
     metadata: dict[str, Any] = {
         **name,
         "labels": _labels(spec),
-        "annotations": {PROJECT_ANNOTATION: project_key(spec.project)},
+        "annotations": _annotations(spec),
     }
     if spec.namespace is not None:
         metadata["namespace"] = spec.namespace
@@ -402,7 +407,15 @@ def cron_job(spec: JobSpec, delay: int) -> dict[str, Any]:
             "startingDeadlineSeconds": 1800,
             "successfulJobsHistoryLimit": 24,
             "failedJobsHistoryLimit": 24,
-            "jobTemplate": {"metadata": {"labels": _labels(spec)}, "spec": body},
+            "jobTemplate": {
+                # Kubernetes copies this to each Job; `status` finds the
+                # project's Jobs by the annotation.
+                "metadata": {
+                    "labels": _labels(spec),
+                    "annotations": _annotations(spec),
+                },
+                "spec": body,
+            },
         },
     }
 
