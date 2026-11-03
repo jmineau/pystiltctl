@@ -149,6 +149,22 @@ def push(project: str | Path, url: str) -> list[str]:
     return copied
 
 
+def _exists(fs: fsspec.AbstractFileSystem, path: str, kind: str = "file") -> bool:
+    """
+    Whether *path* is a *kind* (``"file"`` or ``"directory"``) on *fs*.
+
+    Unlike ``fs.isfile``/``fs.isdir``, which fsspec defines to catch every
+    exception and return False, this lets anything but a missing *path*
+    through, so a refused connection, a timeout or expired credentials are
+    not mistaken for an absent file.
+    """
+    try:
+        info = fs.info(path)
+    except FileNotFoundError:
+        return False
+    return info["type"] == kind
+
+
 def pull(url: str, directory: str | Path) -> Path:
     """
     Copy a project's inputs from *url* into *directory*.
@@ -172,23 +188,36 @@ def pull(url: str, directory: str | Path) -> Path:
     ------
     FileNotFoundError
         If *url* has no ``config.yaml`` or ``receptors.csv``.
+    OSError
+        If *url* cannot be reached, such as a refused connection, a
+        timeout or expired credentials: worth a retry, unlike a project
+        that is genuinely not there.
     """
     directory = Path(directory)
     fs, root = fsspec.core.url_to_fs(url)
     root = root.rstrip("/")
-    for name in INPUT_FILES:
-        if not fs.isfile(f"{root}/{name}"):
-            raise FileNotFoundError(f"No PYSTILT project at {url}: it has no {name}.")
-    directory.mkdir(parents=True, exist_ok=True)
-    for name in INPUT_FILES:
-        fs.get_file(f"{root}/{name}", str(directory / name))
-    if fs.isfile(f"{root}/{SITES}"):
-        fs.get_file(f"{root}/{SITES}", str(directory / SITES))
-    if fs.isdir(f"{root}/{TABLES}"):
-        for remote in fs.find(f"{root}/{TABLES}"):
-            local = directory / remote.removeprefix(f"{root}/")
-            local.parent.mkdir(parents=True, exist_ok=True)
-            fs.get_file(remote, str(local))
+    try:
+        for name in INPUT_FILES:
+            if not _exists(fs, f"{root}/{name}"):
+                raise FileNotFoundError(
+                    f"No PYSTILT project at {url}: it has no {name}."
+                )
+        directory.mkdir(parents=True, exist_ok=True)
+        for name in INPUT_FILES:
+            fs.get_file(f"{root}/{name}", str(directory / name))
+        if _exists(fs, f"{root}/{SITES}"):
+            fs.get_file(f"{root}/{SITES}", str(directory / SITES))
+        if _exists(fs, f"{root}/{TABLES}", kind="directory"):
+            for remote in fs.find(f"{root}/{TABLES}"):
+                local = directory / remote.removeprefix(f"{root}/")
+                local.parent.mkdir(parents=True, exist_ok=True)
+                fs.get_file(remote, str(local))
+    except FileNotFoundError:
+        raise
+    except Exception as error:
+        if isinstance(error, OSError):
+            raise
+        raise OSError(f"cannot reach {url}: {error}") from error
     logger.info("Copied the inputs at %s to %s", url, directory)
     return directory
 

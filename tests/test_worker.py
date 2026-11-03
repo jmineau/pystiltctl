@@ -128,6 +128,39 @@ def test_cli_worker_failed_copy_is_retried(bucket, tmp_path, monkeypatch, execs)
     assert "did not answer" in result.output
 
 
+def test_cli_worker_bucket_error_is_retried_not_failed(
+    bucket, tmp_path, monkeypatch, execs
+):
+    """A bucket error while copying the inputs retries the task, not the whole Job (#11)."""
+    import fsspec
+
+    from pystiltctl import inputs
+
+    class _Unreachable:
+        def __init__(self, fs):
+            self.fs = fs
+
+        def __getattr__(self, name):
+            return getattr(self.fs, name)
+
+        def info(self, path, **kwargs):
+            raise TimeoutError("timed out reaching the bucket")
+
+    fs_for = fsspec.core.url_to_fs
+    monkeypatch.setattr(
+        inputs.fsspec.core,
+        "url_to_fs",
+        lambda url: (_Unreachable(fs_for(url)[0]), fs_for(url)[1]),
+    )
+    result = CliRunner().invoke(
+        app,
+        ["worker", bucket, "--tasks", "2", "--index", "0", "--workdir", str(tmp_path)],
+    )
+    assert result.exit_code == 3, result.output
+    assert "timed out" in result.output
+    assert execs == []
+
+
 def test_cli_worker_without_an_index(project, monkeypatch, execs):
     monkeypatch.delenv("JOB_COMPLETION_INDEX", raising=False)
     result = CliRunner().invoke(app, ["worker", str(project), "--tasks", "2"])
