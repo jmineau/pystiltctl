@@ -1,0 +1,6 @@
+﻿pystiltctl.render.png
+=====================
+
+.. currentmodule:: pystiltctl.render
+
+.. autofunction:: png

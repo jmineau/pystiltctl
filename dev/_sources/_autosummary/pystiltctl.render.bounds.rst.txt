@@ -1,0 +1,6 @@
+﻿pystiltctl.render.bounds
+========================
+
+.. currentmodule:: pystiltctl.render
+
+.. autofunction:: bounds

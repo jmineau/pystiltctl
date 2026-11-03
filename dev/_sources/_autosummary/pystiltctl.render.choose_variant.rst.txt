@@ -1,0 +1,6 @@
+﻿pystiltctl.render.choose\_variant
+=================================
+
+.. currentmodule:: pystiltctl.render
+
+.. autofunction:: choose_variant

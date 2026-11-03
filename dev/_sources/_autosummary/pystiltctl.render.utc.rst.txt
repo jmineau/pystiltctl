@@ -1,0 +1,6 @@
+﻿pystiltctl.render.utc
+=====================
+
+.. currentmodule:: pystiltctl.render
+
+.. autofunction:: utc

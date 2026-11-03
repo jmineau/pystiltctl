@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=1d04e6b4"></script>
+    <script src="../_static/documentation_options.js?v=7118659f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev17+gd19083bc9" />
+  <meta name="docsearch:version" content="0.0.1.dev18+g051ef9b6d" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -432,6 +432,7 @@
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.worker.project_directory.html">pystiltctl.worker.project_directory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.worker.stilt_command.html">pystiltctl.worker.stilt_command</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.worker.become.html">pystiltctl.worker.become</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.worker.run.html">pystiltctl.worker.run</a></li>
 </ul>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.job.JobSpec.html">pystiltctl.job.JobSpec</a></li>
@@ -461,6 +462,16 @@
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.schedule.due_hours.html">pystiltctl.schedule.due_hours</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.schedule.read_sites.html">pystiltctl.schedule.read_sites</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.schedule.hourly_receptors.html">pystiltctl.schedule.hourly_receptors</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.render.render.html">pystiltctl.render.render</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.render.choose_variant.html">pystiltctl.render.choose_variant</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.render.image.html">pystiltctl.render.image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.render.png.html">pystiltctl.render.png</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.render.bounds.html">pystiltctl.render.bounds</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.render.entry.html">pystiltctl.render.entry</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.render.utc.html">pystiltctl.render.utc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.render.mercator_y.html">pystiltctl.render.mercator_y</a></li>
 </ul>
 </div>
 </nav></div>
@@ -525,10 +536,16 @@
 <h1>pystiltctl.schedule.tick<a class="headerlink" href="#pystiltctl-schedule-tick" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="pystiltctl.schedule.tick">
-<span class="sig-prename descclassname"><span class="pre">pystiltctl.schedule.</span></span><span class="sig-name descname"><span class="pre">tick</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">delay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">now</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cpus</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PosixPath('/tmp/pystiltctl')</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pystiltctl/schedule.html#tick"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pystiltctl.schedule.tick" title="Link to this definition">#</a></dt>
-<dd><p>Add the hours now due to <em>project</em>, then run its last day, in place of this process.</p>
-<p>This is what each pod of a schedule’s CronJob runs. It does not return:
-it becomes <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--receptors</span></code>, whose exit code is the pod’s.</p>
+<span class="sig-prename descclassname"><span class="pre">pystiltctl.schedule.</span></span><span class="sig-name descname"><span class="pre">tick</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">delay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">now</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cpus</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">render</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PosixPath('/tmp/pystiltctl')</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pystiltctl/schedule.html#tick"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pystiltctl.schedule.tick" title="Link to this definition">#</a></dt>
+<dd><p>Add the hours now due to <em>project</em>, then run its last day.</p>
+<p>This is what each pod of a schedule’s CronJob runs. Without <em>render</em> it
+does not return: it becomes <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--receptors</span></code>, whose exit code
+is the pod’s. With <em>render</em>, it runs <code class="docutils literal notranslate"><span class="pre">stilt</span></code> and then draws the day’s
+finished footprints to <em>render</em> (<a class="reference internal" href="pystiltctl.render.render.html#pystiltctl.render.render" title="pystiltctl.render.render"><code class="xref py py-func docutils literal notranslate"><span class="pre">pystiltctl.render.render()</span></code></a>), and
+returns <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>’s exit code. A drawing that fails does not
+replace a code other than 0: the error is logged and <code class="docutils literal notranslate"><span class="pre">stilt</span></code>’s code is
+returned. After a clean run it raises, so the pod does not look
+successful with footprints missing.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -539,19 +556,26 @@ time fills in a past day.</p></li>
 <li><p><strong>cpus</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Receptors to run at once. Defaults to <code class="docutils literal notranslate"><span class="pre">execution.cpus</span></code> in
 <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p></li>
 <li><p><strong>output</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – The output directory, in place of the one <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> names.</p></li>
+<li><p><strong>render</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Where to draw the footprints for a web map, such as
+<code class="docutils literal notranslate"><span class="pre">s3://my-site/footprints/towers</span></code>.</p></li>
 <li><p><strong>workdir</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span>) – Where a URL’s inputs are copied, and the list of receptors written.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>’s exit code, when <em>render</em> is given.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If there is no project, or it has no <code class="docutils literal notranslate"><span class="pre">sites.csv</span></code>.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">sites.csv</span></code> cannot be read.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">sites.csv</span></code> cannot be read, or <em>render</em> is given and the project
+    has several variants (checked before <code class="docutils literal notranslate"><span class="pre">stilt</span></code> runs).</p></li>
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#OSError" title="(in Python v3.15)"><strong>OSError</strong></a> – If the project’s inputs cannot be copied from <em>project</em>, or
-    <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> back to it; the message says which.</p></li>
+    <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> back to it, or (when <code class="docutils literal notranslate"><span class="pre">stilt</span></code> exited with 0) the
+    footprints cannot be drawn to <em>render</em>; the message says which.</p></li>
 </ul>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>

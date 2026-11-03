@@ -1,0 +1,6 @@
+﻿pystiltctl.render.mercator\_y
+=============================
+
+.. currentmodule:: pystiltctl.render
+
+.. autofunction:: mercator_y

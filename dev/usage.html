@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=1d04e6b4"></script>
+    <script src="_static/documentation_options.js?v=7118659f"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev17+gd19083bc9" />
+  <meta name="docsearch:version" content="0.0.1.dev18+g051ef9b6d" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -630,6 +630,48 @@ past day by hand, run <code class="docutils literal notranslate"><span class="pr
 Scheduling a project again replaces its CronJob; <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">delete</span> <span class="pre">cronjob</span>
 <span class="pre">stilt-&lt;project&gt;</span></code> stops it.</p>
 </section>
+<section id="footprints-on-a-web-map">
+<h2>Footprints on a web map<a class="headerlink" href="#footprints-on-a-web-map" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">--render</span></code> draws each finished footprint for a web map, after each
+hour’s run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pystiltctl<span class="w"> </span>schedule<span class="w"> </span>s3://my-bucket/projects/towers<span class="w"> </span>--volume<span class="w"> </span>met:/met<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--render<span class="w"> </span>s3://my-site/footprints/towers
+</pre></div>
+</div>
+<p>Each footprint becomes a PNG and a JSON beside it, in a folder per day,
+with an <code class="docutils literal notranslate"><span class="pre">index.json</span></code> that lists the day’s footprints:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>s3://my-site/footprints/towers/2026-10-29/index.json
+s3://my-site/footprints/towers/2026-10-29/202610291000_-111.8476_40.7663_35.png
+s3://my-site/footprints/towers/2026-10-29/202610291000_-111.8476_40.7663_35.json
+</pre></div>
+</div>
+<p>The image is the footprint summed over time, on one log color scale for
+every footprint (1e-5 to 1e-1, in the footprint’s units), with the cells
+below the scale left transparent. Its rows are spaced as a web map’s, so
+a map can stretch it between its corners; on a grid that spans many
+degrees of latitude it has more rows than the grid, so that no grid row
+is left out. <code class="docutils literal notranslate"><span class="pre">bounds</span></code> in the JSON is those corners,
+<code class="docutils literal notranslate"><span class="pre">[[south,</span> <span class="pre">west],</span> <span class="pre">[north,</span> <span class="pre">east]]</span></code>, as Leaflet takes them. <code class="docutils literal notranslate"><span class="pre">time</span></code> is in
+UTC and ends in <code class="docutils literal notranslate"><span class="pre">Z</span></code>, so a browser reads it as UTC, not as its own local
+time:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">base</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://storage.googleapis.com/my-site/footprints/towers"</span><span class="p">;</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">day</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"2026-10-29"</span><span class="p">;</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">items</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="sb">`</span><span class="si">${</span><span class="nx">base</span><span class="si">}</span><span class="sb">/</span><span class="si">${</span><span class="nx">day</span><span class="si">}</span><span class="sb">/index.json`</span><span class="p">)).</span><span class="nx">json</span><span class="p">();</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">latest</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">items</span><span class="p">[</span><span class="nx">items</span><span class="p">.</span><span class="nx">length</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mf">1</span><span class="p">];</span>
+<span class="nx">L</span><span class="p">.</span><span class="nx">imageOverlay</span><span class="p">(</span><span class="sb">`</span><span class="si">${</span><span class="nx">base</span><span class="si">}</span><span class="sb">/</span><span class="si">${</span><span class="nx">day</span><span class="si">}</span><span class="sb">/</span><span class="si">${</span><span class="nx">latest</span><span class="p">.</span><span class="nx">receptor</span><span class="si">}</span><span class="sb">.png`</span><span class="p">,</span><span class="w"> </span><span class="nx">latest</span><span class="p">.</span><span class="nx">bounds</span><span class="p">).</span><span class="nx">addTo</span><span class="p">(</span><span class="nx">map</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The folder must be readable by the browser: public, with CORS allowing
+your site’s address. A footprint is drawn once it is not in the day’s
+<code class="docutils literal notranslate"><span class="pre">index.json</span></code>, and added to the index as soon as it is drawn, so a pod that
+stops part way loses none: the next tick draws and indexes the rest.</p>
+<p>The project needs one variant, or <code class="docutils literal notranslate"><span class="pre">tick</span></code> stops before it runs anything
+(exit 2). When the drawing itself fails, the exit code is still the run’s:
+<code class="docutils literal notranslate"><span class="pre">stilt</span></code>’s 1 (some failed), or 3 (stopped), and the error is in the log.
+If <code class="docutils literal notranslate"><span class="pre">stilt</span></code> finished cleanly and only the drawing failed, <code class="docutils literal notranslate"><span class="pre">tick</span></code> exits
+with 3, and the Job tries it again (a bucket that was out for a minute), or
+with 1 for an error in pystiltctl itself, which is not retried.</p>
+</section>
 <section id="check-on-it">
 <h2>Check on it<a class="headerlink" href="#check-on-it" title="Link to this heading">#</a></h2>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pystiltctl<span class="w"> </span>status<span class="w"> </span>s3://my-bucket/projects/my_project
@@ -766,6 +808,7 @@ A retry continues where it stopped.</p></td>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#put-the-project-on-a-bucket">Put the project on a bucket</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-it">Run it</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-it-every-hour">Run it every hour</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#footprints-on-a-web-map">Footprints on a web map</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#check-on-it">Check on it</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-each-pod-runs">What each pod runs</a></li>
 </ul>

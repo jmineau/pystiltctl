@@ -31,6 +31,7 @@ Worker
    worker.project_directory
    worker.stilt_command
    worker.become
+   worker.run
 
 Kubernetes Job
 --------------
@@ -72,3 +73,18 @@ Schedule
    schedule.due_hours
    schedule.read_sites
    schedule.hourly_receptors
+
+Images for web maps
+-------------------
+
+.. autosummary::
+   :toctree: _autosummary
+
+   render.render
+   render.choose_variant
+   render.image
+   render.png
+   render.bounds
+   render.entry
+   render.utc
+   render.mercator_y

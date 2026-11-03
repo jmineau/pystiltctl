@@ -1,0 +1,6 @@
+﻿pystiltctl.render.render
+========================
+
+.. currentmodule:: pystiltctl.render
+
+.. autofunction:: render
