@@ -33,8 +33,9 @@ from typing import Any
 
 import stilt
 
+from pystiltctl import render as renderer
 from pystiltctl.inputs import SITES, is_local, put
-from pystiltctl.worker import WORKDIR, become, project_directory, stilt_command
+from pystiltctl.worker import WORKDIR, become, project_directory, run, stilt_command
 
 logger = logging.getLogger(__name__)
 
@@ -156,13 +157,20 @@ def tick(
     now: datetime | None = None,
     cpus: int | None = None,
     output: str | None = None,
+    render: str | None = None,
     workdir: str | Path = WORKDIR,
-) -> None:
+) -> int:
     """
-    Add the hours now due to *project*, then run its last day, in place of this process.
+    Add the hours now due to *project*, then run its last day.
 
-    This is what each pod of a schedule's CronJob runs. It does not return:
-    it becomes ``stilt run --receptors``, whose exit code is the pod's.
+    This is what each pod of a schedule's CronJob runs. Without *render* it
+    does not return: it becomes ``stilt run --receptors``, whose exit code
+    is the pod's. With *render*, it runs ``stilt`` and then draws the day's
+    finished footprints to *render* (:func:`pystiltctl.render.render`), and
+    returns ``stilt run``'s exit code. A drawing that fails does not
+    replace a code other than 0: the error is logged and ``stilt``'s code is
+    returned. After a clean run it raises, so the pod does not look
+    successful with footprints missing.
 
     Parameters
     ----------
@@ -178,18 +186,28 @@ def tick(
         ``config.yaml``.
     output : str, optional
         The output directory, in place of the one ``config.yaml`` names.
+    render : str, optional
+        Where to draw the footprints for a web map, such as
+        ``s3://my-site/footprints/towers``.
     workdir : str or Path
         Where a URL's inputs are copied, and the list of receptors written.
+
+    Returns
+    -------
+    int
+        ``stilt run``'s exit code, when *render* is given.
 
     Raises
     ------
     FileNotFoundError
         If there is no project, or it has no ``sites.csv``.
     ValueError
-        If ``sites.csv`` cannot be read.
+        If ``sites.csv`` cannot be read, or *render* is given and the project
+        has several variants (checked before ``stilt`` runs).
     OSError
         If the project's inputs cannot be copied from *project*, or
-        ``receptors.csv`` back to it; the message says which.
+        ``receptors.csv`` back to it, or (when ``stilt`` exited with 0) the
+        footprints cannot be drawn to *render*; the message says which.
     """
     now = now or datetime.now(UTC).replace(tzinfo=None)
     try:
@@ -201,7 +219,10 @@ def tick(
             f"cannot copy the project's inputs from {project}: {error}"
         ) from error
     receptors = hourly_receptors(read_sites(directory), due_hours(now, delay))
-    added = stilt.Project(directory, output=output).add_receptors(receptors)
+    stilt_project = stilt.Project(directory, output=output)
+    # Before anything runs: a project that cannot be drawn fails now, not after the day's run.
+    variant = None if render is None else renderer.choose_variant(stilt_project)
+    added = stilt_project.add_receptors(receptors)
     logger.info("Added %d receptors, through %s", len(added), receptors[-1].time)
     if added and not is_local(project):
         try:
@@ -213,4 +234,25 @@ def tick(
     ids = Path(workdir) / f"{directory.name}-due.txt"
     ids.parent.mkdir(parents=True, exist_ok=True)
     ids.write_text("".join(f"{r.id}\n" for r in receptors))
-    become(stilt_command(directory, receptors=ids, cpus=cpus, output=output))
+    command = stilt_command(directory, receptors=ids, cpus=cpus, output=output)
+    if render is None:
+        become(command)
+        return 0  # reached only when become is replaced, as in the tests
+    code = run(command)
+    try:
+        renderer.render(
+            directory,
+            render,
+            [r.id for r in receptors],
+            variant=variant,
+            output=output,
+        )
+    except Exception as error:
+        if code != 0:
+            # stilt's code says more than a failed drawing does; keep it.
+            logger.error("Could not draw the footprints to %s", render, exc_info=True)
+            return code
+        if isinstance(error, OSError):
+            raise OSError(f"cannot draw the footprints to {render}: {error}") from error
+        raise
+    return code

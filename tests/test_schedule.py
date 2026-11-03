@@ -274,3 +274,107 @@ def test_cli_tick_says_which_way_a_failed_pull_went(bucket, tmp_path, monkeypatc
     result = CliRunner().invoke(app, ["tick", bucket, "--workdir", str(tmp_path)])
     assert result.exit_code == 3
     assert "cannot copy the project's inputs from memory://" in result.output
+
+
+def test_tick_with_render_runs_stilt_then_draws(
+    sited, bucket, tmp_path, monkeypatch, execs
+):
+    ran, drew = [], []
+    monkeypatch.setattr(schedule, "run", lambda command: ran.append(command) or 1)
+    monkeypatch.setattr(
+        schedule.renderer,
+        "render",
+        lambda directory, url, ids, variant=None, output=None: drew.append(
+            (url, len(ids), variant)
+        ),
+    )
+    push(sited, bucket)
+    code = schedule.tick(
+        bucket, now=NOW, render="memory://site/footprints", workdir=tmp_path
+    )
+    assert code == 1
+    assert execs == []
+    assert "--receptors" in ran[0]
+    assert drew == [("memory://site/footprints", 2 * schedule.WINDOW_HOURS, "hrrr")]
+
+
+@pytest.fixture
+def two_variants(sited):
+    """The sited project with two variants, which a render cannot choose between."""
+    config = sited / "config.yaml"
+    config.write_text(
+        config.read_text()
+        .replace(
+            "mets:\n",
+            "mets:\n  nam: {directory: /met2, file_format: x, file_tres: 6h}\n",
+        )
+        .replace(
+            "variants:\n  hrrr: {}\n", "variants:\n  hrrr: {}\n  nam: {met: nam}\n"
+        )
+    )
+    return sited
+
+
+def test_tick_with_render_refuses_several_variants_before_running(
+    two_variants, tmp_path, monkeypatch, execs
+):
+    ran = []
+    monkeypatch.setattr(schedule, "run", lambda command: ran.append(command) or 0)
+    before = (two_variants / "receptors.csv").read_text()
+    args = [
+        "tick",
+        str(two_variants),
+        "--now",
+        "2021-01-15T12:15",
+        "--render",
+        "memory://s/f",
+    ]
+    result = CliRunner().invoke(app, [*args, "--workdir", str(tmp_path)])
+    assert result.exit_code == 2
+    assert "2 variants" in result.output
+    assert ran == [] and execs == []
+    assert (two_variants / "receptors.csv").read_text() == before
+
+
+@pytest.mark.parametrize(
+    ("stilt_code", "problem", "exit_code"),
+    [
+        (0, None, 0),
+        (1, None, 1),
+        (3, None, 3),
+        (1, OSError("503"), 1),  # stilt's code, not a retry
+        (3, OSError("503"), 3),
+        (1, RuntimeError("boom"), 1),
+        (0, OSError("503"), 3),  # only the drawing failed: tried again
+        (0, RuntimeError("boom"), 1),  # a bug: not retried
+    ],
+)
+def test_tick_with_render_exits_with_stilts_code(
+    sited, tmp_path, monkeypatch, caplog, stilt_code, problem, exit_code
+):
+    """A drawing that fails must not replace the code of the run it follows."""
+    monkeypatch.setattr(schedule, "run", lambda command: stilt_code)
+
+    def draw(*args, **kwargs):
+        if problem:
+            raise problem
+        return []
+
+    monkeypatch.setattr(schedule.renderer, "render", draw)
+    args = ["tick", str(sited), "--now", "2021-01-15T12:15", "--render", "memory://s/f"]
+    result = CliRunner().invoke(app, [*args, "--workdir", str(tmp_path)])
+    assert result.exit_code == exit_code
+    if problem and stilt_code:
+        # Not hidden: the pod's log says the drawing failed.
+        assert "Could not draw the footprints to memory://s/f" in caplog.text
+        assert str(problem) in caplog.text
+    if problem and not stilt_code and isinstance(problem, OSError):
+        assert "cannot draw the footprints to memory://s/f: 503" in result.output
+
+
+def test_cron_job_passes_render_on(sited):
+    spec = job.job_spec(str(sited))
+    args = job.cron_job(spec, delay=8, render="s3://site/f")["spec"]["jobTemplate"][
+        "spec"
+    ]["template"]["spec"]["containers"][0]["args"]
+    assert args[-2:] == ["--render", "s3://site/f"]
