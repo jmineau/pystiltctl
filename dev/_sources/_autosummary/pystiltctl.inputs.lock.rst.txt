@@ -1,0 +1,6 @@
+﻿pystiltctl.inputs.lock
+======================
+
+.. currentmodule:: pystiltctl.inputs
+
+.. autofunction:: lock

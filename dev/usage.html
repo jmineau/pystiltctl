@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=f9a20078"></script>
+    <script src="_static/documentation_options.js?v=c4f3900a"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev26+g1cdf18bc9" />
+  <meta name="docsearch:version" content="0.0.1.dev27+g453243e7c" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -632,6 +632,13 @@ schedule’s: <code class="docutils literal notranslate"><span class="pre">pysti
 hours already added would be added again by the next tick, but their
 results are not lost, since they are on the output bucket. To fill in a
 past day by hand, run <code class="docutils literal notranslate"><span class="pre">pystiltctl</span> <span class="pre">tick</span> <span class="pre">PROJECT</span> <span class="pre">--now</span> <span class="pre">2026-10-01T00:00</span></code>.
+It can run while the hourly tick does: each holds a lock on
+<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> (a file <code class="docutils literal notranslate"><span class="pre">.receptors.csv.lock</span></code> next to it) while it adds
+its hours, so the second waits for the first, a few seconds. A lock left by
+a pod that crashed is taken over once it has not changed for 5 minutes.
+The lock needs a folder or a store that refuses to create a file that is
+already there: AWS S3 (<code class="docutils literal notranslate"><span class="pre">If-None-Match</span></code>) and Google Cloud Storage do; check
+before relying on it with another S3-compatible store.
 Scheduling a project again replaces its CronJob; <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">delete</span> <span class="pre">cronjob</span>
 <span class="pre">stilt-&lt;project&gt;</span></code> stops it.</p>
 </section>

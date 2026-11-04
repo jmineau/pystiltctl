@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=f9a20078"></script>
+    <script src="../../_static/documentation_options.js?v=c4f3900a"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev26+g1cdf18bc9" />
+  <meta name="docsearch:version" content="0.0.1.dev27+g453243e7c" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -464,7 +464,9 @@
 <span class="sd">any folder fsspec can reach), so they are copied there first with</span>
 <span class="sd">:func:`push`, and each pod copies them back to its own disk with</span>
 <span class="sd">:func:`pull`. The output directory is not copied: PYSTILT writes results</span>
-<span class="sd">straight to it, wherever it is.</span>
+<span class="sd">straight to it, wherever it is. A program that changes one of these files</span>
+<span class="sd">where it is, as a schedule's tick adds to ``receptors.csv``, holds</span>
+<span class="sd">:func:`lock` while it does.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -472,7 +474,11 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">contextlib</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">UTC</span><span class="p">,</span> <span class="n">datetime</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">fsspec</span>
@@ -486,6 +492,10 @@
 <span class="n">TABLES</span> <span class="o">=</span> <span class="s2">"tables"</span>
 <span class="c1">#: The places a schedule adds a receptor for each hour, copied when present.</span>
 <span class="n">SITES</span> <span class="o">=</span> <span class="s2">"sites.csv"</span>
+<span class="c1">#: Seconds a lock may stay the same before a program waiting for it takes it over.</span>
+<span class="n">LOCK_STALE_SECONDS</span> <span class="o">=</span> <span class="mi">300</span>
+<span class="c1">#: Seconds between a waiting program's looks at a lock.</span>
+<span class="n">LOCK_POLL_SECONDS</span> <span class="o">=</span> <span class="mi">2</span>
 
 
 <div class="viewcode-block" id="is_local">
@@ -744,6 +754,159 @@
     <span class="n">fs</span><span class="p">,</span> <span class="n">root</span> <span class="o">=</span> <span class="n">fsspec</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">url_to_fs</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
     <span class="n">_atomic_put_file</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span><span class="p">),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">'/'</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
 
+
+
+<div class="viewcode-block" id="get">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.inputs.get.html#pystiltctl.inputs.get">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Copy one file from *url* into a project folder, the reverse of :func:`put`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    url : str</span>
+<span class="sd">        The project's location, as :func:`push` copied it there.</span>
+<span class="sd">    directory : str or Path</span>
+<span class="sd">        The local project folder.</span>
+<span class="sd">    name : str</span>
+<span class="sd">        The file, relative to the project folder.</span>
+<span class="sd">    """</span>
+    <span class="n">fs</span><span class="p">,</span> <span class="n">root</span> <span class="o">=</span> <span class="n">fsspec</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">url_to_fs</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">fs</span><span class="o">.</span><span class="n">get_file</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">'/'</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="lock">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.inputs.lock.html#pystiltctl.inputs.lock">[docs]</a>
+<span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">lock</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Hold a lock on the file *name* at *url* while the ``with`` block runs.</span>
+
+<span class="sd">    Use it around reading a file, changing it and writing it back, so a</span>
+<span class="sd">    second program doing the same waits for the first instead of writing</span>
+<span class="sd">    over its change. A schedule's tick holds it on ``receptors.csv`` while it</span>
+<span class="sd">    copies the file (:func:`get`), adds its hours, and copies it back</span>
+<span class="sd">    (:func:`put`).</span>
+
+<span class="sd">    The lock is a small file ``.&lt;name&gt;.lock`` next to *name*, created only</span>
+<span class="sd">    if it is not there (``open(..., "x")``: ``If-None-Match`` on S3,</span>
+<span class="sd">    ``ifGenerationMatch=0`` on Google Cloud Storage, ``O_EXCL`` on a</span>
+<span class="sd">    folder), and deleted at the end of the block. It says which host and</span>
+<span class="sd">    process holds it. A program that finds it waits, and takes it over if it</span>
+<span class="sd">    has not changed for :data:`LOCK_STALE_SECONDS` by its own clock, so a</span>
+<span class="sd">    holder that crashed does not stop every later one.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    url : str</span>
+<span class="sd">        The project's location, a URL or a folder.</span>
+<span class="sd">    name : str</span>
+<span class="sd">        The file to lock, relative to the project folder.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    OSError</span>
+<span class="sd">        If the lock cannot be made or read, such as a refused connection or</span>
+<span class="sd">        expired credentials.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    A store that ignores ``If-None-Match`` (some older S3-compatible ones)</span>
+<span class="sd">    lets two programs make the lock at once, so it does not protect there.</span>
+<span class="sd">    A holder slower than :data:`LOCK_STALE_SECONDS` can be taken over; it</span>
+<span class="sd">    then logs a warning when it finishes.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import fsspec</span>
+<span class="sd">    &gt;&gt;&gt; fs = fsspec.filesystem("memory")</span>
+<span class="sd">    &gt;&gt;&gt; with lock("memory://lock-example/project", "receptors.csv"):</span>
+<span class="sd">    ...     fs.exists("/lock-example/project/.receptors.csv.lock")</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; fs.exists("/lock-example/project/.receptors.csv.lock")</span>
+<span class="sd">    False</span>
+<span class="sd">    """</span>
+    <span class="n">fs</span><span class="p">,</span> <span class="n">root</span> <span class="o">=</span> <span class="n">fsspec</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">url_to_fs</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">'/'</span><span class="p">)</span><span class="si">}</span><span class="s2">/.</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.lock"</span>
+    <span class="n">stamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">UTC</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%SZ"</span><span class="p">)</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">()</span><span class="si">}</span><span class="s2"> pid </span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2"> since </span><span class="si">{</span><span class="n">stamp</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">_acquire</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">token</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"cannot lock </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_release</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">token</span><span class="p">):</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">"</span><span class="si">%s</span><span class="s2"> was taken over while this program held it, so another "</span>
+                    <span class="s2">"may have written </span><span class="si">%s</span><span class="s2"> at the same time."</span><span class="p">,</span>
+                    <span class="n">path</span><span class="p">,</span>
+                    <span class="n">name</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="c1"># What the block wrote is written; a lock left behind is taken over later.</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"Could not remove </span><span class="si">%s</span><span class="s2">; it is taken over after </span><span class="si">%d</span><span class="s2"> s."</span><span class="p">,</span>
+                <span class="n">path</span><span class="p">,</span>
+                <span class="n">LOCK_STALE_SECONDS</span><span class="p">,</span>
+                <span class="n">exc_info</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_acquire</span><span class="p">(</span><span class="n">fs</span><span class="p">:</span> <span class="n">fsspec</span><span class="o">.</span><span class="n">AbstractFileSystem</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">token</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Create the lock file *path* holding *token*, waiting while another holds it.</span>
+
+<span class="sd">    A lock is stale when it reads the same for :data:`LOCK_STALE_SECONDS` on</span>
+<span class="sd">    this program's own clock (``time.monotonic``), so no two clocks have to</span>
+<span class="sd">    agree; a stale lock is removed and made again.</span>
+<span class="sd">    """</span>
+    <span class="n">seen</span><span class="p">,</span> <span class="n">since</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="mf">0.0</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">fs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"x"</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">except</span> <span class="ne">FileExistsError</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">held</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="k">continue</span>  <span class="c1"># released while we looked: try again</span>
+        <span class="k">if</span> <span class="n">held</span> <span class="o">!=</span> <span class="n">seen</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Waiting for </span><span class="si">%s</span><span class="s2">, held by </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">held</span><span class="p">)</span>
+            <span class="n">seen</span><span class="p">,</span> <span class="n">since</span> <span class="o">=</span> <span class="n">held</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">since</span> <span class="o">&gt;=</span> <span class="n">LOCK_STALE_SECONDS</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"Taking over </span><span class="si">%s</span><span class="s2">, the same for </span><span class="si">%d</span><span class="s2"> s: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
+                <span class="n">path</span><span class="p">,</span>
+                <span class="n">LOCK_STALE_SECONDS</span><span class="p">,</span>
+                <span class="n">held</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">_release</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">held</span><span class="p">)</span>
+            <span class="n">seen</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">continue</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">LOCK_POLL_SECONDS</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_release</span><span class="p">(</span><span class="n">fs</span><span class="p">:</span> <span class="n">fsspec</span><span class="o">.</span><span class="n">AbstractFileSystem</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">token</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Remove the lock file *path* if it still holds *token*; return whether it did.</span>
+
+<span class="sd">    Reading first keeps a program from removing a lock that another has</span>
+<span class="sd">    taken over since.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">!=</span> <span class="n">token</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">fs</span><span class="o">.</span><span class="n">rm_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span>
 </pre></div>
 
                 </article>

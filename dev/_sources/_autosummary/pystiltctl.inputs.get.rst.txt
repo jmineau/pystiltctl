@@ -1,0 +1,6 @@
+﻿pystiltctl.inputs.get
+=====================
+
+.. currentmodule:: pystiltctl.inputs
+
+.. autofunction:: get
