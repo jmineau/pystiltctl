@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=1621993f"></script>
+    <script src="_static/documentation_options.js?v=6a57cb18"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev23+ge70c1c875" />
+  <meta name="docsearch:version" content="0.0.1.dev24+g8eaf58de3" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -569,11 +569,12 @@ the options do not reach (a node selector for spot nodes, tolerations),
 and start it with <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">create</span> <span class="pre">-f</span> <span class="pre">job.yaml</span></code>.</p>
 <p>Kubernetes retries a task from the worker’s exit code: a stopped task
 (3) up to three times, and a pod taken back with its node (a spot node)
-as often as it happens. A task whose simulations failed (1) is not
-retried, since it would fail the same way; nor is anything after a wrong
-command line (2), which stops the whole Job. Fix the cause and submit
-again: finished simulations are skipped, so only the rest run. The Job,
-and its pods’ logs, stay on the cluster for a week.</p>
+as often as it happens. A task whose simulations failed (1), or that hit
+an unexpected error (4), is not retried, since it would fail the same
+way; nor is anything after a wrong command line (2), which stops the
+whole Job. Fix the cause and submit again: finished simulations are
+skipped, so only the rest run. The Job, and its pods’ logs, stay on the
+cluster for a week.</p>
 </section>
 <section id="run-it-every-hour">
 <h2>Run it every hour<a class="headerlink" href="#run-it-every-hour" title="Link to this heading">#</a></h2>
@@ -750,6 +751,10 @@ Nothing ran. Do not retry.</p></td>
 <tr class="row-odd"><td><p>3</p></td>
 <td><p>Some simulations were stopped, or the inputs could not be copied.
 A retry continues where it stopped.</p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p>An unexpected error, a bug in <code class="docutils literal notranslate"><span class="pre">stilt</span></code> or <code class="docutils literal notranslate"><span class="pre">pystiltctl</span></code>. Do not
+retry: it would hit the same bug.</p></td>
 </tr>
 </tbody>
 </table>

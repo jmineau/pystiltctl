@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1621993f"></script>
+    <script src="../../_static/documentation_options.js?v=6a57cb18"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev23+ge70c1c875" />
+  <meta name="docsearch:version" content="0.0.1.dev24+g8eaf58de3" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -469,6 +469,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
@@ -479,6 +480,12 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.inputs</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_local</span><span class="p">,</span> <span class="n">local_path</span><span class="p">,</span> <span class="n">project_key</span><span class="p">,</span> <span class="n">project_name</span><span class="p">,</span> <span class="n">pull</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.job</span><span class="w"> </span><span class="kn">import</span> <span class="n">PROJECT_ANNOTATION</span><span class="p">,</span> <span class="n">PROJECT_LABEL</span><span class="p">,</span> <span class="n">job_spec</span><span class="p">,</span> <span class="n">label_value</span>
+
+<span class="c1">#: The line PYSTILT's CLI adds after a traceback, for an error it did not</span>
+<span class="c1">#: handle (exit 3 or 4): ``"stilt exits with 4: an unexpected error, which a</span>
+<span class="c1">#: retry would repeat."``. ``_error_message`` reports the traceback's own</span>
+<span class="c1">#: last line instead, which names the error.</span>
+<span class="n">_EXIT_SUMMARY</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\Astilt exits with \d+: .+\.\Z"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="count_indexes">
@@ -592,6 +599,22 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_error_message</span><span class="p">(</span><span class="n">stderr</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">returncode</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the one line of *stderr* that says why ``stilt`` failed.</span>
+
+<span class="sd">    A clean error (exit 2) is already one line. Exit 3 or 4 prints a</span>
+<span class="sd">    traceback and then a summary line (:data:`_EXIT_SUMMARY`); the line</span>
+<span class="sd">    before it, the traceback's own last line, names the error.</span>
+<span class="sd">    """</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"stilt status exited with </span><span class="si">{</span><span class="n">returncode</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">_EXIT_SUMMARY</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="k">return</span> <span class="n">lines</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">lines</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+
 <div class="viewcode-block" id="simulations">
 <a class="viewcode-back" href="../../_autosummary/pystiltctl.status.simulations.html#pystiltctl.status.simulations">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">simulations</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
@@ -634,10 +657,7 @@
             <span class="n">args</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">env</span>
         <span class="p">)</span>
     <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">lines</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
-        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-            <span class="n">lines</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">lines</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"stilt status exited with </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">"</span>
-        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">_error_message</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span><span class="p">))</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
     <span class="n">data</span><span class="p">[</span><span class="s2">"project"</span><span class="p">]</span> <span class="o">=</span> <span class="n">project</span>
     <span class="k">return</span> <span class="n">data</span></div>
