@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=b3dbf34e"></script>
+    <script src="_static/documentation_options.js?v=85a435d3"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev28+ge6ac1fc38" />
+  <meta name="docsearch:version" content="0.0.1.dev29+g2b7c64f77" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -617,9 +617,12 @@ pystiltctl<span class="w"> </span>schedule<span class="w"> </span>s3://my-bucket
 <ol class="arabic simple">
 <li><p>adds a receptor for each site at each hour of the last day that is at
 least <code class="docutils literal notranslate"><span class="pre">--delay</span></code> hours old (8 by default) to <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, and
-writes it back to the bucket;</p></li>
-<li><p>runs the receptors of that day. Finished ones are skipped, so it runs
-the new hour, and any hour that failed before.</p></li>
+writes it back to the bucket. If the cluster, the CronJob or the bucket
+was down for longer than that day, so the last row already in
+<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> is older still, it also adds every hour between that
+row and the day, up to a week back in one tick;</p></li>
+<li><p>runs the receptors of that day, and the gap’s. Finished ones are
+skipped, so it runs the new hour, and any hour that failed before.</p></li>
 </ol>
 <p>The delay is how long the met takes to appear. NOAA’s HRRR archive posts
 each 6-hour block about 40 minutes after it ends, and a backward run also
@@ -645,7 +648,12 @@ a pod that crashed is taken over once it has not changed for 5 minutes.
 The lock needs a folder or a store that refuses to create a file that is
 already there: AWS S3 (<code class="docutils literal notranslate"><span class="pre">If-None-Match</span></code>) and Google Cloud Storage do; check
 before relying on it with another S3-compatible store.
-Scheduling a project again replaces its CronJob; <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">delete</span> <span class="pre">cronjob</span>
+An outage longer than a week of hours closes gradually instead of in one
+tick: each tick reaches no more than a week past the day, so the
+scheduled ticks that follow keep narrowing the gap, a week at a time,
+until the schedule is caught up; nothing by hand is needed. A project that already has old rows in
+<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> gets a one-time backfill of up to a week on its first tick. Scheduling a
+project again replaces its CronJob; <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">delete</span> <span class="pre">cronjob</span>
 <span class="pre">stilt-&lt;project&gt;</span></code> stops it.</p>
 </section>
 <section id="footprints-on-a-web-map">

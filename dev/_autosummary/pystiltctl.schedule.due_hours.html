@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=b3dbf34e"></script>
+    <script src="../_static/documentation_options.js?v=85a435d3"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev28+ge6ac1fc38" />
+  <meta name="docsearch:version" content="0.0.1.dev29+g2b7c64f77" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -539,10 +539,15 @@
 <h1>pystiltctl.schedule.due_hours<a class="headerlink" href="#pystiltctl-schedule-due-hours" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="pystiltctl.schedule.due_hours">
-<span class="sig-prename descclassname"><span class="pre">pystiltctl.schedule.</span></span><span class="sig-name descname"><span class="pre">due_hours</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">now</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pystiltctl/schedule.html#due_hours"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pystiltctl.schedule.due_hours" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">pystiltctl.schedule.</span></span><span class="sig-name descname"><span class="pre">due_hours</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">now</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">since</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pystiltctl/schedule.html#due_hours"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pystiltctl.schedule.due_hours" title="Link to this definition">#</a></dt>
 <dd><p>Return the hours a tick at <em>now</em> covers, oldest first, in UTC.</p>
 <p>The newest is <em>now</em> less <em>delay</em> hours, down to the hour; the oldest is
-<code class="xref py py-data docutils literal notranslate"><span class="pre">WINDOW_HOURS</span></code> - 1 hours before it.</p>
+normally <code class="xref py py-data docutils literal notranslate"><span class="pre">WINDOW_HOURS</span></code> - 1 hours before it.</p>
+<p><em>since</em>, when given, is the newest hour a project already has (the last
+row of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>). If the normal window would leave a gap after
+it, the window reaches back to close the gap instead, capped at
+<code class="xref py py-data docutils literal notranslate"><span class="pre">MAX_BACKFILL_HOURS</span></code> before its normal start: an outage longer
+than that is closed gradually, a tick at a time, rather than in one.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">datetime</span></code></a>]</span></p>
@@ -552,6 +557,10 @@
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hours</span> <span class="o">=</span> <span class="n">due_hours</span><span class="p">(</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2026</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">29</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span> <span class="n">delay</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">hours</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">hours</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 <span class="go">(datetime.datetime(2026, 10, 28, 11, 0), datetime.datetime(2026, 10, 29, 10, 0))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">due_hours</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">datetime</span><span class="p">(</span><span class="mi">2026</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">29</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span> <span class="n">delay</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">since</span><span class="o">=</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2026</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="gp">... </span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="go">datetime.datetime(2026, 10, 28, 1, 0)</span>
 </pre></div>
 </div>
 </dd></dl>
