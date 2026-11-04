@@ -1,6 +1,10 @@
 """Running one task of a project, as a pod does."""
 
+import os
+import signal
+import subprocess
 import sys
+import time
 
 import pytest
 from typer.testing import CliRunner
@@ -8,6 +12,27 @@ from typer.testing import CliRunner
 from pystiltctl import worker
 from pystiltctl.cli import app
 from pystiltctl.inputs import push
+
+
+def _alive(pid: int) -> bool:
+    """Whether a process still exists (signal 0; a permission error still means yes)."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _wait_until(predicate, *, timeout: float = 5.0, step: float = 0.05) -> bool:
+    """Poll *predicate* until it is true or *timeout* elapses; return its last value."""
+    deadline = time.monotonic() + timeout
+    result = predicate()
+    while not result and time.monotonic() < deadline:
+        time.sleep(step)
+        result = predicate()
+    return result
 
 
 def test_task_index_from_argument_or_environment(monkeypatch):
@@ -170,3 +195,52 @@ def test_cli_worker_without_an_index(project, monkeypatch, execs):
 
 def test_run_returns_the_commands_exit_code():
     assert worker.run([sys.executable, "-c", "raise SystemExit(3)"]) == 3
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="prctl is Linux only")
+def test_run_does_not_orphan_the_child_on_sigkill(tmp_path):
+    """
+    Reproduce #30 for real: SIGKILL of the parent must not orphan the child.
+
+    A "parent" process runs :func:`worker.run` on a sleeping child, then
+    this test SIGKILLs the parent from outside (a signal no handler can
+    forward). The child writes its own PID as its first action, so the
+    test can watch it after the parent is gone.
+    """
+    pidfile = tmp_path / "child.pid"
+    child_command = [
+        sys.executable,
+        "-c",
+        "import os, sys, time\n"
+        "open(sys.argv[1], 'w').write(str(os.getpid()))\n"
+        "time.sleep(60)\n",
+        str(pidfile),
+    ]
+    parent_script = tmp_path / "parent.py"
+    parent_script.write_text(
+        "from pystiltctl import worker\n"  # sys.executable: the env that has it installed
+        f"worker.run({child_command!r})\n"
+    )
+    parent = subprocess.Popen([sys.executable, str(parent_script)])
+    try:
+        assert _wait_until(pidfile.exists), "the child never started"
+        child_pid = int(pidfile.read_text())
+        assert _alive(child_pid), (
+            "the child exited before the test could kill the parent"
+        )
+
+        parent.send_signal(signal.SIGKILL)
+        parent.wait(timeout=5)
+
+        # PR_SET_PDEATHSIG's SIGTERM arrives the moment the parent is gone;
+        # give the child a moment to act on it.
+        assert _wait_until(lambda: not _alive(child_pid)), (
+            "the child outlived its SIGKILLed parent (#30)"
+        )
+    finally:
+        if _alive(parent.pid):
+            parent.kill()
+        if pidfile.exists():
+            child_pid = int(pidfile.read_text())
+            if _alive(child_pid):
+                os.kill(child_pid, signal.SIGKILL)

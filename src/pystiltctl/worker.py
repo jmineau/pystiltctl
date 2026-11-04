@@ -9,6 +9,7 @@ signal reaches it and its exit code is the pod's.
 
 from __future__ import annotations
 
+import ctypes
 import logging
 import os
 import signal
@@ -24,6 +25,25 @@ logger = logging.getLogger(__name__)
 INDEX_VARIABLE = "JOB_COMPLETION_INDEX"
 #: Where a URL's inputs are copied, unless told otherwise: the pod's own disk.
 WORKDIR = Path("/tmp/pystiltctl")
+
+#: ``prctl(2)``'s ``PR_SET_PDEATHSIG``; Linux has no stdlib name for it.
+_PR_SET_PDEATHSIG = 1
+#: Resolved once at import time, not inside the forked child (see ``_die_with_parent``).
+_libc = ctypes.CDLL(None, use_errno=True) if sys.platform.startswith("linux") else None
+
+
+def _die_with_parent() -> None:
+    """
+    Ask the kernel to ``SIGTERM`` this process when its parent dies.
+
+    Runs as ``subprocess.Popen``'s ``preexec_fn``, in the forked child
+    before it execs ``stilt``. :func:`run`'s own signal handler forwards
+    ``SIGTERM``/``SIGINT`` to the child, but a ``kill -9`` of the parent
+    cannot be caught, so without this a ``stilt`` grandchild outlives it as
+    an orphan (``PR_SET_PDEATHSIG``, Linux only; a no-op elsewhere).
+    """
+    if _libc is not None:
+        _libc.prctl(_PR_SET_PDEATHSIG, signal.SIGTERM, 0, 0, 0)
 
 
 def task_index(index: int | None = None) -> int:
@@ -117,10 +137,14 @@ def run(command: list[str]) -> int:
     For when something must happen after ``stilt`` finishes, so this
     process cannot :func:`become` it. A stop signal (``SIGTERM`` from
     Kubernetes, or ``SIGINT``) is sent on to the command, which stops its
-    runs cleanly and exits with 3.
+    runs cleanly and exits with 3. A signal that cannot be caught, above
+    all ``SIGKILL``, is not forwarded this way; on Linux the child is set to
+    get its own ``SIGTERM`` from the kernel the moment this process dies,
+    for any reason, so it is not left running as an orphan outside a
+    container (:func:`_die_with_parent`).
     """
     logger.info("Running %s", " ".join(command[2:]))
-    child = subprocess.Popen(command)
+    child = subprocess.Popen(command, preexec_fn=_die_with_parent)
 
     def forward(signum: int, frame: object) -> None:
         """Send the signal this process got on to the command."""
