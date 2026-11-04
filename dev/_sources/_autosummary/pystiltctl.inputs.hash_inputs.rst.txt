@@ -1,0 +1,6 @@
+﻿pystiltctl.inputs.hash\_inputs
+==============================
+
+.. currentmodule:: pystiltctl.inputs
+
+.. autofunction:: hash_inputs

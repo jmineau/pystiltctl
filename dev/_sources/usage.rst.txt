@@ -106,6 +106,13 @@ whole Job. Fix the cause and submit again: finished simulations are
 skipped, so only the rest run. The Job, and its pods' logs, stay on the
 cluster for a week.
 
+``submit`` passes each pod a hash of the ``config.yaml`` and
+``receptors.csv`` it saw. A Job's pods can start minutes to hours apart
+(``parallelism``, retries, nodes the autoscaler adds), so a pod whose pull
+hashes differently fails too (2), instead of quietly running a different
+share of the receptors than an earlier pod did: push again, then submit
+again.
+
 Run it every hour
 -----------------
 

@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=c4f3900a"></script>
+    <script src="_static/documentation_options.js?v=b3dbf34e"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev27+g453243e7c" />
+  <meta name="docsearch:version" content="0.0.1.dev28+ge6ac1fc38" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -575,6 +575,12 @@ way; nor is anything after a wrong command line (2), which stops the
 whole Job. Fix the cause and submit again: finished simulations are
 skipped, so only the rest run. The Job, and its pods’ logs, stay on the
 cluster for a week.</p>
+<p><code class="docutils literal notranslate"><span class="pre">submit</span></code> passes each pod a hash of the <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and
+<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> it saw. A Job’s pods can start minutes to hours apart
+(<code class="docutils literal notranslate"><span class="pre">parallelism</span></code>, retries, nodes the autoscaler adds), so a pod whose pull
+hashes differently fails too (2), instead of quietly running a different
+share of the receptors than an earlier pod did: push again, then submit
+again.</p>
 </section>
 <section id="run-it-every-hour">
 <h2>Run it every hour<a class="headerlink" href="#run-it-every-hour" title="Link to this heading">#</a></h2>

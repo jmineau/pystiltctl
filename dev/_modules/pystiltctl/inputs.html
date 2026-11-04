@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=c4f3900a"></script>
+    <script src="../../_static/documentation_options.js?v=b3dbf34e"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev27+g453243e7c" />
+  <meta name="docsearch:version" content="0.0.1.dev28+ge6ac1fc38" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -472,6 +472,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">contextlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
@@ -576,6 +577,51 @@
         <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">local_path</span><span class="p">(</span><span class="n">project</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
     <span class="n">scheme</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="p">)</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">"://"</span><span class="p">)</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">scheme</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}{</span><span class="n">sep</span><span class="si">}{</span><span class="n">rest</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">'/'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span></div>
+
+
+
+<div class="viewcode-block" id="hash_inputs">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.inputs.hash_inputs.html#pystiltctl.inputs.hash_inputs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">hash_inputs</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return a content hash of a project folder's config.yaml and receptors.csv.</span>
+
+<span class="sd">    :func:`pystiltctl.job.job_spec` hashes the inputs it just pulled (or</span>
+<span class="sd">    found on a mounted volume) when it builds a Job, and passes the hash to</span>
+<span class="sd">    each pod; :func:`pystiltctl.worker.run_task` hashes what it pulls the</span>
+<span class="sd">    same way and compares the two, so a pod can tell that the project was</span>
+<span class="sd">    pushed again after the Job was submitted, rather than quietly running a</span>
+<span class="sd">    different share of the receptors than another pod of the same Job.</span>
+<span class="sd">    Hashing content, not a bucket's mtime or etag, means a byte-identical</span>
+<span class="sd">    re-push never looks like a change. Only these two files are hashed, not</span>
+<span class="sd">    ``tables/`` or ``sites.csv``, since they decide a run's receptor split</span>
+<span class="sd">    and settings.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    directory : str or Path</span>
+<span class="sd">        A project folder that already has both files.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        A hex SHA-256 digest.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        If *directory* has no ``config.yaml`` or ``receptors.csv``.</span>
+<span class="sd">    """</span>
+    <span class="n">directory</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">INPUT_FILES</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">directory</span> <span class="o">/</span> <span class="n">name</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2"> is not a PYSTILT project: it has no </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="n">digest</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">())</span><span class="o">.</span><span class="n">digest</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">digest</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span></div>
 
 
 

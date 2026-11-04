@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=c4f3900a"></script>
+    <script src="_static/documentation_options.js?v=b3dbf34e"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev27+g453243e7c" />
+  <meta name="docsearch:version" content="0.0.1.dev28+ge6ac1fc38" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -573,7 +573,8 @@ submitted with (or a folder here that holds a copy of it).</p>
 </section>
 <section id="pystiltctl-worker">
 <h2>pystiltctl worker<a class="headerlink" href="#pystiltctl-worker" title="Link to this heading">#</a></h2>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pystiltctl worker PROJECT --tasks N [--index I] [--cpus C] [--output URL] [--workdir DIR]
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pystiltctl worker PROJECT --tasks N [--index I] [--cpus C] [--output URL]
+                  [--workdir DIR] [--input-hash HASH]
 </pre></div>
 </div>
 <p>Run task <code class="docutils literal notranslate"><span class="pre">I</span></code> of <code class="docutils literal notranslate"><span class="pre">N</span></code> here: copy the inputs from <code class="docutils literal notranslate"><span class="pre">PROJECT</span></code> (a URL, or
@@ -588,6 +589,10 @@ a folder on a mounted volume), then run <code class="docutils literal notranslat
 <dt><code class="docutils literal notranslate"><span class="pre">--output</span></code></dt><dd><p>The output directory, in place of the one <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> names.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">--workdir</span></code></dt><dd><p>Where a URL’s inputs are copied. Defaults to <code class="docutils literal notranslate"><span class="pre">/tmp/pystiltctl</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--input-hash</span></code></dt><dd><p>The hash <code class="docutils literal notranslate"><span class="pre">submit</span></code> saw of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>. Fails
+this task (exit 2) if what it pulls hashes differently: the project was
+pushed again after submit, so submit again.</p>
 </dd>
 </dl>
 </section>

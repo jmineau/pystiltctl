@@ -21,6 +21,7 @@ Project inputs
    inputs.put
    inputs.get
    inputs.lock
+   inputs.hash_inputs
 
 Worker
 ------
