@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1c1e1f9b"></script>
+    <script src="../../_static/documentation_options.js?v=f9a20078"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev25+g15a7f0ca7" />
+  <meta name="docsearch:version" content="0.0.1.dev26+g1cdf18bc9" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -498,6 +498,12 @@
 <span class="n">RETRIES</span> <span class="o">=</span> <span class="mi">3</span>
 <span class="c1">#: How long a finished Job, and its pods' logs, stay on the cluster: a week.</span>
 <span class="n">KEEP_FINISHED</span> <span class="o">=</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">24</span> <span class="o">*</span> <span class="mi">3600</span>
+<span class="c1">#: How long a schedule's tick may run before its Job fails, as if its pod</span>
+<span class="c1">#: had been stopped (the ``SIGTERM`` ``activeDeadlineSeconds`` sends is what</span>
+<span class="c1">#: ``stilt`` answers with exit 3): a bit under the CronJob's hourly window,</span>
+<span class="c1">#: so a hung pod (a stalled download, a bucket call with no timeout) is</span>
+<span class="c1">#: failed before ``concurrencyPolicy: Forbid`` would skip the next tick too.</span>
+<span class="n">TICK_DEADLINE</span> <span class="o">=</span> <span class="mi">45</span> <span class="o">*</span> <span class="mi">60</span>
 <span class="c1">#: The label every pystiltctl Job and pod carries, with the project's name.</span>
 <span class="n">PROJECT_LABEL</span> <span class="o">=</span> <span class="s2">"pystiltctl/project"</span>
 <span class="c1">#: The annotation holding the project's URL or real path, for ``pystiltctl status``.</span>
@@ -784,12 +790,19 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_job_body</span><span class="p">(</span>
-    <span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">completions</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">parallelism</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">,</span>
+    <span class="n">args</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">completions</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">parallelism</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">active_deadline</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the ``spec`` of an indexed Job whose pods run *args*.</span>
 
 <span class="sd">    The exit-code rules are described in this module's docstring.</span>
+<span class="sd">    *active_deadline* fails the Job after that many seconds, as if its pod</span>
+<span class="sd">    had been stopped; ``None`` (``submit``'s Job) leaves it unbounded, since</span>
+<span class="sd">    a submitted project may run for as long as its simulations take.</span>
 <span class="sd">    """</span>
     <span class="n">resources</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"requests"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"cpu"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">cpus</span><span class="p">)}}</span>
     <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">memory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -826,27 +839,30 @@
         <span class="n">rule</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"containerName"</span><span class="p">:</span> <span class="s2">"stilt"</span><span class="p">,</span> <span class="s2">"operator"</span><span class="p">:</span> <span class="s2">"In"</span><span class="p">,</span> <span class="s2">"values"</span><span class="p">:</span> <span class="p">[</span><span class="n">code</span><span class="p">]}</span>
         <span class="k">return</span> <span class="p">{</span><span class="s2">"action"</span><span class="p">:</span> <span class="n">action</span><span class="p">,</span> <span class="s2">"onExitCodes"</span><span class="p">:</span> <span class="n">rule</span><span class="p">}</span>
 
-    <span class="k">return</span> <span class="p">{</span>
+    <span class="n">body</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">"completionMode"</span><span class="p">:</span> <span class="s2">"Indexed"</span><span class="p">,</span>
         <span class="s2">"completions"</span><span class="p">:</span> <span class="n">completions</span><span class="p">,</span>
         <span class="s2">"parallelism"</span><span class="p">:</span> <span class="n">parallelism</span><span class="p">,</span>
         <span class="s2">"backoffLimitPerIndex"</span><span class="p">:</span> <span class="n">RETRIES</span><span class="p">,</span>
-        <span class="s2">"podFailurePolicy"</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">"rules"</span><span class="p">:</span> <span class="p">[</span>
-                <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailJob"</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
-                <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailIndex"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-                <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailIndex"</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-                <span class="c1"># `status` is required in a CronJob's template; the API server</span>
-                <span class="c1"># fills it in only for a Job created on its own.</span>
-                <span class="p">{</span>
-                    <span class="s2">"action"</span><span class="p">:</span> <span class="s2">"Ignore"</span><span class="p">,</span>
-                    <span class="s2">"onPodConditions"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"DisruptionTarget"</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">:</span> <span class="s2">"True"</span><span class="p">}],</span>
-                <span class="p">},</span>
-            <span class="p">]</span>
-        <span class="p">},</span>
-        <span class="s2">"ttlSecondsAfterFinished"</span><span class="p">:</span> <span class="n">KEEP_FINISHED</span><span class="p">,</span>
-        <span class="s2">"template"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"metadata"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"labels"</span><span class="p">:</span> <span class="n">_labels</span><span class="p">(</span><span class="n">spec</span><span class="p">)},</span> <span class="s2">"spec"</span><span class="p">:</span> <span class="n">pod</span><span class="p">},</span>
     <span class="p">}</span>
+    <span class="k">if</span> <span class="n">active_deadline</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">body</span><span class="p">[</span><span class="s2">"activeDeadlineSeconds"</span><span class="p">]</span> <span class="o">=</span> <span class="n">active_deadline</span>
+    <span class="n">body</span><span class="p">[</span><span class="s2">"podFailurePolicy"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"rules"</span><span class="p">:</span> <span class="p">[</span>
+            <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailJob"</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+            <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailIndex"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="n">on_exit</span><span class="p">(</span><span class="s2">"FailIndex"</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="c1"># `status` is required in a CronJob's template; the API server</span>
+            <span class="c1"># fills it in only for a Job created on its own.</span>
+            <span class="p">{</span>
+                <span class="s2">"action"</span><span class="p">:</span> <span class="s2">"Ignore"</span><span class="p">,</span>
+                <span class="s2">"onPodConditions"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"DisruptionTarget"</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">:</span> <span class="s2">"True"</span><span class="p">}],</span>
+            <span class="p">},</span>
+        <span class="p">]</span>
+    <span class="p">}</span>
+    <span class="n">body</span><span class="p">[</span><span class="s2">"ttlSecondsAfterFinished"</span><span class="p">]</span> <span class="o">=</span> <span class="n">KEEP_FINISHED</span>
+    <span class="n">body</span><span class="p">[</span><span class="s2">"template"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"metadata"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"labels"</span><span class="p">:</span> <span class="n">_labels</span><span class="p">(</span><span class="n">spec</span><span class="p">)},</span> <span class="s2">"spec"</span><span class="p">:</span> <span class="n">pod</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">body</span>
 
 
 <div class="viewcode-block" id="manifest">
@@ -886,12 +902,22 @@
 <span class="sd">    Return the CronJob that runs ``pystiltctl tick`` for *spec* every hour.</span>
 
 <span class="sd">    One pod at a time (a tick that is still running delays the next), at</span>
-<span class="sd">    15 minutes past the hour. Its Jobs carry the project's label, so</span>
+<span class="sd">    15 minutes past the hour. Its Job fails after :data:`TICK_DEADLINE`</span>
+<span class="sd">    seconds, so a tick whose pod hangs (a stalled download, a bucket call</span>
+<span class="sd">    with no timeout) does not stay "active" forever and, with</span>
+<span class="sd">    ``concurrencyPolicy: Forbid``, block every later tick until someone</span>
+<span class="sd">    deletes it by hand. Its Jobs carry the project's label, so</span>
 <span class="sd">    ``pystiltctl status`` lists them, and the last day's are kept. The</span>
 <span class="sd">    CronJob is named ``stilt-&lt;project&gt;``, so scheduling a project again</span>
 <span class="sd">    replaces it.</span>
 <span class="sd">    """</span>
-    <span class="n">body</span> <span class="o">=</span> <span class="n">_job_body</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">tick_args</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">delay</span><span class="p">,</span> <span class="n">render</span><span class="p">),</span> <span class="n">completions</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">parallelism</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="n">_job_body</span><span class="p">(</span>
+        <span class="n">spec</span><span class="p">,</span>
+        <span class="n">tick_args</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">delay</span><span class="p">,</span> <span class="n">render</span><span class="p">),</span>
+        <span class="n">completions</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">parallelism</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">active_deadline</span><span class="o">=</span><span class="n">TICK_DEADLINE</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="s2">"apiVersion"</span><span class="p">:</span> <span class="s2">"batch/v1"</span><span class="p">,</span>
         <span class="s2">"kind"</span><span class="p">:</span> <span class="s2">"CronJob"</span><span class="p">,</span>

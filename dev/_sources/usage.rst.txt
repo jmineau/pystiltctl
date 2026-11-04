@@ -162,6 +162,11 @@ The met volume keeps each downloaded file, cropped, so a 6-hour block is
 downloaded once (3.4 GB from NOAA; the crop is much smaller) and used by
 the ticks that follow. One pod runs at a time, so any volume works.
 
+A tick that hangs (a stalled download, a bucket call with no timeout) does
+not block the schedule forever: its Job fails after 45 minutes, as if its
+pod had been stopped, so the next tick runs instead of being skipped by
+``concurrencyPolicy: Forbid`` until someone deletes the stuck Job by hand.
+
 Once a schedule runs, the ``receptors.csv`` on the bucket is the
 schedule's: ``pystiltctl push`` would replace it with your copy, and the
 hours already added would be added again by the next tick, but their
