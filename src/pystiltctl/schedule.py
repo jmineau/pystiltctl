@@ -11,6 +11,10 @@ for each hour. Each hour a Kubernetes CronJob runs one pod with
 2. writes ``receptors.csv`` back to the bucket, and
 3. becomes ``stilt run --receptors`` on that day's receptors.
 
+Steps 1 and 2 hold :func:`pystiltctl.inputs.lock` on ``receptors.csv``,
+so a tick run by hand to fill in a past day, which the CronJob does not
+know about, waits for the hourly one rather than writing over its hours.
+
 Finished simulations are skipped, so a tick only runs what is new or what
 failed before: an hour whose met was not there yet is tried again by every
 tick for a day.
@@ -34,7 +38,7 @@ from typing import Any
 import stilt
 
 from pystiltctl import render as renderer
-from pystiltctl.inputs import SITES, is_local, put
+from pystiltctl.inputs import SITES, get, is_local, lock, put
 from pystiltctl.worker import WORKDIR, become, project_directory, run, stilt_command
 
 logger = logging.getLogger(__name__)
@@ -206,8 +210,9 @@ def tick(
         has several variants (checked before ``stilt`` runs).
     OSError
         If the project's inputs cannot be copied from *project*, or
-        ``receptors.csv`` back to it, or (when ``stilt`` exited with 0) the
-        footprints cannot be drawn to *render*; the message says which.
+        ``receptors.csv`` locked or copied back to it, or (when ``stilt``
+        exited with 0) the footprints cannot be drawn to *render*; the
+        message says which.
     """
     now = now or datetime.now(UTC).replace(tzinfo=None)
     try:
@@ -219,18 +224,28 @@ def tick(
             f"cannot copy the project's inputs from {project}: {error}"
         ) from error
     receptors = hourly_receptors(read_sites(directory), due_hours(now, delay))
-    stilt_project = stilt.Project(directory, output=output)
-    # Before anything runs: a project that cannot be drawn fails now, not after the day's run.
-    variant = None if render is None else renderer.choose_variant(stilt_project)
-    added = stilt_project.add_receptors(receptors)
-    logger.info("Added %d receptors, through %s", len(added), receptors[-1].time)
-    if added and not is_local(project):
-        try:
-            put(directory, project, "receptors.csv")
-        except OSError as error:
-            raise OSError(
-                f"cannot copy receptors.csv back to {project}: {error}"
-            ) from error
+    # Another tick (a backfill by hand, say) may be adding its hours too. With
+    # the lock, receptors.csv is this tick's alone from a fresh copy to its put.
+    with lock(project, "receptors.csv"):
+        if not is_local(project):
+            try:
+                get(project, directory, "receptors.csv")
+            except OSError as error:
+                raise OSError(
+                    f"cannot copy the project's inputs from {project}: {error}"
+                ) from error
+        stilt_project = stilt.Project(directory, output=output)
+        # Before anything runs: a project that cannot be drawn fails now, not after the day's run.
+        variant = None if render is None else renderer.choose_variant(stilt_project)
+        added = stilt_project.add_receptors(receptors)
+        logger.info("Added %d receptors, through %s", len(added), receptors[-1].time)
+        if added and not is_local(project):
+            try:
+                put(directory, project, "receptors.csv")
+            except OSError as error:
+                raise OSError(
+                    f"cannot copy receptors.csv back to {project}: {error}"
+                ) from error
     ids = Path(workdir) / f"{directory.name}-due.txt"
     ids.parent.mkdir(parents=True, exist_ok=True)
     ids.write_text("".join(f"{r.id}\n" for r in receptors))

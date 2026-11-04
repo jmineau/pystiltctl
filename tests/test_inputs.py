@@ -156,3 +156,85 @@ def test_is_local(location, local):
 def test_local_path_drops_file_protocol():
     assert str(local_path("file:///data/p")) == "/data/p"
     assert str(local_path("/data/p")) == "/data/p"
+
+
+def test_get_copies_one_file_back(project, bucket, tmp_path):
+    push(project, bucket)
+    (tmp_path / "pod").mkdir()
+    inputs.get(bucket, tmp_path / "pod", "config.yaml")
+    assert (tmp_path / "pod" / "config.yaml").read_text() == CONFIG
+
+
+@pytest.fixture
+def fast_lock(monkeypatch):
+    """Locks looked at every 10 ms, and stale after 50 ms."""
+    monkeypatch.setattr(inputs, "LOCK_POLL_SECONDS", 0.01)
+    monkeypatch.setattr(inputs, "LOCK_STALE_SECONDS", 0.05)
+
+
+@pytest.mark.parametrize("where", ["bucket", "folder"])
+def test_lock_lets_one_holder_in_at_a_time(where, bucket, tmp_path, monkeypatch):
+    monkeypatch.setattr(inputs, "LOCK_POLL_SECONDS", 0.01)
+    url = bucket if where == "bucket" else str(tmp_path)
+    fs, root = fsspec.core.url_to_fs(url)
+    fs.makedirs(root, exist_ok=True)
+    order = []
+
+    def second():
+        with inputs.lock(url, "receptors.csv"):
+            order.append("second")
+
+    with inputs.lock(url, "receptors.csv"):
+        assert fs.exists(f"{root}/.receptors.csv.lock")
+        thread = threading.Thread(target=second)
+        thread.start()
+        thread.join(0.2)
+        assert thread.is_alive()
+        order.append("first")
+    thread.join(10)
+    assert order == ["first", "second"]
+    assert not fs.exists(f"{root}/.receptors.csv.lock")
+
+
+def test_lock_is_released_when_the_block_raises(bucket):
+    fs, root = fsspec.core.url_to_fs(bucket)
+    with (
+        pytest.raises(ValueError, match="bad row"),
+        inputs.lock(bucket, "receptors.csv"),
+    ):
+        raise ValueError("bad row")
+    assert not fs.exists(f"{root}/.receptors.csv.lock")
+
+
+def test_lock_takes_over_a_stale_lock(bucket, fast_lock, caplog):
+    """A holder that crashed leaves its lock; the next one takes it over."""
+    fs, root = fsspec.core.url_to_fs(bucket)
+    fs.pipe_file(f"{root}/.receptors.csv.lock", b"a pod that crashed")
+    with inputs.lock(bucket, "receptors.csv"):
+        assert fs.cat_file(f"{root}/.receptors.csv.lock") != b"a pod that crashed"
+    assert "Taking over" in caplog.text
+    assert "a pod that crashed" in caplog.text
+    assert not fs.exists(f"{root}/.receptors.csv.lock")
+
+
+def test_lock_leaves_a_lock_taken_over_from_it(bucket, caplog):
+    """A slow holder must not remove the lock of the program that took it over."""
+    fs, root = fsspec.core.url_to_fs(bucket)
+    with inputs.lock(bucket, "receptors.csv"):
+        fs.pipe_file(f"{root}/.receptors.csv.lock", b"the program that took over")
+    assert fs.cat_file(f"{root}/.receptors.csv.lock") == b"the program that took over"
+    assert "was taken over" in caplog.text
+
+
+def test_lock_says_what_it_could_not_do(bucket, monkeypatch):
+    def refuse(*args):
+        raise RuntimeError("the store went away")
+
+    monkeypatch.setattr(inputs, "_acquire", refuse)
+    with (
+        pytest.raises(
+            OSError, match=r"cannot lock receptors.csv at memory://.*went away"
+        ),
+        inputs.lock(bucket, "receptors.csv"),
+    ):
+        pass

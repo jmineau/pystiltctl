@@ -19,6 +19,8 @@ Project inputs
    inputs.local_path
    inputs.project_name
    inputs.put
+   inputs.get
+   inputs.lock
 
 Worker
 ------
