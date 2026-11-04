@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=7118659f"></script>
+    <script src="../../_static/documentation_options.js?v=b909769c"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev18+g051ef9b6d" />
+  <meta name="docsearch:version" content="0.0.1.dev19+ga3aba12cf" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -487,6 +487,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">packaging.version</span><span class="w"> </span><span class="kn">import</span> <span class="n">Version</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pystiltctl</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.inputs</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_local</span><span class="p">,</span> <span class="n">local_path</span><span class="p">,</span> <span class="n">project_key</span><span class="p">,</span> <span class="n">project_name</span><span class="p">,</span> <span class="n">pull</span>
@@ -511,17 +512,24 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the image matching this pystiltctl.</span>
 
-<span class="sd">    A release runs its own image; anything else (a development version)</span>
-<span class="sd">    runs ``:main``.</span>
+<span class="sd">    A release runs its own image, ``image.yml`` pushes one from every</span>
+<span class="sd">    ``vX.Y.Z...`` tag, pre-release and post-release included. A development</span>
+<span class="sd">    version (past the last tag, with no tag of its own) runs ``:main``,</span>
+<span class="sd">    since no image was ever published for that exact commit.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; default_image("0.2.0")</span>
 <span class="sd">    'ghcr.io/jmineau/pystiltctl:0.2.0'</span>
+<span class="sd">    &gt;&gt;&gt; default_image("0.2.0a1")</span>
+<span class="sd">    'ghcr.io/jmineau/pystiltctl:0.2.0a1'</span>
+<span class="sd">    &gt;&gt;&gt; default_image("0.2.0.post1")</span>
+<span class="sd">    'ghcr.io/jmineau/pystiltctl:0.2.0.post1'</span>
 <span class="sd">    &gt;&gt;&gt; default_image("0.2.1.dev3+g1a2b3c4")</span>
 <span class="sd">    'ghcr.io/jmineau/pystiltctl:main'</span>
 <span class="sd">    """</span>
-    <span class="n">released</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\d+\.\d+\.\d+"</span><span class="p">,</span> <span class="n">version</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="n">parsed</span> <span class="o">=</span> <span class="n">Version</span><span class="p">(</span><span class="n">version</span><span class="p">)</span>
+    <span class="n">released</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">parsed</span><span class="o">.</span><span class="n">is_devrelease</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">parsed</span><span class="o">.</span><span class="n">local</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">IMAGE_REPOSITORY</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">version</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">released</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'main'</span><span class="si">}</span><span class="s2">"</span></div>
 
 
