@@ -196,7 +196,10 @@ below the scale left transparent. Its rows are spaced as a web map's, so
 a map can stretch it between its corners; on a grid that spans many
 degrees of latitude it has more rows than the grid, so that no grid row
 is left out. ``bounds`` in the JSON is those corners,
-``[[south, west], [north, east]]``, as Leaflet takes them. ``time`` is in
+``[[south, west], [north, east]]``, as Leaflet takes them. A footprint whose
+grid crosses the antimeridian (180 degrees) raises instead of being drawn:
+PYSTILT wraps and sorts such a grid's longitudes, so its real west and east
+edges cannot be read from their minimum and maximum. ``time`` is in
 UTC and ends in ``Z``, so a browser reads it as UTC, not as its own local
 time:
 

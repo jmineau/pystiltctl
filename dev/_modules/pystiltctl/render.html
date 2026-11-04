@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=6a57cb18"></script>
+    <script src="../../_static/documentation_options.js?v=1c1e1f9b"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev24+g8eaf58de3" />
+  <meta name="docsearch:version" content="0.0.1.dev25+g15a7f0ca7" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -527,10 +527,30 @@
 
 <span class="sd">    The grid's ``lat`` and ``lon`` are cell centers, so the corners are half</span>
 <span class="sd">    a cell beyond the outer ones.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the grid crosses the antimeridian (180 degrees). PYSTILT wraps such</span>
+<span class="sd">        a grid's longitudes into -180 to 180 and sorts them</span>
+<span class="sd">        (``footprint/gridding.py``), so ``lon.min()``/``lon.max()`` would span</span>
+<span class="sd">        the wrap point rather than the grid's real width. Leaflet does accept</span>
+<span class="sd">        an east edge written past 180 degrees as a workaround, but that bends</span>
+<span class="sd">        every later reader of ``bounds`` to a convention that towers in Utah</span>
+<span class="sd">        never need, so this raises instead of stretching the box silently.</span>
 <span class="sd">    """</span>
     <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span> <span class="o">=</span> <span class="n">foot</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">foot</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
     <span class="n">dlat</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">lat</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="k">if</span> <span class="n">lat</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mf">0.0</span>
-    <span class="n">dlon</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">lon</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">lon</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="k">if</span> <span class="n">lon</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mf">0.0</span>
+    <span class="c1"># The minimum, not the first, gap: on a grid wrapped across the</span>
+    <span class="c1"># antimeridian the sorted longitudes are evenly spaced except for one</span>
+    <span class="c1"># large gap at the wrap point, so the first gap can be that one.</span>
+    <span class="n">dlon</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">lon</span><span class="p">))))</span> <span class="k">if</span> <span class="n">lon</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mf">0.0</span>
+    <span class="k">if</span> <span class="n">lon</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="ow">and</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">lon</span><span class="p">))))</span> <span class="o">&gt;</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">dlon</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"the footprint's grid crosses the antimeridian (180 degrees); its "</span>
+            <span class="s2">"longitudes wrap from near 180 to near -180, so lon.min()/lon.max() "</span>
+            <span class="s2">"cannot give its real west and east edges."</span>
+        <span class="p">)</span>
     <span class="k">return</span> <span class="p">[</span>
         <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">-</span> <span class="n">dlat</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">-</span> <span class="n">dlon</span> <span class="o">/</span> <span class="mi">2</span><span class="p">],</span>
         <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="o">.</span><span class="n">max</span><span class="p">())</span> <span class="o">+</span> <span class="n">dlat</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon</span><span class="o">.</span><span class="n">max</span><span class="p">())</span> <span class="o">+</span> <span class="n">dlon</span> <span class="o">/</span> <span class="mi">2</span><span class="p">],</span>
@@ -564,6 +584,11 @@
 <span class="sd">    row per grid row, unless that would leave a grid row out (the bands are</span>
 <span class="sd">    taller than a cell where a wide grid is far from the equator); then it</span>
 <span class="sd">    has as many rows as it takes for every grid row to show.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the footprint's grid crosses the antimeridian (see :func:`bounds`).</span>
 <span class="sd">    """</span>
     <span class="n">total</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span> <span class="k">if</span> <span class="s2">"time"</span> <span class="ow">in</span> <span class="n">foot</span><span class="o">.</span><span class="n">dims</span> <span class="k">else</span> <span class="n">foot</span>
     <span class="n">total</span> <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">)</span><span class="o">.</span><span class="n">sortby</span><span class="p">(</span><span class="s2">"lat"</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -746,7 +771,8 @@
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the project has several variants and *variant* is not given.</span>
+<span class="sd">        If the project has several variants and *variant* is not given, or a</span>
+<span class="sd">        footprint's grid crosses the antimeridian (see :func:`bounds`).</span>
 <span class="sd">    OSError</span>
 <span class="sd">        If a day's index at *url* cannot be checked: a refused connection, a</span>
 <span class="sd">        timeout, a 403 or expired credentials, say.</span>

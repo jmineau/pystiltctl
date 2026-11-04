@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=6a57cb18"></script>
+    <script src="_static/documentation_options.js?v=1c1e1f9b"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev24+g8eaf58de3" />
+  <meta name="docsearch:version" content="0.0.1.dev25+g15a7f0ca7" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -652,7 +652,10 @@ below the scale left transparent. Its rows are spaced as a web map’s, so
 a map can stretch it between its corners; on a grid that spans many
 degrees of latitude it has more rows than the grid, so that no grid row
 is left out. <code class="docutils literal notranslate"><span class="pre">bounds</span></code> in the JSON is those corners,
-<code class="docutils literal notranslate"><span class="pre">[[south,</span> <span class="pre">west],</span> <span class="pre">[north,</span> <span class="pre">east]]</span></code>, as Leaflet takes them. <code class="docutils literal notranslate"><span class="pre">time</span></code> is in
+<code class="docutils literal notranslate"><span class="pre">[[south,</span> <span class="pre">west],</span> <span class="pre">[north,</span> <span class="pre">east]]</span></code>, as Leaflet takes them. A footprint whose
+grid crosses the antimeridian (180 degrees) raises instead of being drawn:
+PYSTILT wraps and sorts such a grid’s longitudes, so its real west and east
+edges cannot be read from their minimum and maximum. <code class="docutils literal notranslate"><span class="pre">time</span></code> is in
 UTC and ends in <code class="docutils literal notranslate"><span class="pre">Z</span></code>, so a browser reads it as UTC, not as its own local
 time:</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">base</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://storage.googleapis.com/my-site/footprints/towers"</span><span class="p">;</span>

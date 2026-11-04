@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=6a57cb18"></script>
+    <script src="../_static/documentation_options.js?v=1c1e1f9b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev24+g8eaf58de3" />
+  <meta name="docsearch:version" content="0.0.1.dev25+g15a7f0ca7" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -563,7 +563,8 @@ several.</p></li>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the project has several variants and <em>variant</em> is not given.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the project has several variants and <em>variant</em> is not given, or a
+    footprint’s grid crosses the antimeridian (see <a class="reference internal" href="pystiltctl.render.bounds.html#pystiltctl.render.bounds" title="pystiltctl.render.bounds"><code class="xref py py-func docutils literal notranslate"><span class="pre">bounds()</span></code></a>).</p></li>
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#OSError" title="(in Python v3.15)"><strong>OSError</strong></a> – If a day’s index at <em>url</em> cannot be checked: a refused connection, a
     timeout, a 403 or expired credentials, say.</p></li>
 </ul>
