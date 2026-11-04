@@ -19,15 +19,19 @@ order Leaflet takes.
 
 from __future__ import annotations
 
+import contextlib
 import io
 import json
 import logging
+import os
+import uuid
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import fsspec
+import fsspec.implementations.local
 import matplotlib
 import numpy as np
 import stilt
@@ -196,6 +200,32 @@ def _exists(fs: fsspec.AbstractFileSystem, path: str) -> bool:
     return True
 
 
+def _atomic_pipe_file(fs: fsspec.AbstractFileSystem, path: str, data: bytes) -> None:
+    """
+    Write *data* to *path* on *fs*, atomically when *fs* is local.
+
+    ``fs.pipe_file`` truncates *path* and then writes it, so on a local
+    filesystem or mounted volume a reader that opens *path* while it is
+    (re)written sees a half-written file (seen on ``index.json``, rewritten
+    after every footprint). This instead writes a temporary name in the
+    same folder and ``os.replace``s it onto *path*, which is atomic on one
+    filesystem. S3 and GCS already replace the whole object in one
+    request, so there ``pipe_file`` writes *path* directly; a temporary
+    name would only add requests.
+    """
+    if not isinstance(fs, fsspec.implementations.local.LocalFileSystem):
+        fs.pipe_file(path, data)
+        return
+    tmp = f"{path}.tmp-{uuid.uuid4().hex}"
+    try:
+        fs.pipe_file(tmp, data)
+        os.replace(tmp, path)
+    except Exception:
+        with contextlib.suppress(Exception):
+            fs.rm_file(tmp)
+        raise
+
+
 def render(
     directory: str | Path,
     url: str,
@@ -269,14 +299,14 @@ def render(
         if foot is None:
             continue
         fs.makedirs(day, exist_ok=True)
-        fs.pipe_file(f"{day}/{receptor_id}.png", png(foot))
+        _atomic_pipe_file(fs, f"{day}/{receptor_id}.png", png(foot))
         item = entry(simulation.receptor, foot)
-        fs.pipe_file(f"{day}/{receptor_id}.json", json.dumps(item).encode())
+        _atomic_pipe_file(fs, f"{day}/{receptor_id}.json", json.dumps(item).encode())
         indexes[day][receptor_id] = item
         ordered = sorted(
             indexes[day].values(), key=lambda i: (i["time"], i["receptor"])
         )
-        fs.pipe_file(f"{day}/index.json", json.dumps(ordered).encode())
+        _atomic_pipe_file(fs, f"{day}/index.json", json.dumps(ordered).encode())
         drawn.append(receptor_id)
     logger.info("Drew %d footprints to %s", len(drawn), url)
     return drawn

@@ -1,10 +1,12 @@
 """Copying a project's inputs to and from a bucket."""
 
+import threading
+
 import fsspec
 import pytest
 
 from pystiltctl import inputs
-from pystiltctl.inputs import is_local, local_path, pull, push
+from pystiltctl.inputs import is_local, local_path, pull, push, put
 from tests.conftest import CONFIG
 
 
@@ -96,6 +98,46 @@ def test_pull_lets_an_oserror_from_the_bucket_through_unchanged(
     with pytest.raises(OSError, match="refused") as excinfo:
         pull(bucket, tmp_path / "pod")
     assert not isinstance(excinfo.value, FileNotFoundError)
+
+
+def test_put_is_atomic_on_a_local_folder(tmp_path):
+    """
+    A reader must never see a file half written while ``put`` copies it (#29).
+
+    ``put`` always copies the same bytes here, so the only way a read can
+    come back different is a reader catching the destination between its
+    truncation and the new content landing: a torn write, not a stale one.
+    """
+    directory = tmp_path / "pod"
+    directory.mkdir()
+    url = tmp_path / "shared"
+    url.mkdir()
+    content = b"time,longitude,latitude,altitude\n" + b"x" * 50_000 + b"\n"
+    (directory / "receptors.csv").write_bytes(content)
+    path = url / "receptors.csv"
+    path.write_bytes(content)  # the file a pod would already have pulled
+
+    stop = threading.Event()
+    bad_reads = []
+
+    def read_forever():
+        while not stop.is_set():
+            try:
+                data = path.read_bytes()
+            except FileNotFoundError:
+                continue
+            if data != content:
+                bad_reads.append(len(data))
+
+    reader = threading.Thread(target=read_forever)
+    reader.start()
+    try:
+        for _ in range(200):
+            put(directory, str(url), "receptors.csv")
+    finally:
+        stop.set()
+        reader.join()
+    assert bad_reads == []
 
 
 @pytest.mark.parametrize(

@@ -12,10 +12,14 @@ straight to it, wherever it is.
 
 from __future__ import annotations
 
+import contextlib
 import logging
+import os
+import uuid
 from pathlib import Path
 
 import fsspec
+import fsspec.implementations.local
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +226,31 @@ def pull(url: str, directory: str | Path) -> Path:
     return directory
 
 
+def _atomic_put_file(fs: fsspec.AbstractFileSystem, lpath: str, rpath: str) -> None:
+    """
+    Copy *lpath* to *rpath* on *fs*, atomically when *fs* is local.
+
+    ``fs.put_file`` truncates *rpath* and then writes it, so on a local
+    filesystem or mounted volume a reader that opens *rpath* while it is
+    copied sees a half-written file. This instead copies to a temporary
+    name in the same folder and ``os.replace``s it onto *rpath*, which is
+    atomic on one filesystem. S3 and GCS already replace the whole object
+    in one request, so there ``put_file`` writes *rpath* directly; a
+    temporary name would only add requests.
+    """
+    if not isinstance(fs, fsspec.implementations.local.LocalFileSystem):
+        fs.put_file(lpath, rpath)
+        return
+    tmp = f"{rpath}.tmp-{uuid.uuid4().hex}"
+    try:
+        fs.put_file(lpath, tmp)
+        os.replace(tmp, rpath)
+    except Exception:
+        with contextlib.suppress(Exception):
+            fs.rm_file(tmp)
+        raise
+
+
 def put(directory: str | Path, url: str, name: str) -> None:
     """
     Copy one file of a project folder back to *url*, such as a grown ``receptors.csv``.
@@ -236,4 +265,4 @@ def put(directory: str | Path, url: str, name: str) -> None:
         The file, relative to the project folder.
     """
     fs, root = fsspec.core.url_to_fs(url)
-    fs.put_file(str(Path(directory) / name), f"{root.rstrip('/')}/{name}")
+    _atomic_put_file(fs, str(Path(directory) / name), f"{root.rstrip('/')}/{name}")

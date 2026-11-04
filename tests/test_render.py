@@ -1,6 +1,7 @@
 """Drawing footprints for a web map."""
 
 import json
+import threading
 from datetime import UTC, datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -298,6 +299,64 @@ def test_render_keeps_the_days_earlier_entries_in_time_order(hours):
     render.render("/project", hours, ["r12"])
     render.render("/project", hours, ["r10", "r12", "r11"])
     assert indexed(hours) == ["r10", "r11", "r12"]
+
+
+class ManyReceptors:
+    """Stands in for ``stilt.Project``: as many same-day receptors as asked for."""
+
+    variants = {"hrrr": None}
+
+    def __init__(self, directory, output=None):
+        self.output = output
+
+    def simulation(self, receptor_id, variant):
+        receptor = SimpleNamespace(
+            id=receptor_id,
+            time=datetime(2026, 10, 29) + timedelta(seconds=int(receptor_id)),
+            longitude=-111.85,
+            latitude=40.77,
+            altitude=35.0,
+        )
+        return SimpleNamespace(
+            receptor=receptor, footprint=footprint(np.ones((2, 2)) * 1e-3)
+        )
+
+
+def test_render_index_is_atomic_on_a_local_folder(tmp_path, monkeypatch):
+    """
+    A reader must never see ``index.json`` half written, on a local folder (#29).
+
+    ``index.json`` is rewritten after every footprint, so one call that
+    draws many receptors of the same day rewrites it many times while a
+    reader polls it, as a web map would.
+    """
+    monkeypatch.setattr(render.stilt, "Project", ManyReceptors)
+    url = str(tmp_path / "footprints")
+    path = tmp_path / "footprints" / "2026-10-29" / "index.json"
+    ids = [str(n) for n in range(40)]
+
+    stop = threading.Event()
+    bad_reads = []
+
+    def read_forever():
+        while not stop.is_set():
+            try:
+                data = path.read_bytes()
+            except FileNotFoundError:
+                continue
+            try:
+                json.loads(data)
+            except ValueError:
+                bad_reads.append(data[:80])
+
+    reader = threading.Thread(target=read_forever)
+    reader.start()
+    try:
+        render.render("/project", url, ids)
+    finally:
+        stop.set()
+        reader.join()
+    assert bad_reads == []
 
 
 def test_choose_variant(site, monkeypatch):
