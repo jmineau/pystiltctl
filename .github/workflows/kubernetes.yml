@@ -137,6 +137,10 @@ jobs:
         # MET_COVERAGE: the tick must still add a day of receptors to the
         # bucket, and its Job must end by the exit-code rule (1: the task
         # fails, no retries), as an hour whose met has not arrived would.
+        # The demo's receptors.csv already has 2 rows from 2021-01-15, far
+        # older than today: the tick also closes that gap, capped at
+        # MAX_BACKFILL_HOURS (a week, 168 h) past the normal day (24 h), so
+        # it adds 192 hours, not 24 (#26).
         env:
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
@@ -151,7 +155,7 @@ jobs:
           reason=$(kubectl get job/tick-now -o jsonpath='{.status.conditions[?(@.type=="Failed")].reason}')
           test "$reason" = FailedIndexes || { echo "::error::failed for $reason"; exit 1; }
           rows=$(uv run python -c "import s3fs; print(len(s3fs.S3FileSystem().cat_file('stilt/projects/demo/receptors.csv').splitlines()) - 1)")
-          test "$rows" = 26 || { echo "::error::receptors.csv has $rows rows, not 2 + 24"; exit 1; }
+          test "$rows" = 194 || { echo "::error::receptors.csv has $rows rows, not 2 + 192"; exit 1; }
 
       - name: Show the cluster
         if: ${{ !cancelled() }}
