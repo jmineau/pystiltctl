@@ -41,6 +41,12 @@ from pystiltctl.inputs import is_local, local_path, project_key, project_name, p
 RETRIES = 3
 #: How long a finished Job, and its pods' logs, stay on the cluster: a week.
 KEEP_FINISHED = 7 * 24 * 3600
+#: How long a schedule's tick may run before its Job fails, as if its pod
+#: had been stopped (the ``SIGTERM`` ``activeDeadlineSeconds`` sends is what
+#: ``stilt`` answers with exit 3): a bit under the CronJob's hourly window,
+#: so a hung pod (a stalled download, a bucket call with no timeout) is
+#: failed before ``concurrencyPolicy: Forbid`` would skip the next tick too.
+TICK_DEADLINE = 45 * 60
 #: The label every pystiltctl Job and pod carries, with the project's name.
 PROJECT_LABEL = "pystiltctl/project"
 #: The annotation holding the project's URL or real path, for ``pystiltctl status``.
@@ -306,12 +312,19 @@ def _metadata(spec: JobSpec, **name: str) -> dict[str, Any]:
 
 
 def _job_body(
-    spec: JobSpec, args: list[str], completions: int, parallelism: int
+    spec: JobSpec,
+    args: list[str],
+    completions: int,
+    parallelism: int,
+    active_deadline: int | None = None,
 ) -> dict[str, Any]:
     """
     Return the ``spec`` of an indexed Job whose pods run *args*.
 
     The exit-code rules are described in this module's docstring.
+    *active_deadline* fails the Job after that many seconds, as if its pod
+    had been stopped; ``None`` (``submit``'s Job) leaves it unbounded, since
+    a submitted project may run for as long as its simulations take.
     """
     resources: dict[str, Any] = {"requests": {"cpu": str(spec.cpus)}}
     if spec.memory is not None:
@@ -348,27 +361,30 @@ def _job_body(
         rule = {"containerName": "stilt", "operator": "In", "values": [code]}
         return {"action": action, "onExitCodes": rule}
 
-    return {
+    body: dict[str, Any] = {
         "completionMode": "Indexed",
         "completions": completions,
         "parallelism": parallelism,
         "backoffLimitPerIndex": RETRIES,
-        "podFailurePolicy": {
-            "rules": [
-                on_exit("FailJob", 2),
-                on_exit("FailIndex", 1),
-                on_exit("FailIndex", 4),
-                # `status` is required in a CronJob's template; the API server
-                # fills it in only for a Job created on its own.
-                {
-                    "action": "Ignore",
-                    "onPodConditions": [{"type": "DisruptionTarget", "status": "True"}],
-                },
-            ]
-        },
-        "ttlSecondsAfterFinished": KEEP_FINISHED,
-        "template": {"metadata": {"labels": _labels(spec)}, "spec": pod},
     }
+    if active_deadline is not None:
+        body["activeDeadlineSeconds"] = active_deadline
+    body["podFailurePolicy"] = {
+        "rules": [
+            on_exit("FailJob", 2),
+            on_exit("FailIndex", 1),
+            on_exit("FailIndex", 4),
+            # `status` is required in a CronJob's template; the API server
+            # fills it in only for a Job created on its own.
+            {
+                "action": "Ignore",
+                "onPodConditions": [{"type": "DisruptionTarget", "status": "True"}],
+            },
+        ]
+    }
+    body["ttlSecondsAfterFinished"] = KEEP_FINISHED
+    body["template"] = {"metadata": {"labels": _labels(spec)}, "spec": pod}
+    return body
 
 
 def manifest(spec: JobSpec) -> dict[str, Any]:
@@ -403,12 +419,22 @@ def cron_job(spec: JobSpec, delay: int, render: str | None = None) -> dict[str, 
     Return the CronJob that runs ``pystiltctl tick`` for *spec* every hour.
 
     One pod at a time (a tick that is still running delays the next), at
-    15 minutes past the hour. Its Jobs carry the project's label, so
+    15 minutes past the hour. Its Job fails after :data:`TICK_DEADLINE`
+    seconds, so a tick whose pod hangs (a stalled download, a bucket call
+    with no timeout) does not stay "active" forever and, with
+    ``concurrencyPolicy: Forbid``, block every later tick until someone
+    deletes it by hand. Its Jobs carry the project's label, so
     ``pystiltctl status`` lists them, and the last day's are kept. The
     CronJob is named ``stilt-<project>``, so scheduling a project again
     replaces it.
     """
-    body = _job_body(spec, tick_args(spec, delay, render), completions=1, parallelism=1)
+    body = _job_body(
+        spec,
+        tick_args(spec, delay, render),
+        completions=1,
+        parallelism=1,
+        active_deadline=TICK_DEADLINE,
+    )
     return {
         "apiVersion": "batch/v1",
         "kind": "CronJob",
