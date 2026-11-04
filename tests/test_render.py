@@ -123,6 +123,72 @@ def test_render_needs_a_variant_when_there_are_several(site, monkeypatch):
         render.render("/project", site, ["r1a"])
 
 
+class _Unreachable:
+    """Wraps a real filesystem but raises *error* from ``info``, as a broken bucket would."""
+
+    def __init__(self, fs, error: Exception):
+        self.fs = fs
+        self.error = error
+
+    def __getattr__(self, name):
+        return getattr(self.fs, name)
+
+    def info(self, path, **kwargs):
+        raise self.error
+
+
+class _EndpointConnectionError(Exception):
+    """Stands in for a botocore error s3fs does not translate into an OSError."""
+
+
+def _break(monkeypatch, site, error: Exception):
+    """Make render's ``url_to_fs`` for *site* return a filesystem whose ``info`` raises."""
+    fs, root = fsspec.core.url_to_fs(site)
+    monkeypatch.setattr(
+        render.fsspec.core,
+        "url_to_fs",
+        lambda url: (_Unreachable(fs, error), root),
+    )
+    return fs, root
+
+
+def test_render_raises_oserror_on_a_bucket_error_fsspec_does_not_translate(
+    site, monkeypatch
+):
+    """A bucket error checking a day's index must not look like there is none (#31)."""
+    _break(
+        monkeypatch, site, _EndpointConnectionError("could not connect to the endpoint")
+    )
+    with pytest.raises(OSError, match="could not connect") as excinfo:
+        render.render("/project", site, ["r1a"])
+    assert not isinstance(excinfo.value, FileNotFoundError)
+
+
+def test_render_lets_an_oserror_from_the_bucket_through_unchanged(site, monkeypatch):
+    """A connectivity error fsspec already raises as OSError is not swallowed either."""
+    _break(monkeypatch, site, ConnectionError("refused"))
+    with pytest.raises(OSError, match="refused") as excinfo:
+        render.render("/project", site, ["r1a"])
+    assert not isinstance(excinfo.value, FileNotFoundError)
+
+
+def test_render_does_not_drop_other_receptors_entries_on_a_bucket_error(
+    site, monkeypatch
+):
+    """A bucket error reading the index must not be treated as an empty index (#31)."""
+    fs, root = fsspec.core.url_to_fs(site)
+    day = f"{root}/2026-10-29"
+    fs.makedirs(day, exist_ok=True)
+    recorded = [{"receptor": "r1z", "time": "2026-10-29T09:00:00Z"}]
+    fs.pipe_file(f"{day}/index.json", json.dumps(recorded).encode())
+    _break(monkeypatch, site, TimeoutError("timed out reaching the bucket"))
+    with pytest.raises(OSError, match="timed out"):
+        render.render("/project", site, ["r1a"])
+    # the earlier receptor's entry is untouched: render stopped before it could
+    # mistake the bucket error for an empty index and overwrite the file.
+    assert json.loads(fs.cat_file(f"{day}/index.json")) == recorded
+
+
 def test_time_is_written_in_utc_with_its_zone():
     """A browser reads a time with no zone as its own local time."""
     assert render.utc(datetime(2026, 10, 29, 10)) == "2026-10-29T10:00:00Z"
