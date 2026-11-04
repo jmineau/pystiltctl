@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=b909769c"></script>
+    <script src="../../_static/documentation_options.js?v=4146fdc1"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev19+ga3aba12cf" />
+  <meta name="docsearch:version" content="0.0.1.dev21+g989a8f0e0" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -621,6 +621,22 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">:</span> <span class="n">fsspec</span><span class="o">.</span><span class="n">AbstractFileSystem</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"file"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Whether *path* is a *kind* (``"file"`` or ``"directory"``) on *fs*.</span>
+
+<span class="sd">    Unlike ``fs.isfile``/``fs.isdir``, which fsspec defines to catch every</span>
+<span class="sd">    exception and return False, this lets anything but a missing *path*</span>
+<span class="sd">    through, so a refused connection, a timeout or expired credentials are</span>
+<span class="sd">    not mistaken for an absent file.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="n">info</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="n">kind</span>
+
+
 <div class="viewcode-block" id="pull">
 <a class="viewcode-back" href="../../_autosummary/pystiltctl.inputs.pull.html#pystiltctl.inputs.pull">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">pull</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
@@ -646,23 +662,36 @@
 <span class="sd">    ------</span>
 <span class="sd">    FileNotFoundError</span>
 <span class="sd">        If *url* has no ``config.yaml`` or ``receptors.csv``.</span>
+<span class="sd">    OSError</span>
+<span class="sd">        If *url* cannot be reached, such as a refused connection, a</span>
+<span class="sd">        timeout or expired credentials: worth a retry, unlike a project</span>
+<span class="sd">        that is genuinely not there.</span>
 <span class="sd">    """</span>
     <span class="n">directory</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
     <span class="n">fs</span><span class="p">,</span> <span class="n">root</span> <span class="o">=</span> <span class="n">fsspec</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">url_to_fs</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
     <span class="n">root</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">INPUT_FILES</span><span class="p">:</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">fs</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No PYSTILT project at </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: it has no </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
-    <span class="n">directory</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">INPUT_FILES</span><span class="p">:</span>
-        <span class="n">fs</span><span class="o">.</span><span class="n">get_file</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">name</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">SITES</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span>
-        <span class="n">fs</span><span class="o">.</span><span class="n">get_file</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">SITES</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">SITES</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">TABLES</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">remote</span> <span class="ow">in</span> <span class="n">fs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">TABLES</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span>
-            <span class="n">local</span> <span class="o">=</span> <span class="n">directory</span> <span class="o">/</span> <span class="n">remote</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/"</span><span class="p">)</span>
-            <span class="n">local</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">fs</span><span class="o">.</span><span class="n">get_file</span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">INPUT_FILES</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"No PYSTILT project at </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: it has no </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">."</span>
+                <span class="p">)</span>
+        <span class="n">directory</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">INPUT_FILES</span><span class="p">:</span>
+            <span class="n">fs</span><span class="o">.</span><span class="n">get_file</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">name</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">SITES</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span>
+            <span class="n">fs</span><span class="o">.</span><span class="n">get_file</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">SITES</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">SITES</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">TABLES</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"directory"</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">remote</span> <span class="ow">in</span> <span class="n">fs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">TABLES</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span>
+                <span class="n">local</span> <span class="o">=</span> <span class="n">directory</span> <span class="o">/</span> <span class="n">remote</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">/"</span><span class="p">)</span>
+                <span class="n">local</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">fs</span><span class="o">.</span><span class="n">get_file</span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+        <span class="k">raise</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+            <span class="k">raise</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"cannot reach </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Copied the inputs at </span><span class="si">%s</span><span class="s2"> to </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">directory</span></div>
 
