@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 
 from pystiltctl import job
 from pystiltctl.cli import app
-from pystiltctl.inputs import push
+from pystiltctl.inputs import hash_inputs, push
 from tests.conftest import CONFIG
 
 
@@ -62,6 +62,21 @@ def test_job_spec_no_project(bucket):
         job.job_spec(bucket)
 
 
+def test_job_spec_hashes_the_inputs_it_pulled(pushed, project):
+    """The hash is content-based: the pushed bucket and the local project agree (#15)."""
+    assert job.job_spec(pushed).input_hash == hash_inputs(project)
+
+
+def test_job_spec_input_hash_changes_with_receptors(project, bucket):
+    push(project, bucket)
+    before = job.job_spec(bucket, output="s3://bucket/output").input_hash
+    (project / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude\n2021-01-15 00:00:00,-112,40,10\n"
+    )
+    push(project, bucket)
+    assert job.job_spec(bucket, output="s3://bucket/output").input_hash != before
+
+
 def test_manifest_is_an_indexed_job_of_workers(pushed):
     spec = job.job_spec(
         pushed,
@@ -93,6 +108,8 @@ def test_manifest_is_an_indexed_job_of_workers(pushed):
         "4",
         "--workdir",
         "/scratch/project",
+        "--input-hash",
+        spec.input_hash,
     ]
     assert container["resources"] == {
         "requests": {"cpu": "4", "memory": "8Gi"},
@@ -169,6 +186,13 @@ def test_label_value(name, value):
 def test_volume_needs_claim_and_absolute_path(text):
     with pytest.raises(ValueError, match="CLAIM:/path"):
         job.Volume.parse(text)
+
+
+def test_worker_args_omits_input_hash_when_none():
+    """A JobSpec built directly, not through job_spec (as status.py's tests do), has none."""
+    spec = job.JobSpec("s3://b/p", "p", tasks=2, parallelism=2)
+    assert spec.input_hash is None
+    assert "--input-hash" not in job.worker_args(spec)
 
 
 def test_create_runs_kubectl(monkeypatch, pushed):

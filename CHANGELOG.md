@@ -49,3 +49,10 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
   it hangs (a stalled download, a bucket call with no timeout), instead of
   staying "active" forever and, with `concurrencyPolicy: Forbid`, blocking
   every later tick until someone deletes it by hand.
+- `pystiltctl submit` now passes each pod a hash of the `config.yaml` and
+  `receptors.csv` it saw; `pystiltctl worker` exits 2 ("the project changed
+  after submit; submit again") if what it pulls hashes differently, instead
+  of running with it. A Job's pods can start minutes to hours apart, and a
+  push to the project in between used to split the receptors differently for
+  earlier and later pods, so some receptors ran twice and others never, while
+  the Job still reported `Complete`.

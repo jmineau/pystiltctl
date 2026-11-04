@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 
 from pystiltctl import worker
 from pystiltctl.cli import app
-from pystiltctl.inputs import push
+from pystiltctl.inputs import hash_inputs, push
 
 
 def _alive(pid: int) -> bool:
@@ -93,6 +93,48 @@ def test_run_task_refuses_an_index_outside_the_tasks(project, execs):
     assert execs == []
 
 
+def test_run_task_accepts_a_matching_input_hash(project, bucket, tmp_path, execs):
+    push(project, bucket)
+    worker.run_task(
+        bucket, 2, index=0, workdir=tmp_path / "pod", input_hash=hash_inputs(project)
+    )
+    directory = tmp_path / "pod" / "my_project"
+    assert execs == [worker.stilt_command(directory, 0, 2)]
+
+
+def test_run_task_refuses_a_project_pushed_again_after_submit(
+    project, bucket, tmp_path, execs
+):
+    """
+    Reproduce #15: a push between two pods' pulls must not run silently.
+
+    Task 0 pulls the receptors ``submit`` saw, whose hash matches. Before
+    task 1 pulls, the project is pushed again with a different
+    ``receptors.csv`` (as the issue describes: a Job's pods can start
+    minutes to hours apart, and a push in between changes the split
+    ``stilt run --task I/N`` would make). Task 1 must fail instead of
+    silently running that different split.
+    """
+    push(project, bucket)
+    submit_hash = hash_inputs(project)
+
+    worker.run_task(
+        bucket, 2, index=0, workdir=tmp_path / "pod0", input_hash=submit_hash
+    )
+    assert execs == [worker.stilt_command(tmp_path / "pod0" / "my_project", 0, 2)]
+
+    (project / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude\n2021-01-15 00:00:00,-112,40,10\n"
+    )
+    push(project, bucket)
+
+    with pytest.raises(ValueError, match="changed after submit; submit again"):
+        worker.run_task(
+            bucket, 2, index=1, workdir=tmp_path / "pod1", input_hash=submit_hash
+        )
+    assert len(execs) == 1  # task 1 never ran stilt
+
+
 def test_cli_push(project, bucket):
     result = CliRunner().invoke(app, ["push", str(project), bucket])
     assert result.exit_code == 0, result.output
@@ -129,6 +171,57 @@ def test_cli_worker_runs_the_task(project, bucket, tmp_path, execs):
         "--cpus",
         "4",
     ]
+
+
+def test_cli_worker_accepts_a_matching_input_hash(project, bucket, tmp_path, execs):
+    push(project, bucket)
+    result = CliRunner().invoke(
+        app,
+        [
+            "worker",
+            bucket,
+            "--tasks",
+            "2",
+            "--index",
+            "0",
+            "--workdir",
+            str(tmp_path),
+            "--input-hash",
+            hash_inputs(project),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert execs != []
+
+
+def test_cli_worker_refuses_a_project_changed_since_submit(
+    project, bucket, tmp_path, execs
+):
+    """Fails the Job (exit 2), the code the issue itself asks for (#15)."""
+    push(project, bucket)
+    submit_hash = hash_inputs(project)
+    (project / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude\n2021-01-15 00:00:00,-112,40,10\n"
+    )
+    push(project, bucket)
+    result = CliRunner().invoke(
+        app,
+        [
+            "worker",
+            bucket,
+            "--tasks",
+            "2",
+            "--index",
+            "0",
+            "--workdir",
+            str(tmp_path),
+            "--input-hash",
+            submit_hash,
+        ],
+    )
+    assert result.exit_code == 2, result.output
+    assert "changed after submit; submit again" in result.output
+    assert execs == []
 
 
 def test_cli_worker_no_project_is_not_retried(bucket, tmp_path, execs):

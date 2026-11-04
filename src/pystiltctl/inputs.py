@@ -15,6 +15,7 @@ where it is, as a schedule's tick adds to ``receptors.csv``, holds
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import logging
 import os
 import socket
@@ -108,6 +109,48 @@ def project_key(project: str | Path) -> str:
         return str(local_path(project).resolve())
     scheme, sep, rest = str(project).partition("://")
     return f"{scheme.lower()}{sep}{rest.rstrip('/')}"
+
+
+def hash_inputs(directory: str | Path) -> str:
+    """
+    Return a content hash of a project folder's config.yaml and receptors.csv.
+
+    :func:`pystiltctl.job.job_spec` hashes the inputs it just pulled (or
+    found on a mounted volume) when it builds a Job, and passes the hash to
+    each pod; :func:`pystiltctl.worker.run_task` hashes what it pulls the
+    same way and compares the two, so a pod can tell that the project was
+    pushed again after the Job was submitted, rather than quietly running a
+    different share of the receptors than another pod of the same Job.
+    Hashing content, not a bucket's mtime or etag, means a byte-identical
+    re-push never looks like a change. Only these two files are hashed, not
+    ``tables/`` or ``sites.csv``, since they decide a run's receptor split
+    and settings.
+
+    Parameters
+    ----------
+    directory : str or Path
+        A project folder that already has both files.
+
+    Returns
+    -------
+    str
+        A hex SHA-256 digest.
+
+    Raises
+    ------
+    FileNotFoundError
+        If *directory* has no ``config.yaml`` or ``receptors.csv``.
+    """
+    directory = Path(directory)
+    digest = hashlib.sha256()
+    for name in INPUT_FILES:
+        path = directory / name
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"{directory} is not a PYSTILT project: it has no {name}."
+            )
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()
 
 
 def push(project: str | Path, url: str) -> list[str]:
