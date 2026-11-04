@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=c6646d25"></script>
+    <script src="../../_static/documentation_options.js?v=1621993f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev22+g644bf7ec2" />
+  <meta name="docsearch:version" content="0.0.1.dev23+ge70c1c875" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -466,6 +466,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">ctypes</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
@@ -481,6 +482,25 @@
 <span class="n">INDEX_VARIABLE</span> <span class="o">=</span> <span class="s2">"JOB_COMPLETION_INDEX"</span>
 <span class="c1">#: Where a URL's inputs are copied, unless told otherwise: the pod's own disk.</span>
 <span class="n">WORKDIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"/tmp/pystiltctl"</span><span class="p">)</span>
+
+<span class="c1">#: ``prctl(2)``'s ``PR_SET_PDEATHSIG``; Linux has no stdlib name for it.</span>
+<span class="n">_PR_SET_PDEATHSIG</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="c1">#: Resolved once at import time, not inside the forked child (see ``_die_with_parent``).</span>
+<span class="n">_libc</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">CDLL</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_errno</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"linux"</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_die_with_parent</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Ask the kernel to ``SIGTERM`` this process when its parent dies.</span>
+
+<span class="sd">    Runs as ``subprocess.Popen``'s ``preexec_fn``, in the forked child</span>
+<span class="sd">    before it execs ``stilt``. :func:`run`'s own signal handler forwards</span>
+<span class="sd">    ``SIGTERM``/``SIGINT`` to the child, but a ``kill -9`` of the parent</span>
+<span class="sd">    cannot be caught, so without this a ``stilt`` grandchild outlives it as</span>
+<span class="sd">    an orphan (``PR_SET_PDEATHSIG``, Linux only; a no-op elsewhere).</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">_libc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_libc</span><span class="o">.</span><span class="n">prctl</span><span class="p">(</span><span class="n">_PR_SET_PDEATHSIG</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="task_index">
@@ -588,10 +608,14 @@
 <span class="sd">    For when something must happen after ``stilt`` finishes, so this</span>
 <span class="sd">    process cannot :func:`become` it. A stop signal (``SIGTERM`` from</span>
 <span class="sd">    Kubernetes, or ``SIGINT``) is sent on to the command, which stops its</span>
-<span class="sd">    runs cleanly and exits with 3.</span>
+<span class="sd">    runs cleanly and exits with 3. A signal that cannot be caught, above</span>
+<span class="sd">    all ``SIGKILL``, is not forwarded this way; on Linux the child is set to</span>
+<span class="sd">    get its own ``SIGTERM`` from the kernel the moment this process dies,</span>
+<span class="sd">    for any reason, so it is not left running as an orphan outside a</span>
+<span class="sd">    container (:func:`_die_with_parent`).</span>
 <span class="sd">    """</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Running </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">command</span><span class="p">[</span><span class="mi">2</span><span class="p">:]))</span>
-    <span class="n">child</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+    <span class="n">child</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">preexec_fn</span><span class="o">=</span><span class="n">_die_with_parent</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="n">signum</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">frame</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Send the signal this process got on to the command."""</span>

@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=c6646d25"></script>
+    <script src="../_static/documentation_options.js?v=1621993f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev22+g644bf7ec2" />
+  <meta name="docsearch:version" content="0.0.1.dev23+ge70c1c875" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -541,7 +541,11 @@
 <p>For when something must happen after <code class="docutils literal notranslate"><span class="pre">stilt</span></code> finishes, so this
 process cannot <a class="reference internal" href="pystiltctl.worker.become.html#pystiltctl.worker.become" title="pystiltctl.worker.become"><code class="xref py py-func docutils literal notranslate"><span class="pre">become()</span></code></a> it. A stop signal (<code class="docutils literal notranslate"><span class="pre">SIGTERM</span></code> from
 Kubernetes, or <code class="docutils literal notranslate"><span class="pre">SIGINT</span></code>) is sent on to the command, which stops its
-runs cleanly and exits with 3.</p>
+runs cleanly and exits with 3. A signal that cannot be caught, above
+all <code class="docutils literal notranslate"><span class="pre">SIGKILL</span></code>, is not forwarded this way; on Linux the child is set to
+get its own <code class="docutils literal notranslate"><span class="pre">SIGTERM</span></code> from the kernel the moment this process dies,
+for any reason, so it is not left running as an orphan outside a
+container (<code class="xref py py-func docutils literal notranslate"><span class="pre">_die_with_parent()</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span></p>
