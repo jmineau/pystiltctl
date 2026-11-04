@@ -155,9 +155,12 @@ That starts a Kubernetes CronJob. Once an hour, at 15 past, one pod runs
 
 1. adds a receptor for each site at each hour of the last day that is at
    least ``--delay`` hours old (8 by default) to ``receptors.csv``, and
-   writes it back to the bucket;
-2. runs the receptors of that day. Finished ones are skipped, so it runs
-   the new hour, and any hour that failed before.
+   writes it back to the bucket. If the cluster, the CronJob or the bucket
+   was down for longer than that day, so the last row already in
+   ``receptors.csv`` is older still, it also adds every hour between that
+   row and the day, up to a week back in one tick;
+2. runs the receptors of that day, and the gap's. Finished ones are
+   skipped, so it runs the new hour, and any hour that failed before.
 
 The delay is how long the met takes to appear. NOAA's HRRR archive posts
 each 6-hour block about 40 minutes after it ends, and a backward run also
@@ -186,7 +189,11 @@ a pod that crashed is taken over once it has not changed for 5 minutes.
 The lock needs a folder or a store that refuses to create a file that is
 already there: AWS S3 (``If-None-Match``) and Google Cloud Storage do; check
 before relying on it with another S3-compatible store.
-Scheduling a project again replaces its CronJob; ``kubectl delete cronjob
+An outage longer than a week of hours closes gradually instead of in one
+tick: each tick reaches no more than a week past the day, so the
+scheduled ticks that follow keep narrowing the gap, a week at a time,
+until the schedule is caught up; nothing by hand is needed. Scheduling a
+project again replaces its CronJob; ``kubectl delete cronjob
 stilt-<project>`` stops it.
 
 Footprints on a web map

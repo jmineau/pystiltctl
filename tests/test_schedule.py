@@ -1,7 +1,7 @@
 """Running a project every hour, for fixed sites."""
 
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import fsspec
 import pytest
@@ -21,6 +21,42 @@ def test_due_hours_are_the_last_day_behind_the_delay():
     assert hours[-1] == datetime(2026, 10, 29, 10)
     assert hours[0] == datetime(2026, 10, 28, 11)
     assert schedule.due_hours(NOW, delay=0)[-1] == datetime(2026, 10, 29, 18)
+
+
+def test_due_hours_without_since_leaves_a_gap_after_an_outage():
+    """The issue's own reproduction (#26): a 36 h outage, no `since`."""
+    before = schedule.due_hours(datetime(2021, 1, 15, 12, 0), delay=8)
+    after = schedule.due_hours(datetime(2021, 1, 17, 0, 0), delay=8)
+    assert before[-1] == datetime(2021, 1, 15, 4)
+    assert after[0] == datetime(2021, 1, 15, 17)
+    # Every hour strictly between the two windows is never added by either tick.
+    assert after[0] - before[-1] > timedelta(hours=1)
+
+
+def test_due_hours_with_since_closes_the_gap():
+    before = schedule.due_hours(datetime(2021, 1, 15, 12, 0), delay=8)
+    after = schedule.due_hours(datetime(2021, 1, 17, 0, 0), delay=8, since=before[-1])
+    assert after[0] == before[-1] + timedelta(hours=1)  # no hour skipped
+
+
+def test_due_hours_ignores_since_already_inside_the_window():
+    hours = schedule.due_hours(NOW, delay=8)
+    since = hours[-2]  # well within the normal window: no gap to close
+    assert schedule.due_hours(NOW, delay=8, since=since) == hours
+
+
+def test_due_hours_ignores_since_exactly_at_the_windows_edge():
+    hours = schedule.due_hours(NOW, delay=8)
+    since = hours[0] - timedelta(hours=1)  # the hour right before the window: no gap
+    assert schedule.due_hours(NOW, delay=8, since=since) == hours
+
+
+def test_due_hours_caps_how_far_back_it_fills():
+    normal = schedule.due_hours(NOW, delay=8)
+    since = normal[0] - timedelta(days=365)  # far older than any realistic outage
+    hours = schedule.due_hours(NOW, delay=8, since=since)
+    assert hours[0] == normal[0] - timedelta(hours=schedule.MAX_BACKFILL_HOURS)
+    assert hours[-1] == normal[-1]
 
 
 def test_read_sites(sited):
@@ -151,6 +187,24 @@ def test_the_next_tick_adds_only_the_new_hour(sited, bucket, tmp_path, execs):
     assert len(rows) == 2 * (schedule.WINDOW_HOURS + 1)
     ids = (tmp_path / "second" / "my_project-due.txt").read_text().split()
     assert ids[0].startswith("202610281200") and ids[-1].startswith("202610291100")
+
+
+def test_tick_fills_the_gap_left_by_an_outage(sited, bucket, tmp_path, execs):
+    """A tick after an outage longer than the window adds and runs the gap too (#26)."""
+    push(sited, bucket)
+    schedule.tick(bucket, now=NOW, workdir=tmp_path / "first")
+    schedule.tick(bucket, now=NOW + timedelta(hours=36), workdir=tmp_path / "second")
+    rows = receptor_rows(bucket)
+    hours = sorted({row.split(",")[0] for row in rows})
+    # 2026-10-28 11:00 through 2026-10-30 22:00: every hour, no gap, each twice (two sites).
+    assert hours[0] == "2026-10-28 11:00:00"
+    assert hours[-1] == "2026-10-30 22:00:00"
+    assert len(hours) == 60
+    assert len(rows) == 2 * 60
+    # The gap's hours were not just added: they ran in this tick too.
+    ids = (tmp_path / "second" / "my_project-due.txt").read_text().split()
+    assert len(ids) == 2 * 36
+    assert ids[0] == "202610291100_-111.8476_40.7663_35"
 
 
 def test_overlapping_ticks_keep_both_ticks_receptors(

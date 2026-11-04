@@ -7,9 +7,11 @@ for each hour. Each hour a Kubernetes CronJob runs one pod with
 
 1. adds a receptor per site for each hour of the last day that is at least
    ``delay`` hours old (``Project.add_receptors`` skips those already in
-   ``receptors.csv``),
+   ``receptors.csv``), reaching back further to close a gap left by an
+   outage (:func:`due_hours`, :data:`MAX_BACKFILL_HOURS`),
 2. writes ``receptors.csv`` back to the bucket, and
-3. becomes ``stilt run --receptors`` on that day's receptors.
+3. becomes ``stilt run --receptors`` on that day's receptors, and the
+   gap's.
 
 Steps 1 and 2 hold :func:`pystiltctl.inputs.lock` on ``receptors.csv``,
 so a tick run by hand to fill in a past day, which the CronJob does not
@@ -47,25 +49,57 @@ logger = logging.getLogger(__name__)
 DELAY_HOURS = 8
 #: Hours back a tick adds, and runs again if they are not finished.
 WINDOW_HOURS = 24
+#: Extra hours, beyond the normal window, that one tick may reach back to
+#: close a gap left by an outage; one week, bounding a single tick's
+#: workload. A longer outage is closed over the ticks that follow, each
+#: adding another span this wide, since every tick runs within minutes
+#: of the one before (see :func:`due_hours`).
+MAX_BACKFILL_HOURS = 24 * 7
 #: The columns ``sites.csv`` needs; ``altitude_ref`` (``agl`` or ``msl``) is optional.
 SITE_COLUMNS = ("longitude", "latitude", "altitude")
 
 
-def due_hours(now: datetime, delay: int = DELAY_HOURS) -> list[datetime]:
+def due_hours(
+    now: datetime, delay: int = DELAY_HOURS, since: datetime | None = None
+) -> list[datetime]:
     """
     Return the hours a tick at *now* covers, oldest first, in UTC.
 
     The newest is *now* less *delay* hours, down to the hour; the oldest is
-    :data:`WINDOW_HOURS` - 1 hours before it.
+    normally :data:`WINDOW_HOURS` - 1 hours before it.
+
+    *since*, when given, is the newest hour a project already has (the last
+    row of ``receptors.csv``). If the normal window would leave a gap after
+    it, the window reaches back to close the gap instead, capped at
+    :data:`MAX_BACKFILL_HOURS` before its normal start: an outage longer
+    than that is closed gradually, a tick at a time, rather than in one.
 
     Examples
     --------
     >>> hours = due_hours(datetime(2026, 10, 29, 18, 15), delay=8)
     >>> hours[0], hours[-1]
     (datetime.datetime(2026, 10, 28, 11, 0), datetime.datetime(2026, 10, 29, 10, 0))
+    >>> due_hours(
+    ...     datetime(2026, 10, 29, 18, 15), delay=8, since=datetime(2026, 10, 28, 0)
+    ... )[0]
+    datetime.datetime(2026, 10, 28, 1, 0)
     """
-    last = (now - timedelta(hours=delay)).replace(minute=0, second=0, microsecond=0)
-    return [last - timedelta(hours=k) for k in range(WINDOW_HOURS - 1, -1, -1)]
+    newest = (now - timedelta(hours=delay)).replace(minute=0, second=0, microsecond=0)
+    oldest = newest - timedelta(hours=WINDOW_HOURS - 1)
+    if since is not None and since < oldest - timedelta(hours=1):
+        oldest = max(
+            since + timedelta(hours=1), oldest - timedelta(hours=MAX_BACKFILL_HOURS)
+        )
+    span = int((newest - oldest) / timedelta(hours=1))
+    return [oldest + timedelta(hours=k) for k in range(span + 1)]
+
+
+def _last_added(project: stilt.Project) -> datetime | None:
+    """Return the newest hour already in *project*'s ``receptors.csv``, or ``None``."""
+    times = project.receptors["time"]
+    if times.empty:
+        return None
+    return times.max().to_pydatetime()
 
 
 def read_sites(directory: str | Path) -> list[dict[str, Any]]:
@@ -167,6 +201,11 @@ def tick(
     """
     Add the hours now due to *project*, then run its last day.
 
+    If an outage left a gap before the normal window (the last row of
+    ``receptors.csv`` is older than the window's start), this tick also adds
+    and runs the gap's hours, capped at :data:`MAX_BACKFILL_HOURS` (see
+    :func:`due_hours`).
+
     This is what each pod of a schedule's CronJob runs. Without *render* it
     does not return: it becomes ``stilt run --receptors``, whose exit code
     is the pod's. With *render*, it runs ``stilt`` and then draws the day's
@@ -223,7 +262,6 @@ def tick(
         raise OSError(
             f"cannot copy the project's inputs from {project}: {error}"
         ) from error
-    receptors = hourly_receptors(read_sites(directory), due_hours(now, delay))
     # Another tick (a backfill by hand, say) may be adding its hours too. With
     # the lock, receptors.csv is this tick's alone from a fresh copy to its put.
     with lock(project, "receptors.csv"):
@@ -237,6 +275,9 @@ def tick(
         stilt_project = stilt.Project(directory, output=output)
         # Before anything runs: a project that cannot be drawn fails now, not after the day's run.
         variant = None if render is None else renderer.choose_variant(stilt_project)
+        # Read after the fresh copy: the last row there is where a gap starts.
+        hours = due_hours(now, delay, since=_last_added(stilt_project))
+        receptors = hourly_receptors(read_sites(directory), hours)
         added = stilt_project.add_receptors(receptors)
         logger.info("Added %d receptors, through %s", len(added), receptors[-1].time)
         if added and not is_local(project):

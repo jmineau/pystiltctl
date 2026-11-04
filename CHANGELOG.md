@@ -24,7 +24,10 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
   writes `receptors.csv` back to the bucket, and runs the last day's receptors.
   `push` and `pull` carry `sites.csv`. A tick holds a lock on `receptors.csv`
   while it adds its hours, so a tick run by hand for a past day does not write
-  over the hourly one's.
+  over the hourly one's. An outage longer than the normal window does not
+  leave a permanent gap: a tick also adds and runs every hour between the last
+  row already in `receptors.csv` and the window, up to a week back in one tick;
+  a longer outage closes over the ticks that follow.
 - `--render URL` on `schedule` and `tick` draws each finished footprint for a
   web map: a PNG on one log color scale, rows in web Mercator, with a JSON of
   its corners, and an `index.json` per day.
