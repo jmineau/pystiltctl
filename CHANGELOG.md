@@ -41,3 +41,5 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
   its own image instead of `:main`; only an untagged development version does.
 - `tick --render` no longer leaves `stilt` running after `kill -9` of the
   parent, outside a container, where a signal handler cannot forward it.
+- `render.bounds` raises a clear error for a footprint grid that crosses the
+  antimeridian, instead of reporting it as spanning the full 360 degrees.

@@ -65,10 +65,30 @@ def bounds(foot: xr.DataArray) -> list[list[float]]:
 
     The grid's ``lat`` and ``lon`` are cell centers, so the corners are half
     a cell beyond the outer ones.
+
+    Raises
+    ------
+    ValueError
+        If the grid crosses the antimeridian (180 degrees). PYSTILT wraps such
+        a grid's longitudes into -180 to 180 and sorts them
+        (``footprint/gridding.py``), so ``lon.min()``/``lon.max()`` would span
+        the wrap point rather than the grid's real width. Leaflet does accept
+        an east edge written past 180 degrees as a workaround, but that bends
+        every later reader of ``bounds`` to a convention that towers in Utah
+        never need, so this raises instead of stretching the box silently.
     """
     lat, lon = foot["lat"].values, foot["lon"].values
     dlat = abs(float(lat[1] - lat[0])) if lat.size > 1 else 0.0
-    dlon = abs(float(lon[1] - lon[0])) if lon.size > 1 else 0.0
+    # The minimum, not the first, gap: on a grid wrapped across the
+    # antimeridian the sorted longitudes are evenly spaced except for one
+    # large gap at the wrap point, so the first gap can be that one.
+    dlon = float(np.min(np.abs(np.diff(lon)))) if lon.size > 1 else 0.0
+    if lon.size > 2 and float(np.max(np.abs(np.diff(lon)))) > 1.5 * dlon:
+        raise ValueError(
+            "the footprint's grid crosses the antimeridian (180 degrees); its "
+            "longitudes wrap from near 180 to near -180, so lon.min()/lon.max() "
+            "cannot give its real west and east edges."
+        )
     return [
         [float(lat.min()) - dlat / 2, float(lon.min()) - dlon / 2],
         [float(lat.max()) + dlat / 2, float(lon.max()) + dlon / 2],
@@ -99,6 +119,11 @@ def image(foot: xr.DataArray) -> np.ndarray:
     row per grid row, unless that would leave a grid row out (the bands are
     taller than a cell where a wide grid is far from the equator); then it
     has as many rows as it takes for every grid row to show.
+
+    Raises
+    ------
+    ValueError
+        If the footprint's grid crosses the antimeridian (see :func:`bounds`).
     """
     total = foot.sum("time") if "time" in foot.dims else foot
     total = total.transpose("lat", "lon").sortby("lat", ascending=False)
@@ -266,7 +291,8 @@ def render(
     Raises
     ------
     ValueError
-        If the project has several variants and *variant* is not given.
+        If the project has several variants and *variant* is not given, or a
+        footprint's grid crosses the antimeridian (see :func:`bounds`).
     OSError
         If a day's index at *url* cannot be checked: a refused connection, a
         timeout, a 403 or expired credentials, say.

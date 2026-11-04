@@ -33,6 +33,34 @@ def test_bounds_are_the_outer_cell_edges():
     assert render.bounds(foot) == [[39.75, -112.25], [41.25, -111.25]]
 
 
+def _dateline_footprint():
+    """
+    A footprint whose grid crosses the antimeridian, as PYSTILT represents it (#28).
+
+    ``xmin=170, xmax=190, xres=5`` makes PYSTILT wrap and sort the grid's
+    longitudes into this array (``footprint/gridding.py``).
+    """
+    lon = np.array([-177.5, -172.5, 172.5, 177.5])
+    lat = np.array([10.0, 12.0])
+    return xr.DataArray(
+        np.ones((1, lat.size, lon.size)),
+        dims=("time", "lat", "lon"),
+        coords={"time": [0], "lat": lat, "lon": lon},
+        attrs={"units": "ppm (umol m-2 s-1)-1"},
+    )
+
+
+def test_bounds_raises_for_a_grid_that_crosses_the_antimeridian():
+    """``lon.min()``/``lon.max()`` would stretch this 20-degree grid over 360 degrees."""
+    with pytest.raises(ValueError, match="antimeridian"):
+        render.bounds(_dateline_footprint())
+
+
+def test_image_raises_for_a_grid_that_crosses_the_antimeridian():
+    with pytest.raises(ValueError, match="antimeridian"):
+        render.image(_dateline_footprint())
+
+
 def test_image_puts_north_at_the_top_and_hides_small_values():
     # South row strong, north row below the scale.
     foot = footprint([[1e-2, 1e-2], [1e-9, 1e-9]])
