@@ -17,7 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from pystiltctl.inputs import is_local, local_path, project_name, pull
+from pystiltctl.inputs import hash_inputs, is_local, local_path, project_name, pull
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +166,7 @@ def run_task(
     cpus: int | None = None,
     output: str | None = None,
     workdir: str | Path = WORKDIR,
+    input_hash: str | None = None,
 ) -> None:
     """
     Run task *index* of *n_tasks* of *project*, in place of this process.
@@ -174,7 +175,7 @@ def run_task(
     process with ``stilt run --task I/N``, so this function does not return.
     The exit code is ``stilt run``'s: 0 when every simulation of the task is
     complete, 1 when some failed, 3 when some were stopped, 2 when the
-    command line is wrong.
+    command line is wrong or *input_hash* does not match what was pulled.
 
     Parameters
     ----------
@@ -193,9 +194,23 @@ def run_task(
         The output directory, in place of the one ``config.yaml`` names.
     workdir : str or Path
         Where a URL's inputs are copied.
+    input_hash : str, optional
+        The hash ``submit`` saw of ``config.yaml`` and ``receptors.csv``
+        (:func:`pystiltctl.inputs.hash_inputs`). If what this task pulls
+        hashes differently, the project was pushed again after the Job was
+        submitted, so this task's receptor share may no longer agree with
+        another task's of the same Job: raises instead of running.
+
+    Raises
+    ------
+    ValueError
+        If *index* is outside 0 to *n_tasks* - 1, or *input_hash* is given
+        and does not match what was pulled.
     """
     task = task_index(index)
     if not 0 <= task < n_tasks:
         raise ValueError(f"Task {task} is not one of 0 to {n_tasks - 1}.")
     directory = project_directory(project, workdir)
+    if input_hash is not None and hash_inputs(directory) != input_hash:
+        raise ValueError("the project changed after submit; submit again")
     become(stilt_command(directory, task, n_tasks, cpus=cpus, output=output))

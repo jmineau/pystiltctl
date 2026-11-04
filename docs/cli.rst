@@ -112,7 +112,8 @@ pystiltctl worker
 
 .. code-block:: text
 
-   pystiltctl worker PROJECT --tasks N [--index I] [--cpus C] [--output URL] [--workdir DIR]
+   pystiltctl worker PROJECT --tasks N [--index I] [--cpus C] [--output URL]
+                     [--workdir DIR] [--input-hash HASH]
 
 Run task ``I`` of ``N`` here: copy the inputs from ``PROJECT`` (a URL, or
 a folder on a mounted volume), then run ``stilt run --task I/N``.
@@ -127,3 +128,7 @@ a folder on a mounted volume), then run ``stilt run --task I/N``.
    The output directory, in place of the one ``config.yaml`` names.
 ``--workdir``
    Where a URL's inputs are copied. Defaults to ``/tmp/pystiltctl``.
+``--input-hash``
+   The hash ``submit`` saw of ``config.yaml`` and ``receptors.csv``. Fails
+   this task (exit 2) if what it pulls hashes differently: the project was
+   pushed again after submit, so submit again.

@@ -13,8 +13,9 @@ Examples::
 ``pystiltctl worker`` exits with ``stilt run``'s code: 0 when every
 simulation of the task is complete, 1 when some failed, and 3 when some
 were stopped. It also exits with 3 when it cannot copy the project's
-inputs (a retry may work), and with 2 when its command line is wrong or
-there is no project at the URL (a retry will not help).
+inputs (a retry may work), and with 2 when its command line is wrong,
+there is no project at the URL, or --input-hash does not match what it
+pulled (a retry will not help; submit again instead).
 """
 
 from __future__ import annotations
@@ -365,18 +366,36 @@ def worker_command(
     workdir: Annotated[
         Path, typer.Option(help="Where a URL's inputs are copied.")
     ] = worker.WORKDIR,
+    input_hash: Annotated[
+        str | None,
+        typer.Option(
+            "--input-hash",
+            help=(
+                "Hash of config.yaml and receptors.csv that submit saw. "
+                "Fails this task if what it pulls does not match."
+            ),
+        ),
+    ] = None,
 ) -> None:
     """
     Run one task of a project here: what each pod of a Job runs.
 
     Copies the project's inputs from the URL, then runs stilt run --task
     I/N, where I is this pod's index and N is --tasks. Exits with stilt
-    run's code.
+    run's code, or 2 if --input-hash does not match what this task pulled:
+    the project was pushed again after submit, so submit again instead of
+    letting this Job finish with a stale receptor split.
     """
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:
         worker.run_task(
-            project, tasks, index=index, cpus=cpus, output=output, workdir=workdir
+            project,
+            tasks,
+            index=index,
+            cpus=cpus,
+            output=output,
+            workdir=workdir,
+            input_hash=input_hash,
         )
     except (ValueError, FileNotFoundError) as error:
         _fail(str(error))

@@ -5,8 +5,9 @@ A project runs as one indexed Job: ``completions`` tasks, each a pod that
 runs ``pystiltctl worker``, which runs ``stilt run --task I/N``. Kubernetes
 retries a task from its exit code (``podFailurePolicy``):
 
-- 2, a wrong command line, fails the whole Job, since every task would
-  fail the same way;
+- 2, a wrong command line, or the project pushed again after submit (its
+  pulled inputs' hash no longer matches), fails the whole Job, since every
+  task would fail the same way;
 - 1, some simulations failed, fails that task only, since running it again
   repeats the failure until the cause is fixed;
 - 4, an unexpected error, a bug, fails that task only: a retry would hit
@@ -35,7 +36,14 @@ import yaml
 from packaging.version import Version
 
 import pystiltctl
-from pystiltctl.inputs import is_local, local_path, project_key, project_name, pull
+from pystiltctl.inputs import (
+    hash_inputs,
+    is_local,
+    local_path,
+    project_key,
+    project_name,
+    pull,
+)
 
 #: Retries per task for a stopped pod (exit 3) or a crash.
 RETRIES = 3
@@ -189,6 +197,12 @@ class JobSpec:
         PersistentVolumeClaims to mount, such as a met archive.
     namespace : str or None
         The namespace to run in; the current one if None.
+    input_hash : str or None
+        A hash of the project's ``config.yaml`` and ``receptors.csv`` as
+        :func:`job_spec` read them, passed to each pod so it can tell a
+        push happened after submit (:func:`pystiltctl.worker.run_task`).
+        None when a :class:`JobSpec` is built directly, not through
+        :func:`job_spec`.
     """
 
     project: str
@@ -203,6 +217,7 @@ class JobSpec:
     service_account: str | None = None
     volumes: tuple[Volume, ...] = ()
     namespace: str | None = None
+    input_hash: str | None = None
 
 
 def job_spec(
@@ -252,6 +267,7 @@ def job_spec(
         opened = stilt.Project(directory, output=output)
         execution = opened.config.execution
         results = str(opened.output.directory)
+        input_hash = hash_inputs(directory)
     if not is_local(project) and is_local(results):
         raise ValueError(
             "The output directory is a path, so each pod would write its results "
@@ -274,6 +290,7 @@ def job_spec(
         service_account=service_account,
         volumes=tuple(volumes),
         namespace=namespace,
+        input_hash=input_hash,
     )
 
 
@@ -283,6 +300,8 @@ def worker_args(spec: JobSpec) -> list[str]:
     args += ["--cpus", str(spec.cpus), "--workdir", f"{SCRATCH}/project"]
     if spec.output is not None:
         args += ["--output", spec.output]
+    if spec.input_hash is not None:
+        args += ["--input-hash", spec.input_hash]
     return args
 
 

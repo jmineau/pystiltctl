@@ -6,7 +6,7 @@ import fsspec
 import pytest
 
 from pystiltctl import inputs
-from pystiltctl.inputs import is_local, local_path, pull, push, put
+from pystiltctl.inputs import hash_inputs, is_local, local_path, pull, push, put
 from tests.conftest import CONFIG
 
 
@@ -238,3 +238,38 @@ def test_lock_says_what_it_could_not_do(bucket, monkeypatch):
         inputs.lock(bucket, "receptors.csv"),
     ):
         pass
+
+
+def test_hash_inputs_is_the_same_for_the_same_content(project, tmp_path):
+    """Two separate pulls of the same content hash the same (#15)."""
+    copy = tmp_path / "copy"
+    copy.mkdir()
+    (copy / "config.yaml").write_text((project / "config.yaml").read_text())
+    (copy / "receptors.csv").write_text((project / "receptors.csv").read_text())
+    assert hash_inputs(project) == hash_inputs(copy)
+
+
+def test_hash_inputs_changes_with_receptors(project):
+    before = hash_inputs(project)
+    (project / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude\n2021-01-15 00:00:00,-112,40,10\n"
+    )
+    assert hash_inputs(project) != before
+
+
+def test_hash_inputs_changes_with_config(project):
+    before = hash_inputs(project)
+    (project / "config.yaml").write_text(CONFIG + "n_hours: -48\n")
+    assert hash_inputs(project) != before
+
+
+def test_hash_inputs_ignores_tables(project):
+    """Only config.yaml and receptors.csv decide a run's receptor share."""
+    before = hash_inputs(project)
+    (project / "tables" / "kernels.parquet").write_bytes(b"different bytes")
+    assert hash_inputs(project) == before
+
+
+def test_hash_inputs_refuses_a_folder_that_is_not_a_project(tmp_path):
+    with pytest.raises(FileNotFoundError, match="no config.yaml"):
+        hash_inputs(tmp_path)
