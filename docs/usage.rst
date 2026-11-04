@@ -99,11 +99,12 @@ and start it with ``kubectl create -f job.yaml``.
 
 Kubernetes retries a task from the worker's exit code: a stopped task
 (3) up to three times, and a pod taken back with its node (a spot node)
-as often as it happens. A task whose simulations failed (1) is not
-retried, since it would fail the same way; nor is anything after a wrong
-command line (2), which stops the whole Job. Fix the cause and submit
-again: finished simulations are skipped, so only the rest run. The Job,
-and its pods' logs, stay on the cluster for a week.
+as often as it happens. A task whose simulations failed (1), or that hit
+an unexpected error (4), is not retried, since it would fail the same
+way; nor is anything after a wrong command line (2), which stops the
+whole Job. Fix the cause and submit again: finished simulations are
+skipped, so only the rest run. The Job, and its pods' logs, stay on the
+cluster for a week.
 
 Run it every hour
 -----------------
@@ -298,3 +299,6 @@ to retry:
    * - 3
      - Some simulations were stopped, or the inputs could not be copied.
        A retry continues where it stopped.
+   * - 4
+     - An unexpected error, a bug in ``stilt`` or ``pystiltctl``. Do not
+       retry: it would hit the same bug.

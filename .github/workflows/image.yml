@@ -49,12 +49,17 @@ jobs:
       - name: Run a task of an empty project
         # stilt init makes a project with no receptors, so the task has
         # nothing to run and exits 0: this checks the image's whole chain,
-        # tini to pystiltctl to stilt, without meteorology.
+        # tini to pystiltctl to stilt. Since PYSTILT 0.1.0a27 (stilt#280),
+        # `stilt run` reads a met's first file even here, so the demo's met
+        # is one tiny synthetic file, not the placeholder `stilt init` writes
+        # (pystiltctl#37 has the real-usage version of this).
         run: |
-          docker run --rm pystiltctl sh -c '
+          docker run --rm -v "$PWD/.github/scripts/make_demo_met.py:/make_demo_met.py:ro" pystiltctl sh -c '
             set -e
             pystiltctl --help > /dev/null
             stilt init /tmp/demo > /dev/null
+            python /make_demo_met.py /tmp/demo/met
+            sed -i "s#/path/to/arl/meteorology#/tmp/demo/met#" /tmp/demo/config.yaml
             pystiltctl push /tmp/demo /tmp/bucket/demo
             pystiltctl worker file:///tmp/bucket/demo --tasks 2 --index 1
           '

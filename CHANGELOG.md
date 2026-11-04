@@ -16,7 +16,8 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
 - `pystiltctl submit` runs a project as a Kubernetes indexed Job, with the
   tasks, CPUs and memory from `config.yaml`'s `execution` section unless given.
   A stopped task is retried, a preempted pod is retried without counting, and
-  a task whose simulations failed is not. `--dry-run` prints the Job.
+  a task whose simulations failed or hit an unexpected error is not.
+  `--dry-run` prints the Job.
 - `pystiltctl schedule` runs a project every hour for the sites in its
   `sites.csv`, as a Kubernetes CronJob; each hour's pod runs `pystiltctl tick`,
   which adds the hours now due (8 hours behind the clock, for the met archive),
