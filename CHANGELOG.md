@@ -38,3 +38,5 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
 
 - A pre-release or post-release version (`0.2.0a1`, `0.2.0.post1`) now runs
   its own image instead of `:main`; only an untagged development version does.
+- `tick --render` no longer leaves `stilt` running after `kill -9` of the
+  parent, outside a container, where a signal handler cannot forward it.

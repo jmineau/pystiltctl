@@ -46,8 +46,11 @@ complete, 1 some failed, 2 bad command line, 3 stopped).
     output. fsspec's `isfile`/`isdir`/`exists` catch every exception and return False, so
     checking existence this way cannot tell a missing file from a bucket error; use
     `fs.info` and catch only `FileNotFoundError` where that distinction matters.
-  - `worker.py`: what a pod runs: pull, then `os.execv` into `python -m stilt run
-    --task I/N`, so the stop signal and the exit code are `stilt`'s own.
+  - `worker.py`: what a pod runs: pull, then `become()` (`os.execv` into `python
+    -m stilt run`), so the stop signal and exit code are `stilt`'s own. `run()`,
+    for when something must happen after (`tick --render`), forwards
+    `SIGTERM`/`SIGINT` to the child and sets `PR_SET_PDEATHSIG` on Linux, so an
+    unforwardable `kill -9` of this process ends the child too, not an orphan.
   - `job.py`: the indexed Job and the CronJob, defaults from `execution`; retries are
     their `podFailurePolicy`, never a loop here.
   - `schedule.py`: `tick`, each hour's pod: `sites.csv` receptors via `add_receptors`,
