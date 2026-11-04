@@ -27,7 +27,9 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
   over the hourly one's. An outage longer than the normal window does not
   leave a permanent gap: a tick also adds and runs every hour between the last
   row already in `receptors.csv` and the window, up to a week back in one tick;
-  a longer outage closes over the ticks that follow.
+  a longer outage closes over the ticks that follow. A project that already has
+  old rows in `receptors.csv` gets a one-time backfill of up to a week on its
+  first tick.
 - `--render URL` on `schedule` and `tick` draws each finished footprint for a
   web map: a PNG on one log color scale, rows in web Mercator, with a JSON of
   its corners, and an `index.json` per day.

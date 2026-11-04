@@ -207,6 +207,27 @@ def test_tick_fills_the_gap_left_by_an_outage(sited, bucket, tmp_path, execs):
     assert ids[0] == "202610291100_-111.8476_40.7663_35"
 
 
+def test_the_first_tick_backfills_a_project_that_already_has_old_rows(
+    sited, bucket, tmp_path, execs
+):
+    """Old rows count as the schedule's last hour: the first tick reaches back a week (#26)."""
+    (sited / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude\n"
+        "2021-01-15 03:00:00,-111.85,40.77,5\n"
+        "2021-01-15 04:00:00,-111.85,40.77,5\n"
+    )
+    push(sited, bucket)
+    schedule.tick(bucket, now=NOW, workdir=tmp_path / "pod")
+    rows = receptor_rows(bucket)
+    hours = sorted({row.split(",")[0] for row in rows if "2021" not in row})
+    # The 2 old rows stay; each of the 2 sites gets the normal day plus
+    # MAX_BACKFILL_HOURS before it, no more.
+    assert len(hours) == schedule.WINDOW_HOURS + schedule.MAX_BACKFILL_HOURS
+    assert len(rows) == 2 + 2 * len(hours)
+    assert hours[0] == "2026-10-21 11:00:00"  # 7 days before the normal day's start
+    assert hours[-1] == "2026-10-29 10:00:00"
+
+
 def test_overlapping_ticks_keep_both_ticks_receptors(
     sited, bucket, tmp_path, monkeypatch, execs
 ):

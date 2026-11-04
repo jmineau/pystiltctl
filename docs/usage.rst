@@ -192,7 +192,8 @@ before relying on it with another S3-compatible store.
 An outage longer than a week of hours closes gradually instead of in one
 tick: each tick reaches no more than a week past the day, so the
 scheduled ticks that follow keep narrowing the gap, a week at a time,
-until the schedule is caught up; nothing by hand is needed. Scheduling a
+until the schedule is caught up; nothing by hand is needed. A project that already has old rows in
+``receptors.csv`` gets a one-time backfill of up to a week on its first tick. Scheduling a
 project again replaces its CronJob; ``kubectl delete cronjob
 stilt-<project>`` stops it.
 

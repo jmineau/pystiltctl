@@ -155,7 +155,8 @@ jobs:
           reason=$(kubectl get job/tick-now -o jsonpath='{.status.conditions[?(@.type=="Failed")].reason}')
           test "$reason" = FailedIndexes || { echo "::error::failed for $reason"; exit 1; }
           rows=$(uv run python -c "import s3fs; print(len(s3fs.S3FileSystem().cat_file('stilt/projects/demo/receptors.csv').splitlines()) - 1)")
-          test "$rows" = 194 || { echo "::error::receptors.csv has $rows rows, not 2 + 192"; exit 1; }
+          want=$(uv run python -c "from pystiltctl import schedule; print(2 + schedule.WINDOW_HOURS + schedule.MAX_BACKFILL_HOURS)")
+          test "$rows" = "$want" || { echo "::error::receptors.csv has $rows rows, not $want"; exit 1; }
 
       - name: Show the cluster
         if: ${{ !cancelled() }}
