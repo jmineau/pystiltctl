@@ -177,6 +177,7 @@ def test_cron_job_runs_tick_hourly_one_at_a_time(sited, bucket):
     assert (body["schedule"], body["concurrencyPolicy"]) == ("15 * * * *", "Forbid")
     run = body["jobTemplate"]["spec"]
     assert (run["completions"], run["parallelism"]) == (1, 1)
+    assert run["activeDeadlineSeconds"] == job.TICK_DEADLINE
     (container,) = run["template"]["spec"]["containers"]
     assert container["args"] == [
         "pystiltctl",

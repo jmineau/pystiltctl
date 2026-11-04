@@ -117,6 +117,11 @@ def test_manifest_retries_from_exit_codes(pushed):
     } in rules
 
 
+def test_manifest_has_no_deadline(pushed):
+    """``submit``'s Job is unbounded: a project may run for as long as it takes."""
+    assert "activeDeadlineSeconds" not in job.manifest(job.job_spec(pushed))["spec"]
+
+
 def test_manifest_yaml_has_no_anchors(pushed):
     text = job.to_yaml(job.manifest(job.job_spec(pushed)))
     assert "&id" not in text

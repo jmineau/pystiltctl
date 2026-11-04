@@ -43,3 +43,7 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
   parent, outside a container, where a signal handler cannot forward it.
 - `render.bounds` raises a clear error for a footprint grid that crosses the
   antimeridian, instead of reporting it as spanning the full 360 degrees.
+- `pystiltctl schedule`'s CronJob now fails a tick's Job after 45 minutes if
+  it hangs (a stalled download, a bucket call with no timeout), instead of
+  staying "active" forever and, with `concurrencyPolicy: Forbid`, blocking
+  every later tick until someone deletes it by hand.
