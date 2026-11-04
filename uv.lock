@@ -3498,6 +3498,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fsspec" },
     { name = "matplotlib" },
+    { name = "packaging" },
     { name = "pystilt" },
     { name = "typer" },
 ]
@@ -3539,6 +3540,7 @@ requires-dist = [
     { name = "fsspec", specifier = ">=2024.2" },
     { name = "gcsfs", marker = "extra == 'gcs'", specifier = ">=2024.2" },
     { name = "matplotlib", specifier = ">=3.8" },
+    { name = "packaging", specifier = ">=23" },
     { name = "pystilt", specifier = ">=0.1.0a26" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.2" },
     { name = "typer", specifier = ">=0.9" },

@@ -33,3 +33,8 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
 - The `s3` and `gcs` extras, for `s3://` and `gs://` buckets.
 - A container image, `ghcr.io/jmineau/pystiltctl`, with PYSTILT, pystiltctl and
   the bucket libraries: `:latest` for the latest release, `:main` for main.
+
+### Fixed
+
+- A pre-release or post-release version (`0.2.0a1`, `0.2.0.post1`) now runs
+  its own image instead of `:main`; only an untagged development version does.

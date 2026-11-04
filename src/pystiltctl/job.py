@@ -30,6 +30,7 @@ from typing import Any
 
 import stilt
 import yaml
+from packaging.version import Version
 
 import pystiltctl
 from pystiltctl.inputs import is_local, local_path, project_key, project_name, pull
@@ -52,17 +53,24 @@ def default_image(version: str = pystiltctl.__version__) -> str:
     """
     Return the image matching this pystiltctl.
 
-    A release runs its own image; anything else (a development version)
-    runs ``:main``.
+    A release runs its own image, ``image.yml`` pushes one from every
+    ``vX.Y.Z...`` tag, pre-release and post-release included. A development
+    version (past the last tag, with no tag of its own) runs ``:main``,
+    since no image was ever published for that exact commit.
 
     Examples
     --------
     >>> default_image("0.2.0")
     'ghcr.io/jmineau/pystiltctl:0.2.0'
+    >>> default_image("0.2.0a1")
+    'ghcr.io/jmineau/pystiltctl:0.2.0a1'
+    >>> default_image("0.2.0.post1")
+    'ghcr.io/jmineau/pystiltctl:0.2.0.post1'
     >>> default_image("0.2.1.dev3+g1a2b3c4")
     'ghcr.io/jmineau/pystiltctl:main'
     """
-    released = re.fullmatch(r"\d+\.\d+\.\d+", version) is not None
+    parsed = Version(version)
+    released = not parsed.is_devrelease and not parsed.local
     return f"{IMAGE_REPOSITORY}:{version if released else 'main'}"
 
 
