@@ -7,7 +7,9 @@ schedule (:mod:`pystiltctl.schedule`). Pods on a cluster read them from a bucket
 any folder fsspec can reach), so they are copied there first with
 :func:`push`, and each pod copies them back to its own disk with
 :func:`pull`. The output directory is not copied: PYSTILT writes results
-straight to it, wherever it is.
+straight to it, wherever it is. A program that changes one of these files
+where it is, as a schedule's tick adds to ``receptors.csv``, holds
+:func:`lock` while it does.
 """
 
 from __future__ import annotations
@@ -15,7 +17,11 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
+import socket
+import time
 import uuid
+from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import fsspec
@@ -29,6 +35,10 @@ INPUT_FILES = ("config.yaml", "receptors.csv")
 TABLES = "tables"
 #: The places a schedule adds a receptor for each hour, copied when present.
 SITES = "sites.csv"
+#: Seconds a lock may stay the same before a program waiting for it takes it over.
+LOCK_STALE_SECONDS = 300
+#: Seconds between a waiting program's looks at a lock.
+LOCK_POLL_SECONDS = 2
 
 
 def is_local(location: str | Path) -> bool:
@@ -266,3 +276,150 @@ def put(directory: str | Path, url: str, name: str) -> None:
     """
     fs, root = fsspec.core.url_to_fs(url)
     _atomic_put_file(fs, str(Path(directory) / name), f"{root.rstrip('/')}/{name}")
+
+
+def get(url: str, directory: str | Path, name: str) -> None:
+    """
+    Copy one file from *url* into a project folder, the reverse of :func:`put`.
+
+    Parameters
+    ----------
+    url : str
+        The project's location, as :func:`push` copied it there.
+    directory : str or Path
+        The local project folder.
+    name : str
+        The file, relative to the project folder.
+    """
+    fs, root = fsspec.core.url_to_fs(url)
+    fs.get_file(f"{root.rstrip('/')}/{name}", str(Path(directory) / name))
+
+
+@contextlib.contextmanager
+def lock(url: str, name: str) -> Iterator[None]:
+    """
+    Hold a lock on the file *name* at *url* while the ``with`` block runs.
+
+    Use it around reading a file, changing it and writing it back, so a
+    second program doing the same waits for the first instead of writing
+    over its change. A schedule's tick holds it on ``receptors.csv`` while it
+    copies the file (:func:`get`), adds its hours, and copies it back
+    (:func:`put`).
+
+    The lock is a small file ``.<name>.lock`` next to *name*, created only
+    if it is not there (``open(..., "x")``: ``If-None-Match`` on S3,
+    ``ifGenerationMatch=0`` on Google Cloud Storage, ``O_EXCL`` on a
+    folder), and deleted at the end of the block. It says which host and
+    process holds it. A program that finds it waits, and takes it over if it
+    has not changed for :data:`LOCK_STALE_SECONDS` by its own clock, so a
+    holder that crashed does not stop every later one.
+
+    Parameters
+    ----------
+    url : str
+        The project's location, a URL or a folder.
+    name : str
+        The file to lock, relative to the project folder.
+
+    Raises
+    ------
+    OSError
+        If the lock cannot be made or read, such as a refused connection or
+        expired credentials.
+
+    Notes
+    -----
+    A store that ignores ``If-None-Match`` (some older S3-compatible ones)
+    lets two programs make the lock at once, so it does not protect there.
+    A holder slower than :data:`LOCK_STALE_SECONDS` can be taken over; it
+    then logs a warning when it finishes.
+
+    Examples
+    --------
+    >>> import fsspec
+    >>> fs = fsspec.filesystem("memory")
+    >>> with lock("memory://lock-example/project", "receptors.csv"):
+    ...     fs.exists("/lock-example/project/.receptors.csv.lock")
+    True
+    >>> fs.exists("/lock-example/project/.receptors.csv.lock")
+    False
+    """
+    fs, root = fsspec.core.url_to_fs(url)
+    path = f"{root.rstrip('/')}/.{name}.lock"
+    stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    token = f"{socket.gethostname()} pid {os.getpid()} since {stamp} {uuid.uuid4().hex}"
+    try:
+        _acquire(fs, path, token)
+    except Exception as error:
+        raise OSError(f"cannot lock {name} at {url}: {error}") from error
+    try:
+        yield
+    finally:
+        try:
+            if not _release(fs, path, token):
+                logger.warning(
+                    "%s was taken over while this program held it, so another "
+                    "may have written %s at the same time.",
+                    path,
+                    name,
+                )
+        except Exception:
+            # What the block wrote is written; a lock left behind is taken over later.
+            logger.warning(
+                "Could not remove %s; it is taken over after %d s.",
+                path,
+                LOCK_STALE_SECONDS,
+                exc_info=True,
+            )
+
+
+def _acquire(fs: fsspec.AbstractFileSystem, path: str, token: str) -> None:
+    """
+    Create the lock file *path* holding *token*, waiting while another holds it.
+
+    A lock is stale when it reads the same for :data:`LOCK_STALE_SECONDS` on
+    this program's own clock (``time.monotonic``), so no two clocks have to
+    agree; a stale lock is removed and made again.
+    """
+    seen, since = None, 0.0
+    while True:
+        try:
+            with fs.open(path, "x") as file:
+                file.write(token)
+            return
+        except FileExistsError:
+            pass
+        try:
+            held = fs.read_text(path)
+        except FileNotFoundError:
+            continue  # released while we looked: try again
+        if held != seen:
+            logger.info("Waiting for %s, held by %s", path, held)
+            seen, since = held, time.monotonic()
+        elif time.monotonic() - since >= LOCK_STALE_SECONDS:
+            logger.warning(
+                "Taking over %s, the same for %d s: %s",
+                path,
+                LOCK_STALE_SECONDS,
+                held,
+            )
+            _release(fs, path, held)
+            seen = None
+            continue
+        time.sleep(LOCK_POLL_SECONDS)
+
+
+def _release(fs: fsspec.AbstractFileSystem, path: str, token: str | bytes) -> bool:
+    """
+    Remove the lock file *path* if it still holds *token*; return whether it did.
+
+    Reading first keeps a program from removing a lock that another has
+    taken over since.
+    """
+    try:
+        if fs.read_text(path) != token:
+            return False
+        fs.rm_file(path)
+    except FileNotFoundError:
+        return False
+    return True

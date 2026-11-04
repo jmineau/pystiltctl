@@ -76,7 +76,8 @@ pystiltctl tick
 What each hourly pod runs: add a receptor per site for each hour of the
 last day that is ``--delay`` hours old, write ``receptors.csv`` back,
 then ``stilt run --receptors`` on that day. ``--now`` (UTC, such as
-``2026-10-01T00:00``) acts as if it were that time, to fill in a past day.
+``2026-10-01T00:00``) acts as if it were that time, to fill in a past day;
+it waits for a tick that is adding its hours at the same time.
 ``--render`` then draws the day's finished footprints (see :doc:`usage`).
 Exits with ``stilt run``'s code, also when the drawing fails, which is then
 logged; if the run was clean and the drawing failed, it exits with 3 (1 for a

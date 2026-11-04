@@ -1,5 +1,6 @@
 """Running a project every hour, for fixed sites."""
 
+import threading
 from datetime import datetime
 
 import fsspec
@@ -7,7 +8,7 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from pystiltctl import job, schedule
+from pystiltctl import inputs, job, schedule
 from pystiltctl.cli import app
 from pystiltctl.inputs import pull, push
 
@@ -150,6 +151,61 @@ def test_the_next_tick_adds_only_the_new_hour(sited, bucket, tmp_path, execs):
     assert len(rows) == 2 * (schedule.WINDOW_HOURS + 1)
     ids = (tmp_path / "second" / "my_project-due.txt").read_text().split()
     assert ids[0].startswith("202610281200") and ids[-1].startswith("202610291100")
+
+
+def test_overlapping_ticks_keep_both_ticks_receptors(
+    sited, bucket, tmp_path, monkeypatch, execs
+):
+    """A backfill tick that starts while the hourly tick is still writing (#24)."""
+    push(sited, bucket)
+    monkeypatch.setattr(inputs, "LOCK_POLL_SECONDS", 0.01)
+    real_put = schedule.put
+    paused, resume = threading.Event(), threading.Event()
+
+    def slow_put(*args):
+        # The first tick to write stops between its pull and its put.
+        if not paused.is_set():
+            paused.set()
+            resume.wait(10)
+        real_put(*args)
+
+    monkeypatch.setattr(schedule, "put", slow_put)
+    errors = []
+
+    def tick(now, workdir):
+        try:
+            schedule.tick(bucket, now=now, workdir=tmp_path / workdir)
+        except Exception as error:
+            errors.append(error)
+
+    hourly = threading.Thread(target=tick, args=(NOW, "hourly"))
+    hourly.start()
+    assert paused.wait(10)
+    backfill = threading.Thread(target=tick, args=(NOW.replace(day=1), "backfill"))
+    backfill.start()
+    backfill.join(0.5)
+    assert backfill.is_alive()  # it waits for the hourly tick's lock
+    resume.set()
+    hourly.join(10)
+    backfill.join(10)
+    assert errors == []
+    assert len(receptor_rows(bucket)) == 2 * 2 * schedule.WINDOW_HOURS
+    fs, root = fsspec.core.url_to_fs(bucket)
+    assert not fs.exists(f"{root}/.receptors.csv.lock")
+
+
+def test_cli_tick_says_it_cannot_lock(sited, bucket, tmp_path, monkeypatch):
+    push(sited, bucket)
+
+    def refuse(*args):
+        raise PermissionError("access denied")
+
+    monkeypatch.setattr(inputs, "_acquire", refuse)
+    args = ["tick", bucket, "--now", "2021-01-15T12:00", "--workdir", str(tmp_path)]
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 3
+    assert "cannot lock receptors.csv at memory://" in result.output
+    assert "access denied" in result.output
 
 
 def test_tick_on_a_mounted_project_changes_it_in_place(sited, execs):

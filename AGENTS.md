@@ -53,8 +53,8 @@ complete, 1 some failed, 2 bad command line, 3 stopped).
     unforwardable `kill -9` of this process ends the child too, not an orphan.
   - `job.py`: the indexed Job and the CronJob, defaults from `execution`; retries are
     their `podFailurePolicy`, never a loop here.
-  - `schedule.py`: `tick`, each hour's pod: `sites.csv` receptors via `add_receptors`,
-    `receptors.csv` put back, then `stilt run --receptors` on the last day.
+  - `schedule.py`: `tick`, each hour's pod: holding `inputs.lock`, a fresh `receptors.csv`, `sites.csv`
+    receptors via `add_receptors`, and its put back; then `stilt run --receptors` on the last day.
   - `render.py`: PNG + JSON per footprint for web maps (web Mercator rows, fixed log scale); a footprint counts as drawn once it is in the day's `index.json`, which is written after each one. Checking a day's index uses `fs.info`, not `fs.exists` (fsspec defines that to catch every exception and return False), so a bucket error raises `OSError` instead of looking like no index. `tick --render` keeps `stilt`'s exit code when drawing fails.
   - `status.py`: `stilt status --json` plus the Jobs labeled `pystiltctl/project`.
 - `tests/`: pytest suite; `tests/kubernetes/`, the end-to-end test on kind (its README).

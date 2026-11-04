@@ -172,6 +172,13 @@ schedule's: ``pystiltctl push`` would replace it with your copy, and the
 hours already added would be added again by the next tick, but their
 results are not lost, since they are on the output bucket. To fill in a
 past day by hand, run ``pystiltctl tick PROJECT --now 2026-10-01T00:00``.
+It can run while the hourly tick does: each holds a lock on
+``receptors.csv`` (a file ``.receptors.csv.lock`` next to it) while it adds
+its hours, so the second waits for the first, a few seconds. A lock left by
+a pod that crashed is taken over once it has not changed for 5 minutes.
+The lock needs a folder or a store that refuses to create a file that is
+already there: AWS S3 (``If-None-Match``) and Google Cloud Storage do; check
+before relying on it with another S3-compatible store.
 Scheduling a project again replaces its CronJob; ``kubectl delete cronjob
 stilt-<project>`` stops it.
 
