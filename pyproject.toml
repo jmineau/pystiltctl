@@ -27,7 +27,7 @@ dependencies = [
     "fsspec>=2024.2",
     "matplotlib>=3.8",  # footprint images for web maps (pystiltctl.render)
     "packaging>=23",  # PEP 440 parsing for job.default_image
-    "pystilt>=0.1.0a26",
+    "pystilt>=0.1.0a27",
     "typer>=0.9",
 ]
 
@@ -49,6 +49,7 @@ Changelog = "https://github.com/jmineau/pystiltctl/blob/main/CHANGELOG.md"
 [dependency-groups]
 # Dev tooling and docs together; `uv sync` installs it by default.
 dev = [
+    "arlmet>=0.1.0b5",  # tests/conftest.py: a synthetic ARL file for `stilt status` (#37)
     "docstr-coverage>=2.3",
     "git-cliff>=2.10",  # `just changelog`
     "ipython>=9.0",  # `.. ipython::` in the docs

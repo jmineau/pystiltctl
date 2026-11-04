@@ -3465,7 +3465,7 @@ wheels = [
 
 [[package]]
 name = "pystilt"
-version = "0.1.0a26"
+version = "0.1.0a27"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "arlmet" },
@@ -3486,10 +3486,10 @@ dependencies = [
     { name = "universal-pathlib" },
     { name = "xarray" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c3/26/ac0685665f56d1aa0957174e663b2bf0961d0b4a1991d88d8a39e4247e95/pystilt-0.1.0a26.tar.gz", hash = "sha256:c610b0117c8029a757bfc6eb98c2bde87c071dd176732ff7e974f144e9dd1cb0", size = 1344281, upload-time = "2026-10-27T20:50:25.478Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/a9/64a9cf9c0885bc6231596db1bac4e5f57853b2e69b9481ad77d87d495650/pystilt-0.1.0a27.tar.gz", hash = "sha256:2cfb53bfa5fc875e68a11db37a377d45c6228db40d37bd4bc122c94e04855563", size = 1490607, upload-time = "2026-11-03T17:23:49.314Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c4/cf/e9f8d6198117f3fcdf4d133d8a625b371375cb76b0ad42be419e53e5c8b6/pystilt-0.1.0a26-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:66cebb3f6bcaff07e02c6ac886b33df329bd9703243713e30171d67df4ab94ed", size = 719853, upload-time = "2026-10-27T20:50:22.049Z" },
-    { url = "https://files.pythonhosted.org/packages/df/f8/2fe45df00df7a8c145e4ccb8b6d9082e7f7cf8ff618079b6911029f12716/pystilt-0.1.0a26-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:7ef9cdda8ad08e7b5fbcd0fe245ffa325d53e278d175b6a44f09dfa83b4633bf", size = 1521725, upload-time = "2026-10-27T20:50:23.759Z" },
+    { url = "https://files.pythonhosted.org/packages/73/2a/5cc8e2176fd9d9825829d52f49560965aa67390719777e8c854ea15f5270/pystilt-0.1.0a27-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:bc850c4c5e8dec496d4f228cd31e160ec8c5d877d6fac9f9da1d71766507ed2f", size = 739583, upload-time = "2026-11-03T17:23:45.233Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/f9/40754b6e283764e7018bf123e4badfeb601e1fa8624032a730c0d7d7a7e9/pystilt-0.1.0a27-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:0202782eb91ef52e07088214f5c2bea6ddfce1dbbc41ff2625f4fcf3339c3f0b", size = 1541454, upload-time = "2026-11-03T17:23:47.706Z" },
 ]
 
 [[package]]
@@ -3513,6 +3513,7 @@ s3 = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "arlmet" },
     { name = "docstr-coverage" },
     { name = "git-cliff" },
     { name = "ipython" },
@@ -3541,7 +3542,7 @@ requires-dist = [
     { name = "gcsfs", marker = "extra == 'gcs'", specifier = ">=2024.2" },
     { name = "matplotlib", specifier = ">=3.8" },
     { name = "packaging", specifier = ">=23" },
-    { name = "pystilt", specifier = ">=0.1.0a26" },
+    { name = "pystilt", specifier = ">=0.1.0a27" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.2" },
     { name = "typer", specifier = ">=0.9" },
 ]
@@ -3549,6 +3550,7 @@ provides-extras = ["s3", "gcs"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "arlmet", specifier = ">=0.1.0b5" },
     { name = "docstr-coverage", specifier = ">=2.3" },
     { name = "git-cliff", specifier = ">=2.10" },
     { name = "ipython", specifier = ">=9.0" },

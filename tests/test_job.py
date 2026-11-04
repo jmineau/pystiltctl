@@ -110,7 +110,7 @@ def test_manifest_retries_from_exit_codes(pushed):
     by_code = {
         r["onExitCodes"]["values"][0]: r["action"] for r in rules if "onExitCodes" in r
     }
-    assert by_code == {2: "FailJob", 1: "FailIndex"}
+    assert by_code == {2: "FailJob", 1: "FailIndex", 4: "FailIndex"}
     assert {
         "action": "Ignore",
         "onPodConditions": [{"type": "DisruptionTarget", "status": "True"}],

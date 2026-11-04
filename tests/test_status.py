@@ -445,3 +445,37 @@ def test_simulations_reports_stilts_error(project):
     (project / "receptors.csv").write_text("when,where\n")
     with pytest.raises(RuntimeError, match="Receptor table must contain columns"):
         status.simulations(str(project))
+
+
+@pytest.mark.parametrize(
+    ("stderr", "returncode", "message"),
+    [
+        (
+            "Error: Met 'hrrr': /met does not exist.",
+            2,
+            "Error: Met 'hrrr': /met does not exist.",
+        ),
+        (
+            "Traceback (most recent call last):\n"
+            "  ...\n"
+            "ValueError: Receptor table must contain columns: ['time']\n"
+            "stilt exits with 4: an unexpected error, which a retry would repeat.",
+            4,
+            "ValueError: Receptor table must contain columns: ['time']",
+        ),
+        (
+            "Traceback (most recent call last):\n"
+            "  ...\n"
+            "ConnectionError: could not reach the bucket\n"
+            "stilt exits with 3: a connection or I/O error, which a retry may get past.",
+            3,
+            "ConnectionError: could not reach the bucket",
+        ),
+        ("", 1, "stilt status exited with 1"),
+    ],
+)
+def test_error_message_names_the_error_not_the_exit_summary(
+    stderr, returncode, message
+):
+    """Exit 3 and 4 print a traceback, then a one-line summary (#25); the error is above it."""
+    assert status._error_message(stderr, returncode) == message

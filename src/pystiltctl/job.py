@@ -9,6 +9,8 @@ retries a task from its exit code (``podFailurePolicy``):
   fail the same way;
 - 1, some simulations failed, fails that task only, since running it again
   repeats the failure until the cause is fixed;
+- 4, an unexpected error, a bug, fails that task only: a retry would hit
+  the same bug;
 - 3, stopped, is retried, up to :data:`RETRIES` times per task;
 - a pod evicted or preempted (a spot node taken back) is retried without
   counting against that.
@@ -355,6 +357,7 @@ def _job_body(
             "rules": [
                 on_exit("FailJob", 2),
                 on_exit("FailIndex", 1),
+                on_exit("FailIndex", 4),
                 # `status` is required in a CronJob's template; the API server
                 # fills it in only for a Job created on its own.
                 {

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -22,6 +23,12 @@ from typing import Any
 
 from pystiltctl.inputs import is_local, local_path, project_key, project_name, pull
 from pystiltctl.job import PROJECT_ANNOTATION, PROJECT_LABEL, job_spec, label_value
+
+#: The line PYSTILT's CLI adds after a traceback, for an error it did not
+#: handle (exit 3 or 4): ``"stilt exits with 4: an unexpected error, which a
+#: retry would repeat."``. ``_error_message`` reports the traceback's own
+#: last line instead, which names the error.
+_EXIT_SUMMARY = re.compile(r"\Astilt exits with \d+: .+\.\Z")
 
 
 def count_indexes(indexes: str | None) -> int:
@@ -126,6 +133,22 @@ def project_jobs(
     return sorted(jobs, key=lambda j: j["created"] or ""), unclaimed
 
 
+def _error_message(stderr: str, returncode: int) -> str:
+    """
+    Return the one line of *stderr* that says why ``stilt`` failed.
+
+    A clean error (exit 2) is already one line. Exit 3 or 4 prints a
+    traceback and then a summary line (:data:`_EXIT_SUMMARY`); the line
+    before it, the traceback's own last line, names the error.
+    """
+    lines = stderr.strip().splitlines()
+    if not lines:
+        return f"stilt status exited with {returncode}"
+    if len(lines) > 1 and _EXIT_SUMMARY.match(lines[-1]):
+        return lines[-2]
+    return lines[-1]
+
+
 def simulations(project: str, *, output: str | None = None) -> dict[str, Any]:
     """
     Return ``stilt status --json`` for *project*, a URL or a local folder.
@@ -166,10 +189,7 @@ def simulations(project: str, *, output: str | None = None) -> dict[str, Any]:
             args, capture_output=True, text=True, check=False, env=env
         )
     if result.returncode != 0:
-        lines = result.stderr.strip().splitlines()
-        raise RuntimeError(
-            lines[-1] if lines else f"stilt status exited with {result.returncode}"
-        )
+        raise RuntimeError(_error_message(result.stderr, result.returncode))
     data = json.loads(result.stdout)
     data["project"] = project
     return data
