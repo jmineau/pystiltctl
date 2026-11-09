@@ -67,7 +67,7 @@ complete, 1 some failed, 2 bad command line, 3 stopped).
   `uv.lock` with the `s3` and `gcs` extras on `python:3.13-slim`, `tini` as
   process 1; PYSTILT's wheel carries a static `hycs_std`. `image.yml` (not a
   template file) smoke-tests it on every PR and pushes `ghcr.io/jmineau/pystiltctl`
-  (`:main` from main; `:<version>`, `:latest` from a tag). pystiltctl is an
+  (`:main` from main; `:<version>` from a tag, and `:latest` only when that version is not a pre-release). pystiltctl is an
   application that runs in this Linux image: CI tests Linux only, and it is not on PyPI.
 
 ## Commands
