@@ -1,6 +1,8 @@
 """The Kubernetes Job for a project."""
 
+import re
 import subprocess
+from pathlib import Path
 
 import pytest
 import yaml
@@ -10,6 +12,8 @@ from pystiltctl import job
 from pystiltctl.cli import app
 from pystiltctl.inputs import hash_inputs, push
 from tests.conftest import CONFIG
+
+DOCKERFILE = Path(__file__).parents[1] / "Dockerfile"
 
 
 @pytest.fixture
@@ -120,6 +124,18 @@ def test_manifest_is_an_indexed_job_of_workers(pushed):
     assert {"name": "volume-0", "persistentVolumeClaim": {"claimName": "hrrr"}} in pod[
         "volumes"
     ]
+
+
+def test_manifest_volumes_are_writable_by_the_images_user(pushed):
+    """A new cloud disk is owned by root; the pods run as the image's user."""
+    (user,) = re.findall(r"^USER (\d+)$", DOCKERFILE.read_text(), re.MULTILINE)
+    spec = job.job_spec(pushed)
+    cron = job.cron_job(spec, delay=8)["spec"]["jobTemplate"]
+    for body in (job.manifest(spec)["spec"], cron["spec"]):
+        assert body["template"]["spec"]["securityContext"] == {
+            "fsGroup": int(user),
+            "fsGroupChangePolicy": "OnRootMismatch",
+        }
 
 
 def test_manifest_retries_from_exit_codes(pushed):
