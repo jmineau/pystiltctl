@@ -38,6 +38,10 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
   `--json` prints the same for a program.
 - A docs page, "Try it on your computer", that runs a small project on a kind
   cluster, as the end-to-end test does.
+- A docs page, "Set up a cluster": a bucket, a GKE cluster that scales to
+  zero, the pods' bucket access through Workload Identity, the met volume
+  `schedule` wants, a public bucket for web-map footprints, and a Secret for
+  any other cluster.
 - The `s3` and `gcs` extras, for `s3://` and `gs://` buckets.
 - A container image, `ghcr.io/jmineau/pystiltctl`, with PYSTILT, pystiltctl and
   the bucket libraries: `:latest` for the latest release, `:main` for main.

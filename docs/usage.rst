@@ -5,7 +5,8 @@ pystiltctl runs a PYSTILT project on a Kubernetes cluster. Each pod runs
 one share of the receptors, ``stilt run --task I/N``, and writes its
 results straight to a bucket. PYSTILT decides what is finished from those
 files, so running a project again only fills in what is missing.
-:doc:`kind` runs a small project this way on your own computer.
+:doc:`kind` runs a small project this way on your own computer, and
+:doc:`cloud` makes a real cluster and bucket.
 
 The container image
 -------------------
