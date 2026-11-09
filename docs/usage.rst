@@ -92,7 +92,9 @@ whose keys become their environment, such as ``AWS_ACCESS_KEY_ID`` and
 ``--service-account`` gives them a service account instead, for a cluster
 that grants bucket access through one (GKE Workload Identity, EKS IAM
 roles). ``--volume CLAIM:/path`` mounts a PersistentVolumeClaim, such as
-a met archive the ``mets`` directory points into.
+a met archive the ``mets`` directory points into. The pods run as the
+image's own user, not root, and Kubernetes gives each volume to that
+user's group (``fsGroup``), so a new, empty cloud disk is writable.
 
 ``--dry-run`` prints the Job instead of starting it. Save it, change what
 the options do not reach (a node selector for spot nodes, tolerations),

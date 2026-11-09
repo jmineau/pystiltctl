@@ -48,6 +48,9 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
 
 ### Fixed
 
+- A new volume, such as the met disk a schedule keeps, is writable by the
+  pods: they set `fsGroup` to the image's user, since a cloud disk is made
+  owned by root and the image does not run as root.
 - A pre-release or post-release version (`0.2.0a1`, `0.2.0.post1`) now runs
   its own image instead of `:main`; only an untagged development version does.
 - `tick --render` no longer leaves `stilt` running after `kill -9` of the

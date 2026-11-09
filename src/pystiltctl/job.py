@@ -61,6 +61,9 @@ PROJECT_LABEL = "pystiltctl/project"
 PROJECT_ANNOTATION = "pystiltctl/project-url"
 #: Where each pod keeps its inputs and its runs' workdirs: an ``emptyDir``.
 SCRATCH = "/scratch"
+#: The group that owns the pods' volumes: the image's user (``Dockerfile``),
+#: so a new volume, whose folder a cloud makes owned by root, is writable.
+FS_GROUP = 10001
 #: The image's repository.
 IMAGE_REPOSITORY = "ghcr.io/jmineau/pystiltctl"
 
@@ -371,6 +374,12 @@ def _job_body(
             {"name": f"volume-{i}", "persistentVolumeClaim": {"claimName": v.claim}}
             for i, v in enumerate(spec.volumes)
         ],
+        # Kubernetes gives each volume to FS_GROUP once (OnRootMismatch), not
+        # on every pod start, which would walk a whole met archive.
+        "securityContext": {
+            "fsGroup": FS_GROUP,
+            "fsGroupChangePolicy": "OnRootMismatch",
+        },
     }
     if spec.service_account is not None:
         pod["serviceAccountName"] = spec.service_account
