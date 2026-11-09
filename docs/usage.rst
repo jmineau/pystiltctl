@@ -16,7 +16,7 @@ pystiltctl, and what ``s3://`` and ``gs://`` buckets need:
 
 .. code-block:: bash
 
-   docker pull ghcr.io/jmineau/pystiltctl:latest   # the latest release
+   docker pull ghcr.io/jmineau/pystiltctl:latest   # the latest release, never a pre-release
    docker pull ghcr.io/jmineau/pystiltctl:main     # the latest code on main
 
 To build it yourself, from a clone of the repository:

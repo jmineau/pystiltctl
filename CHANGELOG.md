@@ -44,7 +44,8 @@ follow [PEP 440](https://peps.python.org/pep-0440/).
   any other cluster.
 - The `s3` and `gcs` extras, for `s3://` and `gs://` buckets.
 - A container image, `ghcr.io/jmineau/pystiltctl`, with PYSTILT, pystiltctl and
-  the bucket libraries: `:latest` for the latest release, `:main` for main.
+  the bucket libraries: `:latest` for the latest release, `:main` for main,
+  and `:<version>` for each tag. A pre-release tag does not move `:latest`.
 
 ### Fixed
 
