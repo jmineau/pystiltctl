@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=af6c82ae"></script>
+    <script src="_static/documentation_options.js?v=03e3f829"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev30+gff48f8c9d" />
+  <meta name="docsearch:version" content="0.0.1.dev31+g1b4866669" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -588,7 +588,9 @@ whose keys become their environment, such as <code class="docutils literal notra
 <code class="docutils literal notranslate"><span class="pre">--service-account</span></code> gives them a service account instead, for a cluster
 that grants bucket access through one (GKE Workload Identity, EKS IAM
 roles). <code class="docutils literal notranslate"><span class="pre">--volume</span> <span class="pre">CLAIM:/path</span></code> mounts a PersistentVolumeClaim, such as
-a met archive the <code class="docutils literal notranslate"><span class="pre">mets</span></code> directory points into.</p>
+a met archive the <code class="docutils literal notranslate"><span class="pre">mets</span></code> directory points into. The pods run as the
+image’s own user, not root, and Kubernetes gives each volume to that
+user’s group (<code class="docutils literal notranslate"><span class="pre">fsGroup</span></code>), so a new, empty cloud disk is writable.</p>
 <p><code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> prints the Job instead of starting it. Save it, change what
 the options do not reach (a node selector for spot nodes, tolerations),
 and start it with <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">create</span> <span class="pre">-f</span> <span class="pre">job.yaml</span></code>.</p>
