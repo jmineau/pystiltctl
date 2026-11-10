@@ -130,6 +130,8 @@ a Secret with ``--secret``, or a service account with
 (``download: hrrr`` in ``config.yaml``) or a volume the cluster already
 has (``--volume``).
 
+:doc:`cloud` makes a cluster and a bucket on Google Cloud, step by step.
+
 .. note::
 
    ``AWS_ENDPOINT_URL`` sends every S3 request to that server, including
