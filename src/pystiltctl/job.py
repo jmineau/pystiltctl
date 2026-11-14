@@ -22,6 +22,7 @@ again skips the ones whose results exist.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import shutil
 import subprocess
@@ -131,6 +132,28 @@ def label_value(name: str) -> str:
     """
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40].strip("-")
     return slug or "project"
+
+
+def cron_job_name(project: str | Path) -> str:
+    """
+    Return the name of *project*'s CronJob: ``stilt-<project>-<hash>``.
+
+    The hash is of :func:`~pystiltctl.inputs.project_key`, so two projects
+    whose folders share a name (``s3://lab-a/winter``, ``s3://lab-b/winter``)
+    get two CronJobs, while every spelling of one project gets the same one.
+    The folder name is cut to 36 characters, which keeps the whole name within
+    the 52 Kubernetes allows a CronJob.
+
+    Examples
+    --------
+    >>> cron_job_name("s3://lab-a/projects/winter")
+    'stilt-winter-4a2ff0c8'
+    >>> cron_job_name("s3://lab-b/runs/winter/")
+    'stilt-winter-ec939c9e'
+    """
+    digest = hashlib.sha256(project_key(project).encode()).hexdigest()[:8]
+    name = label_value(project_name(project))[:36].rstrip("-")
+    return f"stilt-{name}-{digest}"
 
 
 @dataclass(frozen=True)
@@ -453,8 +476,8 @@ def cron_job(spec: JobSpec, delay: int, render: str | None = None) -> dict[str, 
     ``concurrencyPolicy: Forbid``, block every later tick until someone
     deletes it by hand. Its Jobs carry the project's label, so
     ``pystiltctl status`` lists them, and the last day's are kept. The
-    CronJob is named ``stilt-<project>``, so scheduling a project again
-    replaces it.
+    CronJob is named by :func:`cron_job_name`, so scheduling a project again
+    replaces it, and only it.
     """
     body = _job_body(
         spec,
@@ -466,7 +489,7 @@ def cron_job(spec: JobSpec, delay: int, render: str | None = None) -> dict[str, 
     return {
         "apiVersion": "batch/v1",
         "kind": "CronJob",
-        "metadata": _metadata(spec, name=f"stilt-{label_value(spec.name)}"),
+        "metadata": _metadata(spec, name=cron_job_name(spec.project)),
         "spec": {
             "schedule": "15 * * * *",
             "timeZone": "Etc/UTC",

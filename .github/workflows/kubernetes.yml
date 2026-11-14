@@ -149,8 +149,9 @@ jobs:
         run: |
           uv run pystiltctl schedule s3://stilt/projects/demo \
             --image pystiltctl:ci --secret bucket-creds --volume met:/met
-          kubectl get cronjob stilt-demo
-          kubectl create job tick-now --from=cronjob/stilt-demo
+          name=$(uv run python -c "from pystiltctl import job; print(job.cron_job_name('s3://stilt/projects/demo'))")
+          kubectl get cronjob "$name"
+          kubectl create job tick-now --from=cronjob/"$name"
           kubectl wait --for=condition=failed job/tick-now --timeout=600s
           reason=$(kubectl get job/tick-now -o jsonpath='{.status.conditions[?(@.type=="Failed")].reason}')
           test "$reason" = FailedIndexes || { echo "::error::failed for $reason"; exit 1; }

@@ -283,3 +283,25 @@ def test_apply_runs_kubectl_apply(monkeypatch, pushed):
     monkeypatch.setattr(job.subprocess, "run", run)
     assert job.apply(job.cron_job(job.job_spec(pushed), delay=8)) == "stilt-my-project"
     assert calls[0][1] == "apply"
+
+
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        ("s3://lab-a/projects/winter", "s3://lab-b/runs/2025/winter"),
+        ("s3://lab-a/projects/winter", "s3://lab-a/projects/Winter_"),
+        ("gs://x/SLV_2015", "gs://y/slv-2015"),
+        (
+            "s3://b/slv-methane-inversion-2025-winter-campaign-hrrr",
+            "s3://b/slv-methane-inversion-2025-winter-campaign-nam",
+        ),
+    ],
+)
+def test_cron_job_name_differs_between_projects(a, b):
+    assert job.cron_job_name(a) != job.cron_job_name(b)
+    assert len(job.cron_job_name(a)) <= 52  # Kubernetes' limit for a CronJob
+
+
+def test_cron_job_name_is_the_same_for_every_spelling_of_a_project():
+    names = {job.cron_job_name(u) for u in ["s3://b/p/winter", "S3://b/p/winter/"]}
+    assert len(names) == 1
