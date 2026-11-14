@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1feeea0f"></script>
+    <script src="../../_static/documentation_options.js?v=c37abb20"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev35+gb844cc680" />
+  <meta name="docsearch:version" content="0.0.1.dev36+gd420c03f2" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -578,9 +578,15 @@
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_last_added</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Return the newest hour already in *project*'s ``receptors.csv``, or ``None``."""</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_last_added</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">,</span> <span class="n">now</span><span class="p">:</span> <span class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the newest hour in *project*'s ``receptors.csv`` up to *now*, or ``None``.</span>
+
+<span class="sd">    Rows after *now* (added by a mistyped ``--now`` before it was refused)</span>
+<span class="sd">    are left out, so they cannot hide a gap from every later tick.</span>
+<span class="sd">    """</span>
     <span class="n">times</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">receptors</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">times</span><span class="p">[</span><span class="n">times</span> <span class="o">&lt;=</span> <span class="n">now</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">times</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="k">return</span> <span class="n">times</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">.</span><span class="n">to_pydatetime</span><span class="p">()</span>
@@ -715,7 +721,8 @@
 <span class="sd">        Hours before an hour is added; see :data:`DELAY_HOURS`.</span>
 <span class="sd">    now : datetime, optional</span>
 <span class="sd">        The time to act as if it were, in UTC. Defaults to now; an earlier</span>
-<span class="sd">        time fills in a past day.</span>
+<span class="sd">        time fills in a past day. A time with a time zone is converted to</span>
+<span class="sd">        UTC.</span>
 <span class="sd">    cpus : int, optional</span>
 <span class="sd">        Receptors to run at once. Defaults to ``execution.cpus`` in</span>
 <span class="sd">        ``config.yaml``.</span>
@@ -737,15 +744,25 @@
 <span class="sd">    FileNotFoundError</span>
 <span class="sd">        If there is no project, or it has no ``sites.csv``.</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If ``sites.csv`` cannot be read, or *render* is given and the project</span>
-<span class="sd">        has several variants (checked before ``stilt`` runs).</span>
+<span class="sd">        If *now* is later than the clock, ``sites.csv`` cannot be read, or</span>
+<span class="sd">        *render* is given and the project has several variants (all checked</span>
+<span class="sd">        before ``stilt`` runs).</span>
 <span class="sd">    OSError</span>
 <span class="sd">        If the project's inputs cannot be copied from *project*, or</span>
 <span class="sd">        ``receptors.csv`` locked or copied back to it, or (when ``stilt``</span>
 <span class="sd">        exited with 0) the footprints cannot be drawn to *render*; the</span>
 <span class="sd">        message says which.</span>
 <span class="sd">    """</span>
-    <span class="n">now</span> <span class="o">=</span> <span class="n">now</span> <span class="ow">or</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">UTC</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">clock</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">UTC</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">now</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">clock</span>
+    <span class="k">elif</span> <span class="n">now</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">now</span><span class="o">.</span><span class="n">astimezone</span><span class="p">(</span><span class="n">UTC</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">now</span> <span class="o">&gt;</span> <span class="n">clock</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"--now </span><span class="si">{</span><span class="n">now</span><span class="si">:</span><span class="s2">%Y-%m-%dT%H:%M</span><span class="si">}</span><span class="s2"> is later than the clock "</span>
+            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">clock</span><span class="si">:</span><span class="s2">%Y-%m-%dT%H:%M</span><span class="si">}</span><span class="s2"> UTC): a tick can only fill in hours that are past."</span>
+        <span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">directory</span> <span class="o">=</span> <span class="n">project_directory</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">workdir</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
@@ -768,7 +785,7 @@
         <span class="c1"># Before anything runs: a project that cannot be drawn fails now, not after the day's run.</span>
         <span class="n">variant</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">render</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">renderer</span><span class="o">.</span><span class="n">choose_variant</span><span class="p">(</span><span class="n">stilt_project</span><span class="p">)</span>
         <span class="c1"># Read after the fresh copy: the last row there is where a gap starts.</span>
-        <span class="n">hours</span> <span class="o">=</span> <span class="n">due_hours</span><span class="p">(</span><span class="n">now</span><span class="p">,</span> <span class="n">delay</span><span class="p">,</span> <span class="n">since</span><span class="o">=</span><span class="n">_last_added</span><span class="p">(</span><span class="n">stilt_project</span><span class="p">))</span>
+        <span class="n">hours</span> <span class="o">=</span> <span class="n">due_hours</span><span class="p">(</span><span class="n">now</span><span class="p">,</span> <span class="n">delay</span><span class="p">,</span> <span class="n">since</span><span class="o">=</span><span class="n">_last_added</span><span class="p">(</span><span class="n">stilt_project</span><span class="p">,</span> <span class="n">now</span><span class="p">))</span>
         <span class="n">receptors</span> <span class="o">=</span> <span class="n">hourly_receptors</span><span class="p">(</span><span class="n">read_sites</span><span class="p">(</span><span class="n">directory</span><span class="p">),</span> <span class="n">hours</span><span class="p">)</span>
         <span class="n">added</span> <span class="o">=</span> <span class="n">stilt_project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Added </span><span class="si">%d</span><span class="s2"> receptors, through </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">added</span><span class="p">),</span> <span class="n">receptors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
