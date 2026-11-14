@@ -61,6 +61,34 @@ def test_image_raises_for_a_grid_that_crosses_the_antimeridian():
         render.image(_dateline_footprint())
 
 
+def test_image_puts_west_at_the_left_whatever_order_lon_comes_in():
+    """A footprint whose longitudes run east to west is drawn as the same map."""
+    foot = footprint([[1e-2, 1e-9, 1e-9]] * 3)  # the strong column is the westmost
+    mirrored = foot.isel(lon=slice(None, None, -1))
+    assert foot["lon"].values[0] < foot["lon"].values[-1]
+    assert mirrored["lon"].values[0] > mirrored["lon"].values[-1]
+    assert (render.image(mirrored) == render.image(foot)).all()
+    alpha = render.image(foot)[0, :, 3]
+    assert alpha[0] > 0 and alpha[2] == 0  # drawn at the west, not the east
+    assert render.bounds(mirrored) == render.bounds(foot)
+
+
+def test_bounds_refuses_a_grid_of_one_row_or_column():
+    for values in ([[1.0]], [[1.0, 1.0]], [[1.0], [1.0]]):
+        with pytest.raises(ValueError, match="cell size"):
+            render.bounds(footprint(values))
+        with pytest.raises(ValueError, match="cell size"):
+            render.image(footprint(values))
+
+
+def test_bounds_raises_for_two_columns_across_the_antimeridian():
+    foot = footprint(np.ones((2, 2)), lon0=-179.5, res=359.0)
+    assert list(foot["lon"].values) == [-179.5, 179.5]
+    with pytest.raises(ValueError, match="antimeridian"):
+        render.bounds(foot)
+    assert render.bounds(footprint(np.ones((2, 2)), lon0=170.0, res=5.0))[1][1] == 177.5
+
+
 def test_image_puts_north_at_the_top_and_hides_small_values():
     # South row strong, north row below the scale.
     foot = footprint([[1e-2, 1e-2], [1e-9, 1e-9]])
@@ -72,17 +100,22 @@ def test_image_puts_north_at_the_top_and_hides_small_values():
 
 
 def test_image_is_summed_over_time_on_a_fixed_scale():
-    weak, strong = render.image(footprint([[1e-4]])), render.image(footprint([[1e-2]]))
+    weak = render.image(footprint(np.full((2, 2), 1e-4)))
+    strong = render.image(footprint(np.full((2, 2), 1e-2)))
     assert weak[0, 0, 3] < strong[0, 0, 3]
-    top = render.image(footprint([[10.0]]))
+    top = render.image(footprint(np.full((2, 2), 10.0)))
     assert top[0, 0, 3] == round(0.9 * 255)  # above VMAX: the top of the scale
+    infinite = render.image(footprint(np.full((2, 2), np.inf)))
+    assert (infinite == top).all()  # +inf is above the scale too
+    assert (render.image(footprint(np.zeros((2, 2))))[..., 3] == 0).all()
+    assert (render.image(footprint(np.full((2, 2), np.nan)))[..., 3] == 0).all()
 
 
 def test_image_rows_follow_web_mercator():
     # Over 40-80 N, equal Mercator bands hold more rows of the southern grid:
     # the north of the image takes only the northmost grid rows, and the
     # image has more rows than the grid so that no grid row is left out.
-    values = np.arange(1, 9)[:, None] * np.ones((8, 1)) * 1e-3
+    values = np.arange(1, 9)[:, None] * np.ones((8, 2)) * 1e-3
     rgba = render.image(footprint(values, lat0=40.0, res=5.0, hours=1))
     colors = [tuple(row[0]) for row in rgba]
     assert len(rgba) > 8
