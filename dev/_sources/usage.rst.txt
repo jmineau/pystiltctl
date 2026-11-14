@@ -197,8 +197,10 @@ tick: each tick reaches no more than a week past the day, so the
 scheduled ticks that follow keep narrowing the gap, a week at a time,
 until the schedule is caught up; nothing by hand is needed. A project that already has old rows in
 ``receptors.csv`` gets a one-time backfill of up to a week on its first tick. Scheduling a
-project again replaces its CronJob; ``kubectl delete cronjob
-stilt-<project>`` stops it.
+project again replaces its CronJob, and only its own: the name ``schedule``
+prints, ``stilt-<project>-<hash>``, ends in a short hash of the project's
+URL, so two projects in folders of the same name each keep their schedule.
+``kubectl delete cronjob <that name>`` stops it.
 
 Footprints on a web map
 -----------------------

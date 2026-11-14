@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=81882aa3"></script>
+    <script src="../../_static/documentation_options.js?v=13a464ee"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev33+g07874384a" />
+  <meta name="docsearch:version" content="0.0.1.dev34+ga3a81a388" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -503,6 +503,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
@@ -621,6 +622,28 @@
     <span class="n">slug</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^a-z0-9]+"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)[:</span><span class="mi">40</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">slug</span> <span class="ow">or</span> <span class="s2">"project"</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">cron_job_name</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the name of *project*'s CronJob: ``stilt-&lt;project&gt;-&lt;hash&gt;``.</span>
+
+<span class="sd">    The hash is of :func:`~pystiltctl.inputs.project_key`, so two projects</span>
+<span class="sd">    whose folders share a name (``s3://lab-a/winter``, ``s3://lab-b/winter``)</span>
+<span class="sd">    get two CronJobs, while every spelling of one project gets the same one.</span>
+<span class="sd">    The folder name is cut to 36 characters, which keeps the whole name within</span>
+<span class="sd">    the 52 Kubernetes allows a CronJob.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; cron_job_name("s3://lab-a/projects/winter")</span>
+<span class="sd">    'stilt-winter-4a2ff0c8'</span>
+<span class="sd">    &gt;&gt;&gt; cron_job_name("s3://lab-b/runs/winter/")</span>
+<span class="sd">    'stilt-winter-ec939c9e'</span>
+<span class="sd">    """</span>
+    <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">project_key</span><span class="p">(</span><span class="n">project</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">8</span><span class="p">]</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">label_value</span><span class="p">(</span><span class="n">project_name</span><span class="p">(</span><span class="n">project</span><span class="p">))[:</span><span class="mi">36</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"stilt-</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">digest</span><span class="si">}</span><span class="s2">"</span>
 
 
 <div class="viewcode-block" id="Volume">
@@ -960,8 +983,8 @@
 <span class="sd">    ``concurrencyPolicy: Forbid``, block every later tick until someone</span>
 <span class="sd">    deletes it by hand. Its Jobs carry the project's label, so</span>
 <span class="sd">    ``pystiltctl status`` lists them, and the last day's are kept. The</span>
-<span class="sd">    CronJob is named ``stilt-&lt;project&gt;``, so scheduling a project again</span>
-<span class="sd">    replaces it.</span>
+<span class="sd">    CronJob is named by :func:`cron_job_name`, so scheduling a project again</span>
+<span class="sd">    replaces it, and only it.</span>
 <span class="sd">    """</span>
     <span class="n">body</span> <span class="o">=</span> <span class="n">_job_body</span><span class="p">(</span>
         <span class="n">spec</span><span class="p">,</span>
@@ -973,7 +996,7 @@
     <span class="k">return</span> <span class="p">{</span>
         <span class="s2">"apiVersion"</span><span class="p">:</span> <span class="s2">"batch/v1"</span><span class="p">,</span>
         <span class="s2">"kind"</span><span class="p">:</span> <span class="s2">"CronJob"</span><span class="p">,</span>
-        <span class="s2">"metadata"</span><span class="p">:</span> <span class="n">_metadata</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">"stilt-</span><span class="si">{</span><span class="n">label_value</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">),</span>
+        <span class="s2">"metadata"</span><span class="p">:</span> <span class="n">_metadata</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">cron_job_name</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">project</span><span class="p">)),</span>
         <span class="s2">"spec"</span><span class="p">:</span> <span class="p">{</span>
             <span class="s2">"schedule"</span><span class="p">:</span> <span class="s2">"15 * * * *"</span><span class="p">,</span>
             <span class="s2">"timeZone"</span><span class="p">:</span> <span class="s2">"Etc/UTC"</span><span class="p">,</span>
