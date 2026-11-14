@@ -19,6 +19,9 @@ pystiltctl, and what ``s3://`` and ``gs://`` buckets need:
    docker pull ghcr.io/jmineau/pystiltctl:latest   # the latest release, never a pre-release
    docker pull ghcr.io/jmineau/pystiltctl:main     # the latest code on main
 
+A pod that runs ``:main`` asks the registry for its current build each time
+it starts (``imagePullPolicy: Always``), so a node never keeps an old one.
+
 To build it yourself, from a clone of the repository:
 
 .. code-block:: bash

@@ -94,6 +94,32 @@ def default_image(version: str = pystiltctl.__version__) -> str:
     return f"{IMAGE_REPOSITORY}:{version if released else 'main'}"
 
 
+def pull_policy(image: str) -> str | None:
+    """
+    Return the ``imagePullPolicy`` for *image*: ``Always`` for a ``:main`` tag.
+
+    ``:main`` moves with every push to main, but Kubernetes pulls an image
+    tagged anything but ``latest`` only when the node does not have it yet,
+    so a node would keep running the build it pulled first, and the pods of
+    one Job could run different code. ``Always`` asks the registry for the
+    tag's current build at each pod start, and still uses the node's copy
+    when it is that build. Other images keep Kubernetes' default (``None``
+    here), so an image loaded into a cluster by hand, as ``kind load`` does,
+    still runs.
+
+    Examples
+    --------
+    >>> pull_policy("ghcr.io/jmineau/pystiltctl:main")
+    'Always'
+    >>> pull_policy("ghcr.io/jmineau/pystiltctl:0.2.0") is None
+    True
+    """
+    name = image.rsplit("/", 1)[-1]
+    if "@" in name or ":" not in name:
+        return None
+    return "Always" if name.rpartition(":")[2] == "main" else None
+
+
 def kubernetes_memory(mem: str) -> str:
     """
     Return a Slurm memory size, such as ``8G``, as a Kubernetes quantity.
@@ -413,6 +439,8 @@ def _job_body(
             for i, v in enumerate(spec.volumes)
         ],
     }
+    if pull_policy(spec.image) is not None:
+        container["imagePullPolicy"] = pull_policy(spec.image)
     if spec.secrets:
         container["envFrom"] = [{"secretRef": {"name": name}} for name in spec.secrets]
     pod: dict[str, Any] = {
