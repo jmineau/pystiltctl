@@ -38,6 +38,7 @@ from packaging.version import Version
 
 import pystiltctl
 from pystiltctl.inputs import (
+    config_error,
     hash_inputs,
     is_local,
     local_path,
@@ -335,7 +336,10 @@ def job_spec(
             else pull(project, Path(tmp) / "project")
         )
         opened = stilt.Project(directory, output=output)
-        execution = opened.config.execution
+        try:
+            execution = opened.config.execution  # the config is read here
+        except yaml.YAMLError as error:
+            raise config_error(error) from None
         results = str(opened.output.directory)
         input_hash = hash_inputs(directory)
     if not is_local(project) and is_local(results):

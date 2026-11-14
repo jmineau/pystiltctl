@@ -470,3 +470,24 @@ def test_image_keeps_a_lone_strong_cell_on_a_wide_grid():
     values[161 - 1 - skipped[len(skipped) // 2], :] = 5e-2
     rgba = render.image(footprint(values, lat0=20.0, res=0.25, hours=1))
     assert (rgba[..., 3] > 0).any()
+
+
+@pytest.mark.parametrize(
+    "contents", [b"", b"[1, 2", b'{"a": 1}', b"[1]", b'[{"x": 1}]']
+)
+def test_render_names_an_index_that_is_not_one(site, contents):
+    fs, root = fsspec.core.url_to_fs(site)
+    path = f"{root}/2026-10-29/index.json"
+    fs.pipe_file(path, contents)
+    with pytest.raises(ValueError, match=r"2026-10-29/index\.json is not a footprint"):
+        render.render("/project", site, ["r1a"])
+
+
+def test_bounds_refuses_a_grid_past_web_mercators_edge():
+    """A global grid has edges at +-90 degrees, where a web map has no row."""
+    foot = footprint(np.ones((3, 3)), lat0=-60.0, res=60.0)
+    with pytest.raises(ValueError, match="latitude"):
+        render.bounds(foot)
+    with pytest.raises(ValueError, match="latitude"):
+        render.image(foot)
+    assert render.bounds(footprint(np.ones((3, 3)), lat0=-60.0, res=40.0))

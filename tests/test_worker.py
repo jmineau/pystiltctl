@@ -9,7 +9,7 @@ import time
 import pytest
 from typer.testing import CliRunner
 
-from pystiltctl import worker
+from pystiltctl import inputs, worker
 from pystiltctl.cli import app
 from pystiltctl.inputs import hash_inputs, push
 
@@ -337,3 +337,16 @@ def test_run_does_not_orphan_the_child_on_sigkill(tmp_path):
             child_pid = int(pidfile.read_text())
             if _alive(child_pid):
                 os.kill(child_pid, signal.SIGKILL)
+
+
+def test_cli_worker_without_the_bucket_package_exits_2(monkeypatch, tmp_path):
+    """Every task would fail the same way, and 1 would read as failed simulations."""
+
+    def missing(url):
+        raise ImportError("Install s3fs to access S3")
+
+    monkeypatch.setattr(inputs.fsspec.core, "url_to_fs", missing)
+    args = ["worker", "s3://b/p", "--tasks", "2", "--index", "0"]
+    result = CliRunner().invoke(app, [*args, "--workdir", str(tmp_path)])
+    assert result.exit_code == 2, result.output
+    assert "Install s3fs" in result.output

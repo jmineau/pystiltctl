@@ -479,3 +479,10 @@ def test_error_message_names_the_error_not_the_exit_summary(
 ):
     """Exit 3 and 4 print a traceback, then a one-line summary (#25); the error is above it."""
     assert status._error_message(stderr, returncode) == message
+
+
+def test_cli_status_of_a_folder_that_is_not_a_project_exits_2(tmp_path):
+    result = CliRunner().invoke(app, ["status", str(tmp_path / "nope")])
+    assert result.exit_code == 2, result.output
+    assert result.output.startswith("Error: No PYSTILT project at ")
+    assert len(result.output.splitlines()) == 1
