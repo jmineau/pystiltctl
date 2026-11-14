@@ -77,6 +77,7 @@ Schedule
    schedule.tick
    schedule.due_hours
    schedule.read_sites
+   schedule.check_render
    schedule.hourly_receptors
 
 Images for web maps

@@ -229,6 +229,8 @@ def schedule(
                 else inputs.pull(project, Path(tmp) / "project")
             )
             sites = schedules.read_sites(directory)
+            if render is not None:
+                schedules.check_render(directory, output)
         spec = job.job_spec(
             project,
             cpus=cpus,
