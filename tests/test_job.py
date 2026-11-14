@@ -61,6 +61,23 @@ def test_job_spec_of_a_mounted_project_keeps_a_local_output(project):
     assert (spec.tasks, spec.parallelism, spec.cpus, spec.memory) == (1, 1, 1, None)
 
 
+def test_job_spec_gives_the_pods_real_paths(project, monkeypatch):
+    monkeypatch.chdir(project.parent)
+    spec = job.job_spec("my_project/../my_project", output="out/../out")
+    assert spec.project == str(project.resolve())
+    assert spec.output == str(project.parent.resolve() / "out")
+    assert job.worker_args(spec)[2] == str(project.resolve())
+    assert job.job_spec("my_project", output="s3://bucket/out").output == (
+        "s3://bucket/out"
+    )
+
+
+def test_job_spec_refuses_an_empty_project():
+    for project in ("", "  "):
+        with pytest.raises(ValueError, match="Say which project"):
+            job.job_spec(project)
+
+
 def test_job_spec_no_project(bucket):
     with pytest.raises(FileNotFoundError):
         job.job_spec(bucket)

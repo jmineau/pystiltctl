@@ -290,6 +290,16 @@ class JobSpec:
     input_hash: str | None = None
 
 
+def _real_output(output: str) -> str:
+    """
+    Return *output* with a folder on this machine as its real path.
+
+    A URL is returned as it is. PYSTILT resolves a relative output against
+    the working directory it runs in, which in a pod is not this one.
+    """
+    return str(local_path(output).resolve()) if is_local(output) else output
+
+
 def job_spec(
     project: str,
     *,
@@ -325,9 +335,11 @@ def job_spec(
     FileNotFoundError
         If there is no project at *project*.
     ValueError
-        If the results would stay inside the pods: the project is on a
-        bucket but its output directory is not.
+        If *project* is empty, or the results would stay inside the pods:
+        the project is on a bucket but its output directory is not.
     """
+    if not str(project).strip():
+        raise ValueError("Say which project to run: a URL, or a folder.")
     with tempfile.TemporaryDirectory() as tmp:
         directory = (
             local_path(project)
@@ -355,15 +367,17 @@ def job_spec(
             memory = kubernetes_memory(execution.mem)
         except ValueError as error:
             raise ValueError(f"execution.mem in config.yaml: {error}") from None
+    # The pods start in their own working directory, so a path they are given
+    # must mean the same there as here: the real path, as the annotation holds.
     return JobSpec(
-        project=project,
+        project=project_key(project) if is_local(project) else project,
         name=project_name(project),
         tasks=tasks,
         parallelism=min(parallelism or execution.array_parallelism or tasks, tasks),
         cpus=cpus or execution.cpus,
         memory=memory,
         image=image or default_image(),
-        output=output,
+        output=None if output is None else _real_output(output),
         secrets=tuple(secrets),
         service_account=service_account,
         volumes=tuple(volumes),
