@@ -77,16 +77,13 @@ runs the same recipes.
 
 | Task | Command |
 |---|---|
-| Set up / refresh `.venv` | `uv sync` |
 | Everything CI checks | `just quality-check` |
 | Tests (no network/slow) | `just test` (parallel; extra args go to pytest) |
-| Lint / fix and format | `just lint` / `just format` |
-| Type check | `just type-check` (pyrefly) |
-| Docs (runs every example; warnings are errors) | `just build-docs` |
-| Live docs preview | `just docs-serve` (port 8000) |
+| Lint / fix and format / type check | `just lint` / `just format` / `just type-check` (pyrefly) |
+| Docs (runs every example; warnings are errors) / live preview | `just build-docs` / `just docs-serve` (port 8000) |
 | All pre-commit hooks | `just pre-commit` |
 | Build and check dists | `just dist` |
-| Draft changelog entries | `just changelog` |
+| Draft the changelog entries (at release) | `just changelog` |
 
 After editing dependencies in `pyproject.toml`, run `uv lock` and commit
 `uv.lock` in the same commit.
@@ -97,20 +94,8 @@ After editing dependencies in `pyproject.toml`, run `uv lock` and commit
 - Ruff lint rules `E, F, UP, B, SIM, I, D, D213, NPY, RUF100` (pydocstyle with
   the NumPy convention); line length is the formatter's business. Suppress a
   rule inline with a reason (`# noqa: B008 - why`).
-- NumPy-style docstrings, with the summary on the second line (D213):
-
-  ```python
-  def f(x):
-      """
-      Summarize in one line.
-
-      Parameters
-      ----------
-      x : float
-          What x is.
-      """
-  ```
-
+- NumPy-style docstrings, with the summary on the line after the opening quotes
+  (D213; ruff enforces it).
 - Public functions, classes and modules have docstrings (`just docstr` enforces 95%).
 - Each public attribute and property has its own page in the API reference, and that
   page is where its See Also and Examples go (as in pandas). Say what it is in its
@@ -160,12 +145,13 @@ when one breaks.
 
   A block that raises or warns fails the build; `:okexcept:` or `:okwarning:`
   under the directive allows one that is meant to. All `.rst` pages share one
-  session, so each page imports and defines what it uses.
+  session, so each page imports and defines what it uses. Split a long block so
+  that no multi-line statement is its 10th (or 100th) statement: the directive
+  runs only the first line of that one.
 - **When they run:** `just build-docs` runs everything, as CI does;
   `just docs-serve` reruns a page's blocks whenever that page is rebuilt.
-- **Notebooks, and code cells in Markdown pages,** are off in this project.
-  `copier update --data docs_notebooks=true` turns them on; it adds myst-nb, and
-  Jupyter with it, to the dev tools.
+- **Notebooks, and code cells in Markdown pages,** are off in this project;
+  `copier update --data docs_notebooks=true` turns them on (adds myst-nb and Jupyter).
 - **Data:** the docs build on GitHub Actions, so an example uses synthetic data,
   a small file in the repository, or a public download, never a machine-specific
   path. Seed random numbers so the figures don't change from build to build.
@@ -183,6 +169,9 @@ when one breaks.
   warning is ignored by message and module in `[tool.pytest]` `filterwarnings`.
 - `just test` runs in parallel (pytest-xdist); tests must not depend on order or
   shared state. Debug with a serial `uv run pytest tests/test_x.py -x`.
+- Docstring examples (`>>>` lines under `src/`) run as tests too (`--doctest-modules`),
+  so an example that stops matching the code fails `just test`. One that needs data
+  CI lacks gets `# doctest: +SKIP` on its `>>>` line.
 - Tests must not depend on machine-specific paths or data.
 - The pytest suite needs no cluster, no s3fs and no network: buckets are fsspec's
   `memory://` (fixture `bucket`), and `kubectl` and the worker's `os.execv`
@@ -193,9 +182,10 @@ when one breaks.
 
 - Commit messages follow Conventional Commits (`fix(io): ...`, `docs: ...`), with
   `!` for breaking changes (`feat!: ...`).
-- User-visible changes go under `## [Unreleased]` in `CHANGELOG.md`, which follows
-  [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). `just changelog`
-  drafts entries from commit messages (`cliff.toml`); the entries are edited by hand.
+- A pull request leaves `CHANGELOG.md` alone. At release, `just changelog` drafts
+  the entries from the commit messages (`cliff.toml`) and the maintainer edits them
+  into `CHANGELOG.md`, which follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+  So write each commit message as the line a user would read.
 - Docs are versioned on GitHub Pages, which serves the gh-pages branch (`dev/`,
   one folder per release, `stable/`); `.github/scripts/docs_versions.py`
   maintains the branch. Never edit gh-pages by hand.
