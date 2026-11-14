@@ -470,6 +470,16 @@ def test_tick_with_render_refuses_several_variants_before_running(
     assert (two_variants / "receptors.csv").read_text() == before
 
 
+def test_cli_schedule_with_render_refuses_several_variants(two_variants):
+    args = ["schedule", str(two_variants), "--render", "s3://site/f", "--dry-run"]
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 2
+    assert "2 variants" in result.output
+    # Without --render nothing is drawn, so several variants are fine.
+    result = CliRunner().invoke(app, ["schedule", str(two_variants), "--dry-run"])
+    assert result.exit_code == 0
+
+
 @pytest.mark.parametrize(
     ("stilt_code", "problem", "exit_code"),
     [

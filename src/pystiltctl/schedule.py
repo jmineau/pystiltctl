@@ -194,6 +194,22 @@ def hourly_receptors(
     return [stilt.PointReceptor(time=hour, **site) for hour in hours for site in sites]
 
 
+def check_render(directory: str | Path, output: str | None = None) -> None:
+    """
+    Raise if the project in *directory* cannot be drawn by ``tick --render``.
+
+    ``tick`` makes this check first (a project with several variants has no
+    one to draw), so ``schedule`` makes it too, rather than apply a CronJob
+    whose every tick would fail.
+
+    Raises
+    ------
+    ValueError
+        If the project has several variants.
+    """
+    renderer.choose_variant(stilt.Project(directory, output=output))
+
+
 def tick(
     project: str,
     *,
