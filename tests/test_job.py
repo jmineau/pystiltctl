@@ -184,10 +184,41 @@ def test_default_image(version, tag):
         ("4000", "4000Mi"),
         ("2GB", "2Gi"),
         ("1.5Gi", "1.5Gi"),
+        ("8g", "8Gi"),
+        ("8m", "8Mi"),
+        ("1.5G", "1.5Gi"),
+        ("512Mi", "512Mi"),
     ],
 )
 def test_kubernetes_memory(mem, quantity):
     assert job.kubernetes_memory(mem) == quantity
+
+
+@pytest.mark.parametrize(
+    "mem", ["lots", "", "8gi", "512MiB", "8 Gi", "-4Gi", "0", "0Gi"]
+)
+def test_kubernetes_memory_refuses_what_is_not_a_size(mem):
+    with pytest.raises(ValueError, match="memory|more than 0"):
+        job.kubernetes_memory(mem)
+
+
+@pytest.mark.parametrize(
+    ("given", "written"), [("8G", "8Gi"), ("8m", "8Mi"), ("8Gi", "8Gi")]
+)
+def test_submit_memory_is_converted_like_execution_mem(pushed, given, written):
+    result = CliRunner().invoke(app, ["submit", pushed, "--memory", given, "--dry-run"])
+    assert result.exit_code == 0, result.output
+    pod = yaml.safe_load(result.output)["spec"]["template"]["spec"]["containers"][0]
+    assert pod["resources"]["requests"]["memory"] == written
+    assert pod["resources"]["limits"]["memory"] == written
+
+
+def test_submit_refuses_a_memory_that_is_not_a_size(pushed):
+    result = CliRunner().invoke(
+        app, ["submit", pushed, "--memory", "lots", "--dry-run"]
+    )
+    assert result.exit_code == 2
+    assert "memory: 'lots' is not a memory size" in result.output
 
 
 @pytest.mark.parametrize(
@@ -305,3 +336,12 @@ def test_cron_job_name_differs_between_projects(a, b):
 def test_cron_job_name_is_the_same_for_every_spelling_of_a_project():
     names = {job.cron_job_name(u) for u in ["s3://b/p/winter", "S3://b/p/winter/"]}
     assert len(names) == 1
+
+
+def test_job_spec_names_config_for_a_bad_execution_mem(project, bucket):
+    (project / "config.yaml").write_text(
+        CONFIG + "output: s3://bucket/output\nexecution: {mem: lots}\n"
+    )
+    push(project, bucket)
+    with pytest.raises(ValueError, match="execution.mem in config.yaml: 'lots'"):
+        job.job_spec(bucket)

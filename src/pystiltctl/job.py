@@ -98,9 +98,17 @@ def kubernetes_memory(mem: str) -> str:
     """
     Return a Slurm memory size, such as ``8G``, as a Kubernetes quantity.
 
-    Slurm's ``K``, ``M``, ``G`` and ``T`` count in 1024s, and a bare number
-    is megabytes; Kubernetes writes those as ``Ki``, ``Mi``, ``Gi`` and
-    ``Ti``. A size already in Kubernetes' form is returned as it is.
+    Slurm's ``K``, ``M``, ``G`` and ``T`` count in 1024s, in either case, and
+    a bare number is megabytes; Kubernetes writes those as ``Ki``, ``Mi``,
+    ``Gi`` and ``Ti``. A size already in Kubernetes' binary form (``512Mi``)
+    is returned as it is.
+
+    Raises
+    ------
+    ValueError
+        If *mem* is neither, or is not more than zero. Kubernetes would read
+        some such text as another size (``8m`` is 0.008 bytes there), so it
+        is refused here rather than passed on.
 
     Examples
     --------
@@ -111,11 +119,20 @@ def kubernetes_memory(mem: str) -> str:
     >>> kubernetes_memory("512Mi")
     '512Mi'
     """
-    match = re.fullmatch(r"\s*(\d+)\s*([KMGT]?)B?\s*", mem, flags=re.IGNORECASE)
-    if match is None:
-        return mem.strip()
-    number, unit = match.groups()
-    return f"{number}{(unit or 'M').upper()}i"
+    slurm = re.fullmatch(
+        r"\s*(\d+(?:\.\d+)?)\s*([KMGT]?)B?\s*", mem, flags=re.IGNORECASE
+    )
+    quantity = re.fullmatch(r"\s*(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti|Pi|Ei)\s*", mem)
+    if slurm is not None:
+        number, unit = slurm.groups()
+        size = f"{number}{(unit or 'M').upper()}i"
+    elif quantity is not None:
+        number, size = quantity.group(1), "".join(quantity.groups())
+    else:
+        raise ValueError(f"{mem!r} is not a memory size such as 8G or 8Gi.")
+    if float(number) <= 0:
+        raise ValueError(f"{mem!r}: a pod needs more than 0 memory.")
+    return size
 
 
 def label_value(name: str) -> str:
@@ -209,6 +226,7 @@ class JobSpec:
         Receptors each pod runs at once, and the CPUs it asks for.
     memory : str or None
         Memory each pod asks for, as a Kubernetes quantity.
+        :func:`job_spec` converts a Slurm size (``8G``) to one.
     image : str
         The container image.
     output : str or None
@@ -301,8 +319,16 @@ def job_spec(
             "or give --output s3://..."
         )
     tasks = tasks or execution.n_workers
-    if memory is None and execution.mem is not None:
-        memory = kubernetes_memory(execution.mem)
+    if memory is not None:
+        try:
+            memory = kubernetes_memory(memory)
+        except ValueError as error:
+            raise ValueError(f"memory: {error}") from None
+    elif execution.mem is not None:
+        try:
+            memory = kubernetes_memory(execution.mem)
+        except ValueError as error:
+            raise ValueError(f"execution.mem in config.yaml: {error}") from None
     return JobSpec(
         project=project,
         name=project_name(project),
