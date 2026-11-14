@@ -504,7 +504,23 @@ def cron_job(spec: JobSpec, delay: int, render: str | None = None) -> dict[str, 
     ``pystiltctl status`` lists them, and the last day's are kept. The
     CronJob is named by :func:`cron_job_name`, so scheduling a project again
     replaces it, and only it.
+
+    Raises
+    ------
+    ValueError
+        If *render* is empty, or is a path while the project is on a bucket:
+        each tick's pod would draw onto its own disk and lose the images, as
+        :func:`job_spec` refuses for the output directory.
     """
+    if render is not None and not render.strip():
+        raise ValueError(
+            "--render is empty: give where to draw, such as s3://my-site/footprints."
+        )
+    if render is not None and not is_local(spec.project) and is_local(render):
+        raise ValueError(
+            f"--render {render} is a path, so each tick's pod would draw onto its own "
+            "disk and lose the images. Give a bucket, such as s3://my-site/footprints."
+        )
     body = _job_body(
         spec,
         tick_args(spec, delay, render),

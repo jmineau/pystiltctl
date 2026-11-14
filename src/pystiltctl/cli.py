@@ -240,9 +240,9 @@ def schedule(
             volumes=[job.Volume.parse(v) for v in volume or ()],
             namespace=namespace,
         )
+        manifest = job.cron_job(spec, delay, render)
     except (ValueError, FileNotFoundError) as error:
         _fail(str(error))
-    manifest = job.cron_job(spec, delay, render)
     if dry_run:
         typer.echo(job.to_yaml(manifest), nl=False)
         return
