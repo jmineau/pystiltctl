@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=f3bb6ceb"></script>
+    <script src="../_static/documentation_options.js?v=e9ad26ed"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev44+g1e41d7c08" />
+  <meta name="docsearch:version" content="0.0.1.dev45+gb27187d43" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -572,13 +572,17 @@
 a cell beyond the outer ones.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the grid crosses the antimeridian (180 degrees). PYSTILT wraps such
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the grid has fewer than two latitudes or two longitudes: there is
+    no cell size to take its corners from.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the grid crosses the antimeridian (180 degrees). PYSTILT wraps such
     a grid’s longitudes into -180 to 180 and sorts them
     (<code class="docutils literal notranslate"><span class="pre">footprint/gridding.py</span></code>), so <code class="docutils literal notranslate"><span class="pre">lon.min()</span></code>/<code class="docutils literal notranslate"><span class="pre">lon.max()</span></code> would span
     the wrap point rather than the grid’s real width. Leaflet does accept
     an east edge written past 180 degrees as a workaround, but that bends
     every later reader of <code class="docutils literal notranslate"><span class="pre">bounds</span></code> to a convention that towers in Utah
-    never need, so this raises instead of stretching the box silently.</p>
+    never need, so this raises instead of stretching the box silently.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]]</span></p>
