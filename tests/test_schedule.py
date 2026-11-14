@@ -303,7 +303,9 @@ def test_cron_job_runs_tick_hourly_one_at_a_time(sited, bucket):
     push(sited, bucket)
     spec = job.job_spec(bucket, cpus=2, volumes=[job.Volume.parse("met:/met")])
     cron = job.cron_job(spec, delay=8)
-    assert (cron["kind"], cron["metadata"]["name"]) == ("CronJob", "stilt-my-project")
+    assert cron["kind"] == "CronJob"
+    assert cron["metadata"]["name"] == job.cron_job_name(bucket)
+    assert cron["metadata"]["name"].startswith("stilt-my-project-")
     body = cron["spec"]
     assert (body["schedule"], body["concurrencyPolicy"]) == ("15 * * * *", "Forbid")
     run = body["jobTemplate"]["spec"]
