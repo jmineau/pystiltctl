@@ -64,7 +64,9 @@ The other options are ``submit``'s. ``--delay`` (8) is how many hours
 behind the clock it runs, so the met is there. It checks every row of
 ``sites.csv`` first and exits with 2, naming the line, rather than apply a
 CronJob whose every tick would fail. ``--render`` draws each footprint for a
-web map at ``URL`` (see the usage page).
+web map at ``URL`` (see the usage page). For a project on a bucket ``URL``
+must be a bucket too, as the output must: a path would be each pod's own
+disk, so ``schedule`` exits with 2.
 
 pystiltctl tick
 ---------------

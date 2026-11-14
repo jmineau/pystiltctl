@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=cf9befca"></script>
+    <script src="_static/documentation_options.js?v=89f1386f"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev39+ge261e02c0" />
+  <meta name="docsearch:version" content="0.0.1.dev40+g7d85951ca" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -556,7 +556,9 @@ The other options are <code class="docutils literal notranslate"><span class="pr
 behind the clock it runs, so the met is there. It checks every row of
 <code class="docutils literal notranslate"><span class="pre">sites.csv</span></code> first and exits with 2, naming the line, rather than apply a
 CronJob whose every tick would fail. <code class="docutils literal notranslate"><span class="pre">--render</span></code> draws each footprint for a
-web map at <code class="docutils literal notranslate"><span class="pre">URL</span></code> (see the usage page).</p>
+web map at <code class="docutils literal notranslate"><span class="pre">URL</span></code> (see the usage page). For a project on a bucket <code class="docutils literal notranslate"><span class="pre">URL</span></code>
+must be a bucket too, as the output must: a path would be each pod’s own
+disk, so <code class="docutils literal notranslate"><span class="pre">schedule</span></code> exits with 2.</p>
 </section>
 <section id="pystiltctl-tick">
 <h2>pystiltctl tick<a class="headerlink" href="#pystiltctl-tick" title="Link to this heading">#</a></h2>
