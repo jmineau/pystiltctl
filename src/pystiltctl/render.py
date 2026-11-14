@@ -69,6 +69,9 @@ def bounds(foot: xr.DataArray) -> list[list[float]]:
     Raises
     ------
     ValueError
+        If the grid has fewer than two latitudes or two longitudes: there is
+        no cell size to take its corners from.
+    ValueError
         If the grid crosses the antimeridian (180 degrees). PYSTILT wraps such
         a grid's longitudes into -180 to 180 and sorts them
         (``footprint/gridding.py``), so ``lon.min()``/``lon.max()`` would span
@@ -78,12 +81,21 @@ def bounds(foot: xr.DataArray) -> list[list[float]]:
         never need, so this raises instead of stretching the box silently.
     """
     lat, lon = foot["lat"].values, foot["lon"].values
-    dlat = abs(float(lat[1] - lat[0])) if lat.size > 1 else 0.0
+    if lat.size < 2 or lon.size < 2:
+        raise ValueError(
+            f"the footprint's grid is {lat.size} by {lon.size} cells; it needs "
+            "at least two latitudes and two longitudes to know its cell size."
+        )
+    dlat = abs(float(lat[1] - lat[0]))
     # The minimum, not the first, gap: on a grid wrapped across the
     # antimeridian the sorted longitudes are evenly spaced except for one
     # large gap at the wrap point, so the first gap can be that one.
-    dlon = float(np.min(np.abs(np.diff(lon)))) if lon.size > 1 else 0.0
-    if lon.size > 2 and float(np.max(np.abs(np.diff(lon)))) > 1.5 * dlon:
+    gaps = np.abs(np.diff(lon))
+    dlon = float(gaps.min())
+    # Two columns have one gap and nothing to compare it with; a cell wider
+    # than half the globe is the wrap point, not a cell.
+    wrapped = float(gaps.max()) > (1.5 * dlon if lon.size > 2 else 180.0)
+    if wrapped:
         raise ValueError(
             "the footprint's grid crosses the antimeridian (180 degrees); its "
             "longitudes wrap from near 180 to near -180, so lon.min()/lon.max() "
@@ -126,7 +138,8 @@ def image(foot: xr.DataArray) -> np.ndarray:
         If the footprint's grid crosses the antimeridian (see :func:`bounds`).
     """
     total = foot.sum("time") if "time" in foot.dims else foot
-    total = total.transpose("lat", "lon").sortby("lat", ascending=False)
+    # North at the top, west at the left, as bounds() reads the corners.
+    total = total.transpose("lat", "lon").sortby("lat", ascending=False).sortby("lon")
     values = np.asarray(total.values, dtype=float)
     (south, _), (north, _) = bounds(total)
     lats = total["lat"].values
@@ -142,7 +155,8 @@ def image(foot: xr.DataArray) -> np.ndarray:
 
     with np.errstate(divide="ignore", invalid="ignore"):
         scaled = (np.log10(values) - np.log10(VMIN)) / (np.log10(VMAX) - np.log10(VMIN))
-    shown = np.isfinite(scaled) & (scaled >= 0)
+    # +inf is above the scale, so it is drawn in the top color; NaN and 0 are not drawn.
+    shown = scaled >= 0
     rgba = matplotlib.colormaps[COLORMAP](np.clip(np.nan_to_num(scaled), 0, 1))
     rgba[..., 3] = np.where(shown, 0.4 + 0.5 * np.clip(scaled, 0, 1), 0.0)
     return (rgba * 255).round().astype(np.uint8)
