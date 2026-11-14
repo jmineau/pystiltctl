@@ -1,0 +1,6 @@
+﻿pystiltctl.inputs.check\_url
+============================
+
+.. currentmodule:: pystiltctl.inputs
+
+.. autofunction:: check_url

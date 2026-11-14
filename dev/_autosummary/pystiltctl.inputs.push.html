@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=13a464ee"></script>
+    <script src="../_static/documentation_options.js?v=1feeea0f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev34+ga3a81a388" />
+  <meta name="docsearch:version" content="0.0.1.dev35+gb844cc680" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -446,6 +446,7 @@
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">pystiltctl.inputs.push</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.inputs.pull.html">pystiltctl.inputs.pull</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.inputs.is_local.html">pystiltctl.inputs.is_local</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pystiltctl.inputs.check_url.html">pystiltctl.inputs.check_url</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.inputs.local_path.html">pystiltctl.inputs.local_path</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.inputs.project_name.html">pystiltctl.inputs.project_name</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pystiltctl.inputs.put.html">pystiltctl.inputs.put</a></li>
@@ -584,7 +585,11 @@ a folder.</p></li>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If <em>project</em> has no <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> or <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If <em>project</em> has no <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> or <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <em>url</em> is a URL missing a slash (<code class="docutils literal notranslate"><span class="pre">s3:/bucket</span></code>; see
+    <a class="reference internal" href="pystiltctl.inputs.check_url.html#pystiltctl.inputs.check_url" title="pystiltctl.inputs.check_url"><code class="xref py py-func docutils literal notranslate"><span class="pre">check_url()</span></code></a>), or names a protocol fsspec does not know.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
