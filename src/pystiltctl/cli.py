@@ -88,7 +88,9 @@ Cpus = Annotated[
 ]
 Memory = Annotated[
     str | None,
-    typer.Option(help="Memory per pod, such as 8Gi. Default: execution.mem."),
+    typer.Option(
+        help="Memory per pod: 8G (Slurm's form, which is 8Gi) or 8Gi. Default: execution.mem."
+    ),
 ]
 Image = Annotated[
     str | None, typer.Option(help="Container image. Default: this version's.")
