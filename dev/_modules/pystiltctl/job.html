@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=e8ebad76"></script>
+    <script src="../../_static/documentation_options.js?v=cf9befca"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev38+g7dd276160" />
+  <meta name="docsearch:version" content="0.0.1.dev39+ge261e02c0" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -584,9 +584,17 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return a Slurm memory size, such as ``8G``, as a Kubernetes quantity.</span>
 
-<span class="sd">    Slurm's ``K``, ``M``, ``G`` and ``T`` count in 1024s, and a bare number</span>
-<span class="sd">    is megabytes; Kubernetes writes those as ``Ki``, ``Mi``, ``Gi`` and</span>
-<span class="sd">    ``Ti``. A size already in Kubernetes' form is returned as it is.</span>
+<span class="sd">    Slurm's ``K``, ``M``, ``G`` and ``T`` count in 1024s, in either case, and</span>
+<span class="sd">    a bare number is megabytes; Kubernetes writes those as ``Ki``, ``Mi``,</span>
+<span class="sd">    ``Gi`` and ``Ti``. A size already in Kubernetes' binary form (``512Mi``)</span>
+<span class="sd">    is returned as it is.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If *mem* is neither, or is not more than zero. Kubernetes would read</span>
+<span class="sd">        some such text as another size (``8m`` is 0.008 bytes there), so it</span>
+<span class="sd">        is refused here rather than passed on.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -597,11 +605,20 @@
 <span class="sd">    &gt;&gt;&gt; kubernetes_memory("512Mi")</span>
 <span class="sd">    '512Mi'</span>
 <span class="sd">    """</span>
-    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\s*(\d+)\s*([KMGT]?)B?\s*"</span><span class="p">,</span> <span class="n">mem</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">match</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">mem</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-    <span class="n">number</span><span class="p">,</span> <span class="n">unit</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">number</span><span class="si">}{</span><span class="p">(</span><span class="n">unit</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'M'</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">i"</span></div>
+    <span class="n">slurm</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span>
+        <span class="sa">r</span><span class="s2">"\s*(\d+(?:\.\d+)?)\s*([KMGT]?)B?\s*"</span><span class="p">,</span> <span class="n">mem</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span>
+    <span class="p">)</span>
+    <span class="n">quantity</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\s*(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti|Pi|Ei)\s*"</span><span class="p">,</span> <span class="n">mem</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">slurm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">number</span><span class="p">,</span> <span class="n">unit</span> <span class="o">=</span> <span class="n">slurm</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">number</span><span class="si">}{</span><span class="p">(</span><span class="n">unit</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'M'</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">i"</span>
+    <span class="k">elif</span> <span class="n">quantity</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">number</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="n">quantity</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">quantity</span><span class="o">.</span><span class="n">groups</span><span class="p">())</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">mem</span><span class="si">!r}</span><span class="s2"> is not a memory size such as 8G or 8Gi."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">number</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">mem</span><span class="si">!r}</span><span class="s2">: a pod needs more than 0 memory."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">size</span></div>
 
 
 
@@ -707,6 +724,7 @@
 <span class="sd">        Receptors each pod runs at once, and the CPUs it asks for.</span>
 <span class="sd">    memory : str or None</span>
 <span class="sd">        Memory each pod asks for, as a Kubernetes quantity.</span>
+<span class="sd">        :func:`job_spec` converts a Slurm size (``8G``) to one.</span>
 <span class="sd">    image : str</span>
 <span class="sd">        The container image.</span>
 <span class="sd">    output : str or None</span>
@@ -802,8 +820,16 @@
             <span class="s2">"or give --output s3://..."</span>
         <span class="p">)</span>
     <span class="n">tasks</span> <span class="o">=</span> <span class="n">tasks</span> <span class="ow">or</span> <span class="n">execution</span><span class="o">.</span><span class="n">n_workers</span>
-    <span class="k">if</span> <span class="n">memory</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">execution</span><span class="o">.</span><span class="n">mem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">memory</span> <span class="o">=</span> <span class="n">kubernetes_memory</span><span class="p">(</span><span class="n">execution</span><span class="o">.</span><span class="n">mem</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">memory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">memory</span> <span class="o">=</span> <span class="n">kubernetes_memory</span><span class="p">(</span><span class="n">memory</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"memory: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+    <span class="k">elif</span> <span class="n">execution</span><span class="o">.</span><span class="n">mem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">memory</span> <span class="o">=</span> <span class="n">kubernetes_memory</span><span class="p">(</span><span class="n">execution</span><span class="o">.</span><span class="n">mem</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"execution.mem in config.yaml: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
     <span class="k">return</span> <span class="n">JobSpec</span><span class="p">(</span>
         <span class="n">project</span><span class="o">=</span><span class="n">project</span><span class="p">,</span>
         <span class="n">name</span><span class="o">=</span><span class="n">project_name</span><span class="p">(</span><span class="n">project</span><span class="p">),</span>
