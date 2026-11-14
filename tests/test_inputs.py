@@ -273,3 +273,42 @@ def test_hash_inputs_ignores_tables(project):
 def test_hash_inputs_refuses_a_folder_that_is_not_a_project(tmp_path):
     with pytest.raises(FileNotFoundError, match="no config.yaml"):
         hash_inputs(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("typed", "meant"),
+    [
+        ("s3:/bucket/projects/p", "s3://bucket/projects/p"),
+        ("gs:bucket/p", "gs://bucket/p"),
+        ("memory:/b/p", "memory://b/p"),
+    ],
+)
+def test_push_refuses_a_url_missing_a_slash(
+    project, tmp_path, monkeypatch, typed, meant
+):
+    here = tmp_path / "here"
+    here.mkdir()
+    monkeypatch.chdir(here)
+    with pytest.raises(ValueError, match=f"did you mean '{meant}'"):
+        push(project, typed)
+    assert list(here.iterdir()) == []  # no folder "s3:" made here
+
+
+@pytest.mark.parametrize(
+    "location",
+    ["s3://bucket/p", "/data/p", "relative/p", "file:/data/p", "file:///data/p"],
+)
+def test_check_url_passes_urls_and_paths(location):
+    inputs.check_url(location)
+
+
+def test_cli_push_to_a_url_missing_a_slash_exits_2(project, tmp_path, monkeypatch):
+    from typer.testing import CliRunner
+
+    from pystiltctl.cli import app
+
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(app, ["push", str(project), "s3:/bucket/p"])
+    assert result.exit_code == 2
+    assert "did you mean 's3://bucket/p'" in result.output
+    assert "Copied" not in result.output

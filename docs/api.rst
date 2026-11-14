@@ -16,6 +16,7 @@ Project inputs
    inputs.push
    inputs.pull
    inputs.is_local
+   inputs.check_url
    inputs.local_path
    inputs.project_name
    inputs.put

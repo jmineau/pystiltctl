@@ -68,7 +68,7 @@ def push(
     """
     try:
         copied = inputs.push(project, url)
-    except FileNotFoundError as error:
+    except (FileNotFoundError, ValueError) as error:
         _fail(str(error))
     typer.echo(f"Copied {len(copied)} files to {url}")
 
