@@ -558,3 +558,39 @@ def test_tick_converts_a_now_with_a_time_zone_to_utc(sited, bucket, tmp_path, ex
     schedule.tick(bucket, now=denver, workdir=tmp_path / "second")
     hours = sorted({row.split(",")[0] for row in receptor_rows(bucket)})
     assert (hours[0], hours[-1]) == ("2026-10-28 11:00:00", "2026-10-29 10:00:00")
+
+
+@pytest.fixture
+def sited_on_bucket(sited, bucket):
+    """The sited project pushed to a bucket, with its output on a bucket."""
+    (sited / "config.yaml").write_text(
+        (sited / "config.yaml").read_text() + "output: s3://b/output\n"
+    )
+    push(sited, bucket)
+    return bucket
+
+
+@pytest.mark.parametrize("render", ["footprints", "/data/footprints", "s3:/site/f"])
+def test_cli_schedule_refuses_a_render_path_for_a_bucket_project(
+    sited_on_bucket, render
+):
+    args = ["schedule", sited_on_bucket, "--render", render, "--dry-run"]
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 2
+    assert "is a path" in result.output
+
+
+def test_cli_schedule_refuses_an_empty_render(sited):
+    result = CliRunner().invoke(
+        app, ["schedule", str(sited), "--render", "", "--dry-run"]
+    )
+    assert result.exit_code == 2
+    assert "--render is empty" in result.output
+
+
+def test_cron_job_takes_a_render_path_for_a_project_on_a_volume(sited):
+    spec = job.job_spec(str(sited))
+    args = job.cron_job(spec, delay=8, render="/data/footprints")["spec"][
+        "jobTemplate"
+    ]["spec"]["template"]["spec"]["containers"][0]["args"]
+    assert args[-2:] == ["--render", "/data/footprints"]
