@@ -18,6 +18,7 @@ import contextlib
 import hashlib
 import logging
 import os
+import re
 import socket
 import time
 import uuid
@@ -54,6 +55,37 @@ def is_local(location: str | Path) -> bool:
     False
     """
     return fsspec.utils.get_protocol(str(location)) in ("file", "local")
+
+
+def check_url(location: str | Path) -> None:
+    """
+    Refuse a URL typed without its two slashes, such as ``s3:/bucket``.
+
+    fsspec reads ``s3:/bucket/projects/my_project`` as a path on this
+    machine, so copying there would make a folder ``s3:`` here and look
+    like it worked. A path and a whole URL pass.
+
+    Raises
+    ------
+    ValueError
+        If *location* starts like a URL (``s3:``, ``gs:``) with fewer than two
+        slashes after the colon.
+
+    Examples
+    --------
+    >>> check_url("s3://bucket/projects/my_project")
+    >>> check_url("s3:/bucket/projects/my_project")
+    Traceback (most recent call last):
+    ...
+    ValueError: 's3:/bucket/projects/my_project' is not a URL; did you mean 's3://bucket/projects/my_project'?
+    """
+    match = re.fullmatch(r"([A-Za-z][A-Za-z0-9+.-]+):(?!//)/?(.*)", str(location), re.S)
+    if match is None or match.group(1).lower() == "file":
+        return
+    scheme, rest = match.groups()
+    raise ValueError(
+        f"{str(location)!r} is not a URL; did you mean {f'{scheme}://{rest}'!r}?"
+    )
 
 
 def local_path(location: str | Path) -> Path:
@@ -179,7 +211,11 @@ def push(project: str | Path, url: str) -> list[str]:
     ------
     FileNotFoundError
         If *project* has no ``config.yaml`` or ``receptors.csv``.
+    ValueError
+        If *url* is a URL missing a slash (``s3:/bucket``; see
+        :func:`check_url`), or names a protocol fsspec does not know.
     """
+    check_url(url)
     project = Path(project)
     for name in INPUT_FILES:
         if not (project / name).is_file():
