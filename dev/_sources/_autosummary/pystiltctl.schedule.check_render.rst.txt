@@ -1,0 +1,6 @@
+﻿pystiltctl.schedule.check\_render
+=================================
+
+.. currentmodule:: pystiltctl.schedule
+
+.. autofunction:: check_render

@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=116491ee"></script>
+    <script src="_static/documentation_options.js?v=f3bb6ceb"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev42+g51f59fd8a" />
+  <meta name="docsearch:version" content="0.0.1.dev44+g1e41d7c08" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -594,7 +594,8 @@ slash, the case of <code class="docutils literal notranslate"><span class="pre">
 do not matter): another
 project whose folder has the same name is not mixed in. <code class="docutils literal notranslate"><span class="pre">--json</span></code> adds
 <code class="docutils literal notranslate"><span class="pre">jobs_not_counted</span></code>, the names of Jobs left out for the reason given
-in <a class="reference internal" href="usage.html"><span class="doc">Usage</span></a>. For a project on a bucket, the output directory must be
+in <a class="reference internal" href="usage.html"><span class="doc">Usage</span></a>, and <code class="docutils literal notranslate"><span class="pre">jobs_error</span></code>: <code class="docutils literal notranslate"><span class="pre">null</span></code>, or why the Jobs could not
+be listed (no <code class="docutils literal notranslate"><span class="pre">kubectl</span></code>, no cluster), in which case <code class="docutils literal notranslate"><span class="pre">jobs</span></code> is an empty list. For a project on a bucket, the output directory must be
 a bucket too, as for <code class="docutils literal notranslate"><span class="pre">submit</span></code>: a path in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> would be a
 folder on this machine, not where the pods wrote. <code class="docutils literal notranslate"><span class="pre">status</span></code> then exits
 with 2 and asks for <code class="docutils literal notranslate"><span class="pre">--output</span></code>, which names the bucket the project was
