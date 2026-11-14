@@ -408,6 +408,15 @@ def test_cli_status_without_a_cluster(project, monkeypatch):
     assert "Jobs: not listed. kubectl is not installed" in result.output
 
 
+def test_cli_status_json_without_a_cluster(project, monkeypatch):
+    monkeypatch.setattr(status.shutil, "which", lambda name: None)
+    result = CliRunner().invoke(app, ["status", str(project), "--json"])
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert data["jobs"] == []
+    assert "kubectl is not installed" in data["jobs_error"]
+
+
 def test_cli_status_json(project, bucket, kubectl):
     push(project, bucket)
     result = CliRunner().invoke(
@@ -417,6 +426,7 @@ def test_cli_status_json(project, bucket, kubectl):
     data = json.loads(result.output)
     assert data["simulations"]["total"] == 0
     assert [j["state"] for j in data["jobs"]] == ["failed", "complete"]
+    assert data["jobs_error"] is None
     assert data["jobs_not_counted"] == []
 
 
