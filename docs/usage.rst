@@ -187,7 +187,10 @@ Once a schedule runs, the ``receptors.csv`` on the bucket is the
 schedule's: ``pystiltctl push`` would replace it with your copy, and the
 hours already added would be added again by the next tick, but their
 results are not lost, since they are on the output bucket. To fill in a
-past day by hand, run ``pystiltctl tick PROJECT --now 2026-10-01T00:00``.
+past day by hand, run ``pystiltctl tick PROJECT --now 2026-10-02T07:00``,
+which adds each hour of October 1 (UTC): a tick covers the 24 hours that end
+``--delay`` hours (8 by default) before ``--now``, so ``--now`` is 7 hours past
+the end of the day's last hour, 23:00, when the delay is 8.
 It can run while the hourly tick does: each holds a lock on
 ``receptors.csv`` (a file ``.receptors.csv.lock`` next to it) while it adds
 its hours, so the second waits for the first, a few seconds. A lock left by
