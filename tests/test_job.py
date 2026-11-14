@@ -345,3 +345,28 @@ def test_job_spec_names_config_for_a_bad_execution_mem(project, bucket):
     push(project, bucket)
     with pytest.raises(ValueError, match="execution.mem in config.yaml: 'lots'"):
         job.job_spec(bucket)
+
+
+@pytest.mark.parametrize(
+    ("image", "policy"),
+    [
+        ("ghcr.io/jmineau/pystiltctl:main", "Always"),
+        ("registry.local:5000/pystiltctl:main", "Always"),
+        ("ghcr.io/jmineau/pystiltctl:0.2.0", None),
+        ("pystiltctl:ci", None),
+        ("registry.local:5000/pystiltctl", None),
+        ("ghcr.io/jmineau/pystiltctl@sha256:" + "0" * 64, None),
+    ],
+)
+def test_pull_policy(image, policy):
+    assert job.pull_policy(image) == policy
+
+
+@pytest.mark.parametrize(
+    ("image", "policy"), [("me/stilt:main", "Always"), ("me/stilt:1", None)]
+)
+def test_manifest_pulls_main_always(pushed, image, policy):
+    container = job.manifest(job.job_spec(pushed, image=image))["spec"]["template"][
+        "spec"
+    ]["containers"][0]
+    assert container.get("imagePullPolicy") == policy
