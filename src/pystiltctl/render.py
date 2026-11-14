@@ -37,6 +37,8 @@ import numpy as np
 import stilt
 import xarray as xr
 
+from pystiltctl.inputs import filesystem
+
 logger = logging.getLogger(__name__)
 
 #: The bottom of the color scale, in the footprint's units; smaller is transparent.
@@ -45,6 +47,8 @@ VMIN = 1e-5
 VMAX = 1e-1
 #: The matplotlib colormap.
 COLORMAP = "viridis"
+#: The latitude web Mercator ends at: where its square map is cut.
+MAX_LATITUDE = 85.0511
 
 
 def mercator_y(lat: Any) -> Any:
@@ -101,10 +105,17 @@ def bounds(foot: xr.DataArray) -> list[list[float]]:
             "longitudes wrap from near 180 to near -180, so lon.min()/lon.max() "
             "cannot give its real west and east edges."
         )
-    return [
+    corners = [
         [float(lat.min()) - dlat / 2, float(lon.min()) - dlon / 2],
         [float(lat.max()) + dlat / 2, float(lon.max()) + dlon / 2],
     ]
+    south, north = corners[0][0], corners[1][0]
+    if south < -MAX_LATITUDE or north > MAX_LATITUDE:
+        raise ValueError(
+            f"the footprint's grid reaches {south:g} to {north:g} degrees of "
+            f"latitude; a web map ends at {MAX_LATITUDE:g}, so it cannot be drawn."
+        )
+    return corners
 
 
 def _bands(lats: np.ndarray, south: float, north: float, rows: int) -> np.ndarray:
@@ -305,15 +316,16 @@ def render(
     Raises
     ------
     ValueError
-        If the project has several variants and *variant* is not given, or a
-        footprint's grid crosses the antimeridian (see :func:`bounds`).
+        If the project has several variants and *variant* is not given, a
+        footprint's grid cannot be drawn (see :func:`bounds`), or a day's
+        ``index.json`` at *url* is not an index.
     OSError
         If a day's index at *url* cannot be checked: a refused connection, a
         timeout, a 403 or expired credentials, say.
     """
     project = stilt.Project(directory, output=output)
     variant = choose_variant(project, variant)
-    fs, root = fsspec.core.url_to_fs(url)
+    fs, root = filesystem(url)
     root = root.rstrip("/")
     indexes: dict[str, dict[str, dict[str, Any]]] = {}
     drawn: list[str] = []
@@ -328,8 +340,14 @@ def render(
                 if isinstance(error, OSError):
                     raise
                 raise OSError(f"cannot check {path} for an index: {error}") from error
-            known = json.loads(contents) if contents is not None else []
-            indexes[day] = {i["receptor"]: i for i in known}
+            try:
+                known = json.loads(contents) if contents is not None else []
+                indexes[day] = {i["receptor"]: i for i in known}
+            except (ValueError, TypeError, KeyError) as error:
+                raise ValueError(
+                    f"{path} is not a footprint index ({error!r}); delete it to "
+                    "draw the day again."
+                ) from error
         if receptor_id in indexes[day]:
             continue
         try:

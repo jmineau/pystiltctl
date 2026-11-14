@@ -38,9 +38,10 @@ from pathlib import Path
 from typing import Any
 
 import stilt
+import yaml
 
 from pystiltctl import render as renderer
-from pystiltctl.inputs import SITES, get, is_local, lock, put
+from pystiltctl.inputs import SITES, config_error, get, is_local, lock, put
 from pystiltctl.worker import WORKDIR, become, project_directory, run, stilt_command
 
 logger = logging.getLogger(__name__)
@@ -306,6 +307,10 @@ def tick(
                     f"cannot copy the project's inputs from {project}: {error}"
                 ) from error
         stilt_project = stilt.Project(directory, output=output)
+        try:
+            stilt_project.config  # noqa: B018 - the config is read here, so a bad one fails here
+        except yaml.YAMLError as error:
+            raise config_error(error) from None
         # Before anything runs: a project that cannot be drawn fails now, not after the day's run.
         variant = None if render is None else renderer.choose_variant(stilt_project)
         # Read after the fresh copy: the last row there is where a gap starts.

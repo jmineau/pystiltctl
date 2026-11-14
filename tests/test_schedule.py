@@ -604,3 +604,18 @@ def test_cron_job_takes_a_render_path_for_a_project_on_a_volume(sited):
         "jobTemplate"
     ]["spec"]["template"]["spec"]["containers"][0]["args"]
     assert args[-2:] == ["--render", "/data/footprints"]
+
+
+def test_tick_says_which_line_of_config_is_not_yaml(sited, tmp_path):
+    (sited / "config.yaml").write_text("mets: [unclosed\n")
+    args = ["tick", str(sited), "--now", "2021-01-15T12:15"]
+    result = CliRunner().invoke(app, [*args, "--workdir", str(tmp_path)])
+    assert result.exit_code == 2, result.output
+    assert "Error: config.yaml line " in result.output
+
+
+def test_cli_schedule_says_which_line_of_config_is_not_yaml(sited):
+    (sited / "config.yaml").write_text("mets: [unclosed\n")
+    result = CliRunner().invoke(app, ["schedule", str(sited), "--dry-run"])
+    assert result.exit_code == 2, result.output
+    assert result.output.startswith("Error: config.yaml line ")

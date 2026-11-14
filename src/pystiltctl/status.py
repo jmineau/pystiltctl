@@ -180,6 +180,10 @@ def simulations(project: str, *, output: str | None = None) -> dict[str, Any]:
             if is_local(project)
             else pull(project, Path(tmp) / "project")
         )
+        if not (directory / "config.yaml").is_file():
+            raise FileNotFoundError(
+                f"No PYSTILT project at {project}: it has no config.yaml."
+            )
         args = [sys.executable, "-m", "stilt", "status", str(directory), "--json"]
         if output is not None:
             args += ["--output", output]

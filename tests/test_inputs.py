@@ -312,3 +312,39 @@ def test_cli_push_to_a_url_missing_a_slash_exits_2(project, tmp_path, monkeypatc
     assert result.exit_code == 2
     assert "did you mean 's3://bucket/p'" in result.output
     assert "Copied" not in result.output
+
+
+def test_push_refuses_the_projects_own_folder_and_a_file(project, tmp_path):
+    with pytest.raises(ValueError, match="own folder"):
+        push(project, str(project))
+    with pytest.raises(ValueError, match="own folder"):
+        push(project, f"file://{project}/../my_project/")
+    afile = tmp_path / "afile"
+    afile.write_text("not a folder")
+    with pytest.raises(ValueError, match="is a file"):
+        push(project, str(afile))
+
+
+def test_cli_push_errors_exit_2_with_one_line(project, tmp_path):
+    from typer.testing import CliRunner
+
+    from pystiltctl.cli import app
+
+    afile = tmp_path / "afile"
+    afile.write_text("not a folder")
+    for where in (str(project), str(afile), "s4://bucket/x"):
+        result = CliRunner().invoke(app, ["push", str(project), where])
+        assert result.exit_code == 2, result.output
+        assert result.output.startswith("Error: ")
+        assert len(result.output.splitlines()) == 1
+
+
+def test_a_filesystem_whose_package_is_missing_is_a_value_error(monkeypatch):
+    def missing(url):
+        raise ImportError("Install s3fs to access S3")
+
+    monkeypatch.setattr(inputs.fsspec.core, "url_to_fs", missing)
+    with pytest.raises(ValueError, match="cannot use s3://b/p: Install s3fs"):
+        inputs.filesystem("s3://b/p")
+    with pytest.raises(ValueError, match="Install s3fs"):
+        pull("s3://b/p", "/unused")

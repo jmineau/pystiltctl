@@ -387,3 +387,12 @@ def test_manifest_pulls_main_always(pushed, image, policy):
         "spec"
     ]["containers"][0]
     assert container.get("imagePullPolicy") == policy
+
+
+@pytest.mark.parametrize("text", ["mets: [unclosed\n", "mets:\n\t- tab\n"])
+def test_submit_says_which_line_of_config_is_not_yaml(project, text):
+    (project / "config.yaml").write_text(text)
+    result = CliRunner().invoke(app, ["submit", str(project), "--dry-run"])
+    assert result.exit_code == 2, result.output
+    assert result.output.startswith("Error: config.yaml line ")
+    assert len(result.output.splitlines()) == 1

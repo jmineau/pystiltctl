@@ -25,9 +25,11 @@ import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import fsspec
 import fsspec.implementations.local
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +88,41 @@ def check_url(location: str | Path) -> None:
     raise ValueError(
         f"{str(location)!r} is not a URL; did you mean {f'{scheme}://{rest}'!r}?"
     )
+
+
+def filesystem(url: str) -> tuple[Any, str]:
+    """
+    Return the filesystem for *url* and the path on it, as fsspec does.
+
+    Raises
+    ------
+    ValueError
+        If fsspec does not know the protocol, or its package is not
+        installed (``s3fs`` for ``s3://``). Either is wrong everywhere the
+        project is used, so a retry will not help.
+    """
+    try:
+        return fsspec.core.url_to_fs(url)
+    except ImportError as error:
+        raise ValueError(f"cannot use {url}: {error}") from error
+
+
+def config_error(error: yaml.YAMLError) -> ValueError:
+    r"""
+    Return a one-line :class:`ValueError` for a ``config.yaml`` that is not YAML.
+
+    Examples
+    --------
+    >>> try:
+    ...     yaml.safe_load("mets: [unclosed\n")
+    ... except yaml.YAMLError as error:
+    ...     print(config_error(error))
+    config.yaml line 2: expected ',' or ']', but got '<stream end>'
+    """
+    mark = getattr(error, "problem_mark", None)
+    problem = getattr(error, "problem", None) or str(error)
+    where = "config.yaml" if mark is None else f"config.yaml line {mark.line + 1}"
+    return ValueError(f"{where}: {problem}")
 
 
 def local_path(location: str | Path) -> Path:
@@ -213,7 +250,8 @@ def push(project: str | Path, url: str) -> list[str]:
         If *project* has no ``config.yaml`` or ``receptors.csv``.
     ValueError
         If *url* is a URL missing a slash (``s3:/bucket``; see
-        :func:`check_url`), or names a protocol fsspec does not know.
+        :func:`check_url`), names a protocol fsspec does not know, is the
+        project's own folder, or is a file.
     """
     check_url(url)
     project = Path(project)
@@ -222,8 +260,14 @@ def push(project: str | Path, url: str) -> list[str]:
             raise FileNotFoundError(
                 f"{project} is not a PYSTILT project: it has no {name}."
             )
-    fs, root = fsspec.core.url_to_fs(url)
+    fs, root = filesystem(url)
     root = root.rstrip("/")
+    if is_local(url):
+        destination = Path(root).resolve()
+        if destination == project.resolve():
+            raise ValueError(f"{url} is the project's own folder; give another.")
+        if destination.is_file():
+            raise ValueError(f"{url} is a file; give a folder to copy the project to.")
     fs.makedirs(root, exist_ok=True)
     copied = []
     for name in (*INPUT_FILES, SITES):
@@ -287,7 +331,7 @@ def pull(url: str, directory: str | Path) -> Path:
         that is genuinely not there.
     """
     directory = Path(directory)
-    fs, root = fsspec.core.url_to_fs(url)
+    fs, root = filesystem(url)
     root = root.rstrip("/")
     try:
         for name in INPUT_FILES:
@@ -353,7 +397,7 @@ def put(directory: str | Path, url: str, name: str) -> None:
     name : str
         The file, relative to the project folder.
     """
-    fs, root = fsspec.core.url_to_fs(url)
+    fs, root = filesystem(url)
     _atomic_put_file(fs, str(Path(directory) / name), f"{root.rstrip('/')}/{name}")
 
 
@@ -370,7 +414,7 @@ def get(url: str, directory: str | Path, name: str) -> None:
     name : str
         The file, relative to the project folder.
     """
-    fs, root = fsspec.core.url_to_fs(url)
+    fs, root = filesystem(url)
     fs.get_file(f"{root.rstrip('/')}/{name}", str(Path(directory) / name))
 
 
@@ -423,7 +467,7 @@ def lock(url: str, name: str) -> Iterator[None]:
     >>> fs.exists("/lock-example/project/.receptors.csv.lock")
     False
     """
-    fs, root = fsspec.core.url_to_fs(url)
+    fs, root = filesystem(url)
     path = f"{root.rstrip('/')}/.{name}.lock"
     stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     token = f"{socket.gethostname()} pid {os.getpid()} since {stamp} {uuid.uuid4().hex}"
