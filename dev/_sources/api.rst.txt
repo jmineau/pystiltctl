@@ -53,6 +53,7 @@ Kubernetes Job
    job.to_yaml
    job.default_image
    job.kubernetes_memory
+   job.pull_policy
    job.label_value
 
 Status

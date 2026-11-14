@@ -1,0 +1,6 @@
+﻿pystiltctl.job.pull\_policy
+===========================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: pull_policy

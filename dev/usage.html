@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=89f1386f"></script>
+    <script src="_static/documentation_options.js?v=e278c4d3"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev40+g7d85951ca" />
+  <meta name="docsearch:version" content="0.0.1.dev41+g93766fa46" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -513,6 +513,8 @@ pystiltctl, and what <code class="docutils literal notranslate"><span class="pre
 docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/jmineau/pystiltctl:main<span class="w">     </span><span class="c1"># the latest code on main</span>
 </pre></div>
 </div>
+<p>A pod that runs <code class="docutils literal notranslate"><span class="pre">:main</span></code> asks the registry for its current build each time
+it starts (<code class="docutils literal notranslate"><span class="pre">imagePullPolicy:</span> <span class="pre">Always</span></code>), so a node never keeps an old one.</p>
 <p>To build it yourself, from a clone of the repository:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>build<span class="w"> </span>--build-arg<span class="w"> </span><span class="nv">VERSION</span><span class="o">=</span><span class="m">0</span>.1.0<span class="w"> </span>-t<span class="w"> </span>pystiltctl<span class="w"> </span>.
 </pre></div>
