@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=e9ad26ed"></script>
+    <script src="../../_static/documentation_options.js?v=083e851a"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev45+gb27187d43" />
+  <meta name="docsearch:version" content="0.0.1.dev46+g9253c1ff2" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -519,9 +519,10 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl</span><span class="w"> </span><span class="kn">import</span> <span class="n">render</span> <span class="k">as</span> <span class="n">renderer</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.inputs</span><span class="w"> </span><span class="kn">import</span> <span class="n">SITES</span><span class="p">,</span> <span class="n">get</span><span class="p">,</span> <span class="n">is_local</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">put</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.inputs</span><span class="w"> </span><span class="kn">import</span> <span class="n">SITES</span><span class="p">,</span> <span class="n">config_error</span><span class="p">,</span> <span class="n">get</span><span class="p">,</span> <span class="n">is_local</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">put</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">WORKDIR</span><span class="p">,</span> <span class="n">become</span><span class="p">,</span> <span class="n">project_directory</span><span class="p">,</span> <span class="n">run</span><span class="p">,</span> <span class="n">stilt_command</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -801,6 +802,10 @@
                     <span class="sa">f</span><span class="s2">"cannot copy the project's inputs from </span><span class="si">{</span><span class="n">project</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span>
                 <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
         <span class="n">stilt_project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">stilt_project</span><span class="o">.</span><span class="n">config</span>  <span class="c1"># noqa: B018 - the config is read here, so a bad one fails here</span>
+        <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">config_error</span><span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
         <span class="c1"># Before anything runs: a project that cannot be drawn fails now, not after the day's run.</span>
         <span class="n">variant</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">render</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">renderer</span><span class="o">.</span><span class="n">choose_variant</span><span class="p">(</span><span class="n">stilt_project</span><span class="p">)</span>
         <span class="c1"># Read after the fresh copy: the last row there is where a gap starts.</span>

@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=e9ad26ed"></script>
+    <script src="../_static/documentation_options.js?v=083e851a"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev45+gb27187d43" />
+  <meta name="docsearch:version" content="0.0.1.dev46+g9253c1ff2" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -590,7 +590,8 @@ a folder.</p></li>
 <dd class="field-even"><ul class="simple">
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If <em>project</em> has no <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> or <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p></li>
 <li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <em>url</em> is a URL missing a slash (<code class="docutils literal notranslate"><span class="pre">s3:/bucket</span></code>; see
-    <a class="reference internal" href="pystiltctl.inputs.check_url.html#pystiltctl.inputs.check_url" title="pystiltctl.inputs.check_url"><code class="xref py py-func docutils literal notranslate"><span class="pre">check_url()</span></code></a>), or names a protocol fsspec does not know.</p></li>
+    <a class="reference internal" href="pystiltctl.inputs.check_url.html#pystiltctl.inputs.check_url" title="pystiltctl.inputs.check_url"><code class="xref py py-func docutils literal notranslate"><span class="pre">check_url()</span></code></a>), names a protocol fsspec does not know, is the
+    project’s own folder, or is a file.</p></li>
 </ul>
 </dd>
 </dl>

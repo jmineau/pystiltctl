@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=e9ad26ed"></script>
+    <script src="../../_static/documentation_options.js?v=083e851a"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev45+gb27187d43" />
+  <meta name="docsearch:version" content="0.0.1.dev46+g9253c1ff2" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -518,6 +518,8 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">pystiltctl.inputs</span><span class="w"> </span><span class="kn">import</span> <span class="n">filesystem</span>
+
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 <span class="c1">#: The bottom of the color scale, in the footprint's units; smaller is transparent.</span>
@@ -526,6 +528,8 @@
 <span class="n">VMAX</span> <span class="o">=</span> <span class="mf">1e-1</span>
 <span class="c1">#: The matplotlib colormap.</span>
 <span class="n">COLORMAP</span> <span class="o">=</span> <span class="s2">"viridis"</span>
+<span class="c1">#: The latitude web Mercator ends at: where its square map is cut.</span>
+<span class="n">MAX_LATITUDE</span> <span class="o">=</span> <span class="mf">85.0511</span>
 
 
 <div class="viewcode-block" id="mercator_y">
@@ -587,10 +591,17 @@
             <span class="s2">"longitudes wrap from near 180 to near -180, so lon.min()/lon.max() "</span>
             <span class="s2">"cannot give its real west and east edges."</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="p">[</span>
+    <span class="n">corners</span> <span class="o">=</span> <span class="p">[</span>
         <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">-</span> <span class="n">dlat</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">-</span> <span class="n">dlon</span> <span class="o">/</span> <span class="mi">2</span><span class="p">],</span>
         <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="o">.</span><span class="n">max</span><span class="p">())</span> <span class="o">+</span> <span class="n">dlat</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon</span><span class="o">.</span><span class="n">max</span><span class="p">())</span> <span class="o">+</span> <span class="n">dlon</span> <span class="o">/</span> <span class="mi">2</span><span class="p">],</span>
-    <span class="p">]</span></div>
+    <span class="p">]</span>
+    <span class="n">south</span><span class="p">,</span> <span class="n">north</span> <span class="o">=</span> <span class="n">corners</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">corners</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">south</span> <span class="o">&lt;</span> <span class="o">-</span><span class="n">MAX_LATITUDE</span> <span class="ow">or</span> <span class="n">north</span> <span class="o">&gt;</span> <span class="n">MAX_LATITUDE</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"the footprint's grid reaches </span><span class="si">{</span><span class="n">south</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">north</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> degrees of "</span>
+            <span class="sa">f</span><span class="s2">"latitude; a web map ends at </span><span class="si">{</span><span class="n">MAX_LATITUDE</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, so it cannot be drawn."</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">corners</span></div>
 
 
 
@@ -809,15 +820,16 @@
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the project has several variants and *variant* is not given, or a</span>
-<span class="sd">        footprint's grid crosses the antimeridian (see :func:`bounds`).</span>
+<span class="sd">        If the project has several variants and *variant* is not given, a</span>
+<span class="sd">        footprint's grid cannot be drawn (see :func:`bounds`), or a day's</span>
+<span class="sd">        ``index.json`` at *url* is not an index.</span>
 <span class="sd">    OSError</span>
 <span class="sd">        If a day's index at *url* cannot be checked: a refused connection, a</span>
 <span class="sd">        timeout, a 403 or expired credentials, say.</span>
 <span class="sd">    """</span>
     <span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">)</span>
     <span class="n">variant</span> <span class="o">=</span> <span class="n">choose_variant</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
-    <span class="n">fs</span><span class="p">,</span> <span class="n">root</span> <span class="o">=</span> <span class="n">fsspec</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">url_to_fs</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">fs</span><span class="p">,</span> <span class="n">root</span> <span class="o">=</span> <span class="n">filesystem</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
     <span class="n">root</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
     <span class="n">indexes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">drawn</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -832,8 +844,14 @@
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
                     <span class="k">raise</span>
                 <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"cannot check </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> for an index: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
-            <span class="n">known</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span> <span class="k">if</span> <span class="n">contents</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[]</span>
-            <span class="n">indexes</span><span class="p">[</span><span class="n">day</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">known</span><span class="p">}</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">known</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span> <span class="k">if</span> <span class="n">contents</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[]</span>
+                <span class="n">indexes</span><span class="p">[</span><span class="n">day</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">known</span><span class="p">}</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is not a footprint index (</span><span class="si">{</span><span class="n">error</span><span class="si">!r}</span><span class="s2">); delete it to "</span>
+                    <span class="s2">"draw the day again."</span>
+                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
         <span class="k">if</span> <span class="n">receptor_id</span> <span class="ow">in</span> <span class="n">indexes</span><span class="p">[</span><span class="n">day</span><span class="p">]:</span>
             <span class="k">continue</span>
         <span class="k">try</span><span class="p">:</span>
