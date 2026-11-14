@@ -1,7 +1,7 @@
 """Running a project every hour, for fixed sites."""
 
 import threading
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import fsspec
 import pytest
@@ -510,3 +510,49 @@ def test_cron_job_passes_render_on(sited):
         "spec"
     ]["template"]["spec"]["containers"][0]["args"]
     assert args[-2:] == ["--render", "s3://site/f"]
+
+
+def test_tick_refuses_a_now_later_than_the_clock(sited, bucket, tmp_path, execs):
+    """A year typo (2062 for 2026) would add future hours and stop gap closing (#55)."""
+    push(sited, bucket)
+    with pytest.raises(ValueError, match="later than the clock"):
+        schedule.tick(bucket, now=datetime(2062, 10, 1), workdir=tmp_path / "pod")
+    assert receptor_rows(bucket) == []
+    assert execs == []
+
+
+def test_cli_tick_with_a_future_now_exits_2(sited, bucket, tmp_path, execs):
+    push(sited, bucket)
+    args = ["tick", bucket, "--now", "2062-10-01T00:00", "--workdir", str(tmp_path)]
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 2
+    assert "later than the clock" in result.output
+
+
+def test_rows_in_the_future_do_not_stop_gap_closing(sited, bucket, tmp_path, execs):
+    """Rows already past the clock (added before #55) are not taken as the last hour."""
+    push(sited, bucket)
+    schedule.tick(bucket, now=NOW, workdir=tmp_path / "first")
+    fs, root = fsspec.core.url_to_fs(bucket)
+    path = f"{root}/receptors.csv"
+    future = "2062-09-30 16:00:00,-111.8476,40.7663,35\n"
+    fs.pipe_file(path, fs.cat_file(path) + future.encode())
+    schedule.tick(bucket, now=NOW + timedelta(hours=36), workdir=tmp_path / "second")
+    hours = sorted({row.split(",")[0] for row in receptor_rows(bucket)} - {future[:19]})
+    # The same 60 hours as an outage with no future row: the gap is closed.
+    assert (hours[0], hours[-1], len(hours)) == (
+        "2026-10-28 11:00:00",
+        "2026-10-30 22:00:00",
+        60,
+    )
+
+
+def test_tick_converts_a_now_with_a_time_zone_to_utc(sited, bucket, tmp_path, execs):
+    from zoneinfo import ZoneInfo
+
+    push(sited, bucket)
+    denver = NOW.replace(tzinfo=UTC).astimezone(ZoneInfo("America/Denver"))
+    schedule.tick(bucket, now=denver, workdir=tmp_path / "first")
+    schedule.tick(bucket, now=denver, workdir=tmp_path / "second")
+    hours = sorted({row.split(",")[0] for row in receptor_rows(bucket)})
+    assert (hours[0], hours[-1]) == ("2026-10-28 11:00:00", "2026-10-29 10:00:00")

@@ -94,9 +94,15 @@ def due_hours(
     return [oldest + timedelta(hours=k) for k in range(span + 1)]
 
 
-def _last_added(project: stilt.Project) -> datetime | None:
-    """Return the newest hour already in *project*'s ``receptors.csv``, or ``None``."""
+def _last_added(project: stilt.Project, now: datetime) -> datetime | None:
+    """
+    Return the newest hour in *project*'s ``receptors.csv`` up to *now*, or ``None``.
+
+    Rows after *now* (added by a mistyped ``--now`` before it was refused)
+    are left out, so they cannot hide a gap from every later tick.
+    """
     times = project.receptors["time"]
+    times = times[times <= now]
     if times.empty:
         return None
     return times.max().to_pydatetime()
@@ -223,7 +229,8 @@ def tick(
         Hours before an hour is added; see :data:`DELAY_HOURS`.
     now : datetime, optional
         The time to act as if it were, in UTC. Defaults to now; an earlier
-        time fills in a past day.
+        time fills in a past day. A time with a time zone is converted to
+        UTC.
     cpus : int, optional
         Receptors to run at once. Defaults to ``execution.cpus`` in
         ``config.yaml``.
@@ -245,15 +252,25 @@ def tick(
     FileNotFoundError
         If there is no project, or it has no ``sites.csv``.
     ValueError
-        If ``sites.csv`` cannot be read, or *render* is given and the project
-        has several variants (checked before ``stilt`` runs).
+        If *now* is later than the clock, ``sites.csv`` cannot be read, or
+        *render* is given and the project has several variants (all checked
+        before ``stilt`` runs).
     OSError
         If the project's inputs cannot be copied from *project*, or
         ``receptors.csv`` locked or copied back to it, or (when ``stilt``
         exited with 0) the footprints cannot be drawn to *render*; the
         message says which.
     """
-    now = now or datetime.now(UTC).replace(tzinfo=None)
+    clock = datetime.now(UTC).replace(tzinfo=None)
+    if now is None:
+        now = clock
+    elif now.tzinfo is not None:
+        now = now.astimezone(UTC).replace(tzinfo=None)
+    if now > clock:
+        raise ValueError(
+            f"--now {now:%Y-%m-%dT%H:%M} is later than the clock "
+            f"({clock:%Y-%m-%dT%H:%M} UTC): a tick can only fill in hours that are past."
+        )
     try:
         directory = project_directory(project, workdir)
     except FileNotFoundError:
@@ -276,7 +293,7 @@ def tick(
         # Before anything runs: a project that cannot be drawn fails now, not after the day's run.
         variant = None if render is None else renderer.choose_variant(stilt_project)
         # Read after the fresh copy: the last row there is where a gap starts.
-        hours = due_hours(now, delay, since=_last_added(stilt_project))
+        hours = due_hours(now, delay, since=_last_added(stilt_project, now))
         receptors = hourly_receptors(read_sites(directory), hours)
         added = stilt_project.add_receptors(receptors)
         logger.info("Added %d receptors, through %s", len(added), receptors[-1].time)
