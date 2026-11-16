@@ -1,0 +1,6 @@
+﻿pystiltctl.job.fetch\_manifest
+==============================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: fetch_manifest

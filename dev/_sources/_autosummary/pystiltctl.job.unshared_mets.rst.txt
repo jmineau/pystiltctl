@@ -1,0 +1,6 @@
+﻿pystiltctl.job.unshared\_mets
+=============================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: unshared_mets

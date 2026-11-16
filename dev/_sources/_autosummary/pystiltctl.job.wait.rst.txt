@@ -1,0 +1,6 @@
+﻿pystiltctl.job.wait
+===================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: wait

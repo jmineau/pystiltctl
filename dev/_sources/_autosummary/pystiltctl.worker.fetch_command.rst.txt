@@ -1,0 +1,6 @@
+﻿pystiltctl.worker.fetch\_command
+================================
+
+.. currentmodule:: pystiltctl.worker
+
+.. autofunction:: fetch_command

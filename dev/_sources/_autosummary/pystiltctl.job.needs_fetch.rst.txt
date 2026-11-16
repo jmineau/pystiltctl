@@ -1,0 +1,6 @@
+﻿pystiltctl.job.needs\_fetch
+===========================
+
+.. currentmodule:: pystiltctl.job
+
+.. autofunction:: needs_fetch

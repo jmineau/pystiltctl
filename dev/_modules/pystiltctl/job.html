@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=9059d9ec"></script>
+    <script src="../../_static/documentation_options.js?v=7c92a9ab"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.1.dev47+g2295c0afa" />
+  <meta name="docsearch:version" content="0.0.1.dev49+gd71fbeffa" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -499,18 +499,27 @@
 
 <span class="sd">Nothing here decides which simulations are finished: a task that runs</span>
 <span class="sd">again skips the ones whose results exist.</span>
+
+<span class="sd">A project whose met downloads (``download:`` in ``config.yaml``) into a</span>
+<span class="sd">folder on a volume every pod mounts first gets a fetch Job: one pod that</span>
+<span class="sd">runs ``stilt fetch``, so the met is downloaded once, not by every task.</span>
+<span class="sd">``submit`` waits for it to end, then starts the indexed Job</span>
+<span class="sd">(:func:`fetch_manifest`, :func:`wait`).</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">posixpath</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">replace</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span><span class="p">,</span> <span class="n">PurePosixPath</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
@@ -549,6 +558,8 @@
 <span class="n">FS_GROUP</span> <span class="o">=</span> <span class="mi">10001</span>
 <span class="c1">#: The image's repository.</span>
 <span class="n">IMAGE_REPOSITORY</span> <span class="o">=</span> <span class="s2">"ghcr.io/jmineau/pystiltctl"</span>
+<span class="c1">#: Seconds between two looks at a fetch Job, while ``submit`` waits for it.</span>
+<span class="n">WAIT_SECONDS</span> <span class="o">=</span> <span class="mi">15</span>
 
 
 <div class="viewcode-block" id="default_image">
@@ -775,6 +786,10 @@
 <span class="sd">        push happened after submit (:func:`pystiltctl.worker.run_task`).</span>
 <span class="sd">        None when a :class:`JobSpec` is built directly, not through</span>
 <span class="sd">        :func:`job_spec`.</span>
+<span class="sd">    downloads : dict of str to str</span>
+<span class="sd">        The directory of each met that downloads (``download:`` in</span>
+<span class="sd">        ``config.yaml``), by the met's name, as ``config.yaml`` writes it.</span>
+<span class="sd">        Empty when no met downloads.</span>
 <span class="sd">    """</span>
 
     <span class="n">project</span><span class="p">:</span> <span class="nb">str</span>
@@ -789,7 +804,8 @@
     <span class="n">service_account</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">volumes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Volume</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
     <span class="n">namespace</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">input_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
+    <span class="n">input_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">downloads</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
 
 
 
@@ -858,6 +874,11 @@
             <span class="k">raise</span> <span class="n">config_error</span><span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
         <span class="n">results</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">opened</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
         <span class="n">input_hash</span> <span class="o">=</span> <span class="n">hash_inputs</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+        <span class="n">downloads</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"directory"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">met</span> <span class="ow">in</span> <span class="n">opened</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">mets</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">met</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"download"</span><span class="p">)</span>
+        <span class="p">}</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">is_local</span><span class="p">(</span><span class="n">project</span><span class="p">)</span> <span class="ow">and</span> <span class="n">is_local</span><span class="p">(</span><span class="n">results</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="s2">"The output directory is a path, so each pod would write its results "</span>
@@ -891,7 +912,60 @@
         <span class="n">volumes</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">volumes</span><span class="p">),</span>
         <span class="n">namespace</span><span class="o">=</span><span class="n">namespace</span><span class="p">,</span>
         <span class="n">input_hash</span><span class="o">=</span><span class="n">input_hash</span><span class="p">,</span>
+        <span class="n">downloads</span><span class="o">=</span><span class="n">downloads</span><span class="p">,</span>
     <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="unshared_mets">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.unshared_mets.html#pystiltctl.job.unshared_mets">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">unshared_mets</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the names of *spec*'s mets that would download into each pod's own disk.</span>
+
+<span class="sd">    A met that downloads is shared by the pods when its directory is on one</span>
+<span class="sd">    of *spec*'s volumes, as the pods see it: an absolute path under a</span>
+<span class="sd">    volume's mount path, or, for a project on a volume, a path relative to</span>
+<span class="sd">    the project. Any other directory is on the pod's own disk, so each pod</span>
+<span class="sd">    downloads its own copy.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; spec = JobSpec(</span>
+<span class="sd">    ...     "s3://b/p",</span>
+<span class="sd">    ...     "p",</span>
+<span class="sd">    ...     tasks=2,</span>
+<span class="sd">    ...     parallelism=2,</span>
+<span class="sd">    ...     volumes=(Volume("met", "/met"),),</span>
+<span class="sd">    ...     downloads={"hrrr": "/met/hrrr", "nam": "/scratch/met"},</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; unshared_mets(spec)</span>
+<span class="sd">    ['nam']</span>
+<span class="sd">    """</span>
+    <span class="n">unshared</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">directory</span> <span class="ow">in</span> <span class="n">spec</span><span class="o">.</span><span class="n">downloads</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">PurePosixPath</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">()</span> <span class="ow">and</span> <span class="n">is_local</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">project</span><span class="p">):</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">PurePosixPath</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">project</span><span class="p">)</span> <span class="o">/</span> <span class="n">path</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">PurePosixPath</span><span class="p">(</span><span class="n">posixpath</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">spec</span><span class="o">.</span><span class="n">volumes</span><span class="p">):</span>
+            <span class="n">unshared</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">unshared</span></div>
+
+
+
+<div class="viewcode-block" id="needs_fetch">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.needs_fetch.html#pystiltctl.job.needs_fetch">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">needs_fetch</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return whether *spec*'s met is downloaded once, by a fetch Job, before its Job.</span>
+
+<span class="sd">    True when a met downloads and every met that does is on a volume the</span>
+<span class="sd">    pods share (:func:`unshared_mets`). A met that is not would be fetched</span>
+<span class="sd">    into the fetch Job's own disk and lost, so then there is no fetch Job,</span>
+<span class="sd">    and each pod downloads what it needs, as it would without one.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">downloads</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">unshared_mets</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span></div>
 
 
 
@@ -899,6 +973,16 @@
 <span class="w">    </span><span class="sd">"""Return the command line each pod runs."""</span>
     <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"pystiltctl"</span><span class="p">,</span> <span class="s2">"worker"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">project</span><span class="p">,</span> <span class="s2">"--tasks"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">tasks</span><span class="p">)]</span>
     <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--cpus"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">cpus</span><span class="p">),</span> <span class="s2">"--workdir"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">SCRATCH</span><span class="si">}</span><span class="s2">/project"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">output</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--output"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">output</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">input_hash</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--input-hash"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">input_hash</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">args</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_args</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the command line the fetch Job's pod runs."""</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"pystiltctl"</span><span class="p">,</span> <span class="s2">"fetch"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">project</span><span class="p">,</span> <span class="s2">"--workdir"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">SCRATCH</span><span class="si">}</span><span class="s2">/project"</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">output</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--output"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">output</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">input_hash</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1034,6 +1118,31 @@
 
 
 
+<div class="viewcode-block" id="fetch_manifest">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.fetch_manifest.html#pystiltctl.job.fetch_manifest">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_manifest</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the Job that downloads *spec*'s met once, before its indexed Job.</span>
+
+<span class="sd">    One pod runs ``pystiltctl fetch``, which runs ``stilt fetch``: it gets</span>
+<span class="sd">    the met files the project's unfinished simulations need into the met's</span>
+<span class="sd">    directory, which must be on a volume every pod mounts</span>
+<span class="sd">    (:func:`needs_fetch`). It asks for one CPU and the pods' memory. Its</span>
+<span class="sd">    exit-code rules are the indexed Job's: a stop (3), such as a busy</span>
+<span class="sd">    archive, is retried; files the archive lacks (1) are not. The Job's</span>
+<span class="sd">    name is ``stilt-&lt;project&gt;-fetch-`` and a suffix Kubernetes picks.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"apiVersion"</span><span class="p">:</span> <span class="s2">"batch/v1"</span><span class="p">,</span>
+        <span class="s2">"kind"</span><span class="p">:</span> <span class="s2">"Job"</span><span class="p">,</span>
+        <span class="s2">"metadata"</span><span class="p">:</span> <span class="n">_metadata</span><span class="p">(</span>
+            <span class="n">spec</span><span class="p">,</span> <span class="n">generateName</span><span class="o">=</span><span class="sa">f</span><span class="s2">"stilt-</span><span class="si">{</span><span class="n">label_value</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">-fetch-"</span>
+        <span class="p">),</span>
+        <span class="s2">"spec"</span><span class="p">:</span> <span class="n">_job_body</span><span class="p">(</span><span class="n">replace</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">cpus</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch_args</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="p">}</span></div>
+
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">tick_args</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">JobSpec</span><span class="p">,</span> <span class="n">delay</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">render</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Return the command line a schedule's pod runs each hour."""</span>
     <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"pystiltctl"</span><span class="p">,</span> <span class="s2">"tick"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">project</span><span class="p">,</span> <span class="s2">"--delay"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">delay</span><span class="p">)]</span>
@@ -1130,7 +1239,7 @@
 <span class="sd">    RuntimeError</span>
 <span class="sd">        If ``kubectl`` refuses the Job; the message is its error.</span>
 <span class="sd">    """</span>
-    <span class="k">return</span> <span class="n">_kubectl</span><span class="p">(</span><span class="s2">"create"</span><span class="p">,</span> <span class="n">job</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">_name</span><span class="p">(</span><span class="n">_kubectl</span><span class="p">(</span><span class="s2">"create"</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="s2">"-o"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="n">manifest</span><span class="o">=</span><span class="n">job</span><span class="p">))</span></div>
 
 
 
@@ -1149,18 +1258,56 @@
 <span class="sd">    RuntimeError</span>
 <span class="sd">        If ``kubectl`` refuses it; the message is its error.</span>
 <span class="sd">    """</span>
-    <span class="k">return</span> <span class="n">_kubectl</span><span class="p">(</span><span class="s2">"apply"</span><span class="p">,</span> <span class="n">manifest</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">_name</span><span class="p">(</span><span class="n">_kubectl</span><span class="p">(</span><span class="s2">"apply"</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="s2">"-o"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="n">manifest</span><span class="o">=</span><span class="n">manifest</span><span class="p">))</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_kubectl</span><span class="p">(</span><span class="n">verb</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Run ``kubectl &lt;verb&gt; -f -`` on *manifest* and return the object's name."""</span>
+<div class="viewcode-block" id="wait">
+<a class="viewcode-back" href="../../_autosummary/pystiltctl.job.wait.html#pystiltctl.job.wait">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">wait</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">namespace</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Wait for the Job *name* to end; return True if it completed, False if it failed.</span>
+
+<span class="sd">    Looks at the Job every :data:`WAIT_SECONDS` seconds, until Kubernetes</span>
+<span class="sd">    marks it ``Complete`` or ``Failed``.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        If ``kubectl`` is not installed.</span>
+<span class="sd">    RuntimeError</span>
+<span class="sd">        If ``kubectl`` cannot read the Job, such as one deleted meanwhile;</span>
+<span class="sd">        the message is its error.</span>
+<span class="sd">    """</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"get"</span><span class="p">,</span> <span class="s2">"job"</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">"-o"</span><span class="p">,</span> <span class="s2">"json"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">namespace</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--namespace"</span><span class="p">,</span> <span class="n">namespace</span><span class="p">]</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">_kubectl</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"status"</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">ended</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">c</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">status</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"conditions"</span><span class="p">,</span> <span class="p">[])</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"status"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"True"</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="s2">"Complete"</span> <span class="ow">in</span> <span class="n">ended</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="s2">"Failed"</span> <span class="ow">in</span> <span class="n">ended</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">WAIT_SECONDS</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_name</span><span class="p">(</span><span class="n">output</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the object's name from ``kubectl -o name``'s ``kind/name``."""</span>
+    <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_kubectl</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Run ``kubectl`` with *args*, giving it *manifest* as YAML, and return its output."""</span>
     <span class="n">kubectl</span> <span class="o">=</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"kubectl"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">kubectl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">"kubectl is not installed, or not on PATH."</span><span class="p">)</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-        <span class="p">[</span><span class="n">kubectl</span><span class="p">,</span> <span class="n">verb</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="s2">"-o"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">],</span>
-        <span class="nb">input</span><span class="o">=</span><span class="n">to_yaml</span><span class="p">(</span><span class="n">manifest</span><span class="p">),</span>
+        <span class="p">[</span><span class="n">kubectl</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">],</span>
+        <span class="nb">input</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">manifest</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">to_yaml</span><span class="p">(</span><span class="n">manifest</span><span class="p">),</span>
         <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
@@ -1169,7 +1316,7 @@
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
             <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">"kubectl exited with </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span>
 </pre></div>
 
                 </article>

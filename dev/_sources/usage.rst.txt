@@ -48,9 +48,11 @@ every pod writes to the same place:
    output: s3://my-bucket/output
 
 The met ``directory`` in ``config.yaml`` must be a path inside the pod.
-With ``download: hrrr`` (see PYSTILT's meteorology guide), each pod
-downloads the files its receptors need from NOAA's bucket into that
-folder, so nothing has to be staged.
+With ``download: hrrr`` (see PYSTILT's meteorology guide), the files are
+downloaded from NOAA's bucket into that folder, so nothing has to be
+staged. Put the folder on a volume every pod mounts (``--volume``), and
+``submit`` downloads each file once, before the pods start (see
+`Met that downloads`_).
 
 Any URL fsspec knows works: ``s3://`` needs ``pystiltctl[s3]`` (AWS,
 MinIO, any S3-compatible store) and ``gs://`` needs ``pystiltctl[gcs]``.
@@ -101,7 +103,39 @@ user's group (``fsGroup``), so a new, empty cloud disk is writable.
 
 ``--dry-run`` prints the Job instead of starting it. Save it, change what
 the options do not reach (a node selector for spot nodes, tolerations),
-and start it with ``kubectl create -f job.yaml``.
+and start it with ``kubectl create -f job.yaml``. With a fetch Job (next
+section), it prints that Job first: start it on its own, and the other
+once it is complete.
+
+Met that downloads
+^^^^^^^^^^^^^^^^^^
+
+PYSTILT gives each task receptors from every day of the project, so with
+``download: hrrr`` and the met on each pod's own disk, nearly every pod
+downloads nearly every file. When the met's ``directory`` is on a
+``--volume``, ``submit`` first starts a fetch Job: one pod that runs
+``stilt fetch``, which downloads the files the unfinished simulations
+need into that folder. ``submit`` waits for it to end, then starts the
+Job, whose pods find every file and download nothing:
+
+.. code-block:: text
+
+   $ pystiltctl submit s3://my-bucket/projects/my_project --secret bucket-creds --volume met:/met
+   Submitted fetch job: stilt-my-project-fetch-q9x4m  (downloads the met once; ...)
+   Submitted job: stilt-my-project-x7k2p  (20 tasks, 20 at once)
+
+The volume must be one that the pods of many nodes can mount and write
+at once (``ReadWriteMany``; :doc:`cloud` makes one). A ``directory``
+relative to the project counts as on a volume only when the project
+itself is a folder on one.
+
+If you stop waiting (Ctrl-C), the fetch Job goes on: submit again once it
+has ended, and the next fetch finds the files there. If the fetch Job
+fails (``kubectl logs job/<its name>`` says why), ``submit`` still starts
+the Job, as PYSTILT does on Slurm, and each pod downloads what is still
+missing. A met whose ``directory`` is not on a volume gets no fetch Job,
+since the files would be lost with its pod: ``submit`` says so, and each
+pod downloads what it needs.
 
 Kubernetes retries a task from the worker's exit code: a stopped task
 (3) up to three times, and a pod taken back with its node (a spot node)
@@ -315,7 +349,9 @@ What each pod runs
    pystiltctl worker s3://my-bucket/projects/my_project --tasks 20
 
 ``pystiltctl worker`` copies the project's inputs to the pod's disk, then
-becomes ``stilt run <project> --task I/20``. ``I`` is the pod's index,
+becomes ``stilt run <project> --task I/20``. The fetch Job's pod runs
+``pystiltctl fetch``, which does the same with ``stilt fetch <project>``
+and exits with its codes. ``I`` is the pod's index,
 which a Kubernetes indexed Job sets in ``JOB_COMPLETION_INDEX``
 (``--index`` sets it by hand). A project on a mounted volume is used where
 it is.

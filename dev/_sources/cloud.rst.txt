@@ -108,26 +108,24 @@ reports.
 Met
 ---
 
-With ``download: hrrr``, each pod downloads the met its receptors need from
-NOAA's archive, which is public. Point the met at the pod's own disk,
-``/scratch``, which is on the node's boot disk:
+With ``download: hrrr``, the met comes from NOAA's archive, which is
+public. Keep it on a volume every pod mounts, so each file is downloaded
+once: ``submit`` then starts one pod that downloads what the project
+needs (``stilt fetch``), waits for it to end, and only then starts the
+Job, whose pods read the files and download nothing.
 
-.. code-block:: yaml
+The Job's pods run on many nodes at once, so the volume must be one that
+many nodes can mount and write (``ReadWriteMany``). On Google Cloud that
+is Filestore. Turn on its driver when you make the cluster
+(``--addons=GcpFilestoreCsiDriver`` on ``gcloud container clusters
+create``), or later:
 
-   mets:
-     hrrr:
-       download: hrrr
-       directory: /scratch/met
-       subgrid_enable: true
-       subgrid_bounds: {xmin: -114.0, xmax: -110.0, ymin: 39.0, ymax: 42.0}
+.. code-block:: bash
 
-Each 6-hour block is 3.4 GB before it is cropped, so a pod needs a few
-blocks' room; a node's boot disk is 100 GB unless ``--disk-size`` says
-otherwise. The met goes away with the pod, so two pods on the same days
-each download it.
+   gcloud container clusters update stilt --zone=$ZONE \
+       --update-addons=GcpFilestoreCsiDriver=ENABLED
 
-``schedule`` runs one pod an hour, every hour, so it keeps its met on a
-volume instead, and downloads each block once. Make the volume:
+Then make the volume:
 
 .. code-block:: bash
 
@@ -137,22 +135,46 @@ volume instead, and downloads each block once. Make the volume:
    metadata:
      name: met
    spec:
-     accessModes: [ReadWriteOnce]
+     accessModes: [ReadWriteMany]
+     storageClassName: standard-rwx
      resources:
        requests:
-         storage: 50Gi
+         storage: 1Ti
    EOF
 
-and give it to the schedule, with ``directory: /met`` in ``config.yaml``:
+and point the met at it in ``config.yaml``, cropped to your region:
+
+.. code-block:: yaml
+
+   mets:
+     hrrr:
+       download: hrrr
+       directory: /met/hrrr
+       subgrid_enable: true
+       subgrid_bounds: {xmin: -114.0, xmax: -110.0, ymin: 39.0, ymax: 42.0}
+
+and give it to ``submit`` and ``schedule``:
 
 .. code-block:: bash
 
+   pystiltctl submit gs://my-stilt/projects/my_project --service-account stilt \
+       --volume met:/met
    pystiltctl schedule gs://my-stilt/projects/towers --service-account stilt \
        --volume met:/met
 
-``ReadWriteOnce`` is a disk one node uses at a time. That is enough for
-a schedule, whose pods run one after another. Cropped to the box above, a
-year of HRRR is about 30 GB.
+Each 6-hour block is 3.4 GB before it is cropped; cropped to the box
+above, a year of HRRR is about 30 GB. Filestore is billed for the size you
+ask for, used or not.
+
+A met directory on the pod's own disk, such as ``/scratch/met``, works
+without a volume, but each pod then downloads every file its receptors
+need, and the receptors of every day are spread over all the pods, so
+nearly every pod downloads nearly every file. ``submit`` says so when it
+starts such a Job.
+
+``schedule`` runs one pod at a time, so any volume works for it, also a
+``ReadWriteOnce`` disk (``accessModes: [ReadWriteOnce]`` and no
+``storageClassName``), which costs less.
 
 Footprints on a web map
 -----------------------
@@ -207,7 +229,8 @@ come from a volume.
 When you are done
 -----------------
 
-Delete the met volume first, so its disk goes with it, then the cluster:
+Delete the met volume first, so its disk or Filestore goes with it, then the
+cluster:
 
 .. code-block:: bash
 
