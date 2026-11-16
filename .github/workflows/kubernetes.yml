@@ -129,10 +129,10 @@ jobs:
           AWS_DEFAULT_REGION: us-east-1
           AWS_ENDPOINT_URL: http://127.0.0.1:5000
         run: |
-          cp -r tests/kubernetes/demo fetch
+          cp -r tests/kubernetes/demo metonce
           python3 - <<'EDIT'
           from pathlib import Path
-          config = Path("fetch/config.yaml")
+          config = Path("metonce/config.yaml")
           local = '    file_format: "%Y%m%d_%H"\n    file_tres: 6h\n'
           download = (
               "    download: hrrr\n    subgrid_enable: true\n"
@@ -141,20 +141,21 @@ jobs:
           assert local in config.read_text()
           config.write_text(config.read_text().replace(local, download))
           EDIT
-          uv run pystiltctl push fetch s3://stilt/projects/fetch
-          uv run pystiltctl submit s3://stilt/projects/fetch --tasks 2 \
-            --output s3://stilt/output-fetch \
+          uv run pystiltctl push metonce s3://stilt/projects/metonce
+          uv run pystiltctl submit s3://stilt/projects/metonce --tasks 2 \
+            --output s3://stilt/output-metonce \
             --image pystiltctl:ci --secret bucket-creds --volume met:/met | tee submit.log
-          grep -q "Submitted fetch job: stilt-fetch-fetch-" submit.log
-          kubectl wait --for=condition=complete job -l pystiltctl/project=fetch --timeout=600s
-          uv run pystiltctl status s3://stilt/projects/fetch --output s3://stilt/output-fetch --json > status.json
+          grep -q "Submitted fetch job: stilt-metonce-fetch-" submit.log
+          kubectl wait --for=condition=complete job -l pystiltctl/project=metonce --timeout=600s
+          uv run pystiltctl status s3://stilt/projects/metonce --output s3://stilt/output-metonce --json > status.json
           python3 - <<'CHECK'
           import json
           status = json.load(open("status.json"))
           assert status["simulations"]["complete"] == 2, status["simulations"]
           jobs = status["jobs"]
           assert [job["state"] for job in jobs] == ["complete", "complete"], jobs
-          assert "-fetch-" in jobs[0]["name"] and "-fetch-" not in jobs[1]["name"], jobs
+          fetch, run = (job["name"].startswith("stilt-metonce-fetch-") for job in jobs)
+          assert fetch and not run, jobs
           CHECK
 
       - name: A missing project fails the Job without retries
