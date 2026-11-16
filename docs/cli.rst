@@ -47,7 +47,16 @@ or a folder at the same path here and in the pods.
 ``--namespace``
    Defaults to ``kubectl``'s current namespace.
 ``--dry-run``
-   Print the Job as YAML instead of creating it.
+   Print the Job as YAML instead of creating it, after the fetch Job if
+   there is one.
+
+When a met downloads (``download:`` in ``config.yaml``) into a folder on
+a ``--volume``, ``submit`` first creates a fetch Job, one pod of
+``pystiltctl fetch``, waits for it to end, then creates the Job, also when
+the fetch failed. A met that downloads into a folder on no volume gets no
+fetch Job, and ``submit`` notes that each pod downloads its own. If it
+cannot follow the fetch Job (``kubectl`` fails), it exits with 3 before
+creating the Job.
 
 pystiltctl schedule
 -------------------
@@ -139,3 +148,18 @@ a folder on a mounted volume), then run ``stilt run --task I/N``.
    The hash ``submit`` saw of ``config.yaml`` and ``receptors.csv``. Fails
    this task (exit 2) if what it pulls hashes differently: the project was
    pushed again after submit, so submit again.
+
+pystiltctl fetch
+----------------
+
+.. code-block:: text
+
+   pystiltctl fetch PROJECT [--output URL] [--workdir DIR] [--input-hash HASH]
+
+What the fetch Job's pod runs: copy the inputs from ``PROJECT``, as
+``worker`` does, then run ``stilt fetch``, which downloads the met files
+the unfinished simulations need into the met's folder. Exits with
+``stilt fetch``'s code: 0 when every file is there, 1 when the archive
+lacks some, 3 when stopped or the archive was busy (the Job tries again).
+``--output``, ``--workdir`` and ``--input-hash`` are ``worker``'s, and
+exit the same way.

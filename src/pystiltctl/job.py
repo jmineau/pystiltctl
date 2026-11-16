@@ -18,18 +18,27 @@ retries a task from its exit code (``podFailurePolicy``):
 
 Nothing here decides which simulations are finished: a task that runs
 again skips the ones whose results exist.
+
+A project whose met downloads (``download:`` in ``config.yaml``) into a
+folder on a volume every pod mounts first gets a fetch Job: one pod that
+runs ``stilt fetch``, so the met is downloaded once, not by every task.
+``submit`` waits for it to end, then starts the indexed Job
+(:func:`fetch_manifest`, :func:`wait`).
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
+import posixpath
 import re
 import shutil
 import subprocess
 import tempfile
+import time
 from collections.abc import Iterable
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass, field, replace
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import stilt
@@ -68,6 +77,8 @@ SCRATCH = "/scratch"
 FS_GROUP = 10001
 #: The image's repository.
 IMAGE_REPOSITORY = "ghcr.io/jmineau/pystiltctl"
+#: Seconds between two looks at a fetch Job, while ``submit`` waits for it.
+WAIT_SECONDS = 15
 
 
 def default_image(version: str = pystiltctl.__version__) -> str:
@@ -274,6 +285,10 @@ class JobSpec:
         push happened after submit (:func:`pystiltctl.worker.run_task`).
         None when a :class:`JobSpec` is built directly, not through
         :func:`job_spec`.
+    downloads : dict of str to str
+        The directory of each met that downloads (``download:`` in
+        ``config.yaml``), by the met's name, as ``config.yaml`` writes it.
+        Empty when no met downloads.
     """
 
     project: str
@@ -289,6 +304,7 @@ class JobSpec:
     volumes: tuple[Volume, ...] = ()
     namespace: str | None = None
     input_hash: str | None = None
+    downloads: dict[str, str] = field(default_factory=dict)
 
 
 def _real_output(output: str) -> str:
@@ -354,6 +370,11 @@ def job_spec(
             raise config_error(error) from None
         results = str(opened.output.directory)
         input_hash = hash_inputs(directory)
+        downloads = {
+            name: str(met.get("directory", ""))
+            for name, met in opened.config.mets.items()
+            if met.get("download")
+        }
     if not is_local(project) and is_local(results):
         raise ValueError(
             "The output directory is a path, so each pod would write its results "
@@ -387,13 +408,70 @@ def job_spec(
         volumes=tuple(volumes),
         namespace=namespace,
         input_hash=input_hash,
+        downloads=downloads,
     )
+
+
+def unshared_mets(spec: JobSpec) -> list[str]:
+    """
+    Return the names of *spec*'s mets that would download into each pod's own disk.
+
+    A met that downloads is shared by the pods when its directory is on one
+    of *spec*'s volumes, as the pods see it: an absolute path under a
+    volume's mount path, or, for a project on a volume, a path relative to
+    the project. Any other directory is on the pod's own disk, so each pod
+    downloads its own copy.
+
+    Examples
+    --------
+    >>> spec = JobSpec(
+    ...     "s3://b/p",
+    ...     "p",
+    ...     tasks=2,
+    ...     parallelism=2,
+    ...     volumes=(Volume("met", "/met"),),
+    ...     downloads={"hrrr": "/met/hrrr", "nam": "/scratch/met"},
+    ... )
+    >>> unshared_mets(spec)
+    ['nam']
+    """
+    unshared = []
+    for name, directory in spec.downloads.items():
+        path = PurePosixPath(directory)
+        if not path.is_absolute() and is_local(spec.project):
+            path = PurePosixPath(spec.project) / path
+        path = PurePosixPath(posixpath.normpath(path))
+        if not any(path.is_relative_to(v.path) for v in spec.volumes):
+            unshared.append(name)
+    return unshared
+
+
+def needs_fetch(spec: JobSpec) -> bool:
+    """
+    Return whether *spec*'s met is downloaded once, by a fetch Job, before its Job.
+
+    True when a met downloads and every met that does is on a volume the
+    pods share (:func:`unshared_mets`). A met that is not would be fetched
+    into the fetch Job's own disk and lost, so then there is no fetch Job,
+    and each pod downloads what it needs, as it would without one.
+    """
+    return bool(spec.downloads) and not unshared_mets(spec)
 
 
 def worker_args(spec: JobSpec) -> list[str]:
     """Return the command line each pod runs."""
     args = ["pystiltctl", "worker", spec.project, "--tasks", str(spec.tasks)]
     args += ["--cpus", str(spec.cpus), "--workdir", f"{SCRATCH}/project"]
+    if spec.output is not None:
+        args += ["--output", spec.output]
+    if spec.input_hash is not None:
+        args += ["--input-hash", spec.input_hash]
+    return args
+
+
+def fetch_args(spec: JobSpec) -> list[str]:
+    """Return the command line the fetch Job's pod runs."""
+    args = ["pystiltctl", "fetch", spec.project, "--workdir", f"{SCRATCH}/project"]
     if spec.output is not None:
         args += ["--output", spec.output]
     if spec.input_hash is not None:
@@ -526,6 +604,28 @@ def manifest(spec: JobSpec) -> dict[str, Any]:
     }
 
 
+def fetch_manifest(spec: JobSpec) -> dict[str, Any]:
+    """
+    Return the Job that downloads *spec*'s met once, before its indexed Job.
+
+    One pod runs ``pystiltctl fetch``, which runs ``stilt fetch``: it gets
+    the met files the project's unfinished simulations need into the met's
+    directory, which must be on a volume every pod mounts
+    (:func:`needs_fetch`). It asks for one CPU and the pods' memory. Its
+    exit-code rules are the indexed Job's: a stop (3), such as a busy
+    archive, is retried; files the archive lacks (1) are not. The Job's
+    name is ``stilt-<project>-fetch-`` and a suffix Kubernetes picks.
+    """
+    return {
+        "apiVersion": "batch/v1",
+        "kind": "Job",
+        "metadata": _metadata(
+            spec, generateName=f"stilt-{label_value(spec.name)}-fetch-"
+        ),
+        "spec": _job_body(replace(spec, cpus=1), fetch_args(spec), 1, 1),
+    }
+
+
 def tick_args(spec: JobSpec, delay: int, render: str | None = None) -> list[str]:
     """Return the command line a schedule's pod runs each hour."""
     args = ["pystiltctl", "tick", spec.project, "--delay", str(delay)]
@@ -614,7 +714,7 @@ def create(job: dict[str, Any]) -> str:
     RuntimeError
         If ``kubectl`` refuses the Job; the message is its error.
     """
-    return _kubectl("create", job)
+    return _name(_kubectl("create", "-f", "-", "-o", "name", manifest=job))
 
 
 def apply(manifest: dict[str, Any]) -> str:
@@ -630,17 +730,52 @@ def apply(manifest: dict[str, Any]) -> str:
     RuntimeError
         If ``kubectl`` refuses it; the message is its error.
     """
-    return _kubectl("apply", manifest)
+    return _name(_kubectl("apply", "-f", "-", "-o", "name", manifest=manifest))
 
 
-def _kubectl(verb: str, manifest: dict[str, Any]) -> str:
-    """Run ``kubectl <verb> -f -`` on *manifest* and return the object's name."""
+def wait(name: str, *, namespace: str | None = None) -> bool:
+    """
+    Wait for the Job *name* to end; return True if it completed, False if it failed.
+
+    Looks at the Job every :data:`WAIT_SECONDS` seconds, until Kubernetes
+    marks it ``Complete`` or ``Failed``.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``kubectl`` is not installed.
+    RuntimeError
+        If ``kubectl`` cannot read the Job, such as one deleted meanwhile;
+        the message is its error.
+    """
+    args = ["get", "job", name, "-o", "json"]
+    if namespace is not None:
+        args += ["--namespace", namespace]
+    while True:
+        status = json.loads(_kubectl(*args)).get("status", {})
+        ended = {
+            c["type"] for c in status.get("conditions", []) if c.get("status") == "True"
+        }
+        if "Complete" in ended:
+            return True
+        if "Failed" in ended:
+            return False
+        time.sleep(WAIT_SECONDS)
+
+
+def _name(output: str) -> str:
+    """Return the object's name from ``kubectl -o name``'s ``kind/name``."""
+    return output.strip().split("/", 1)[-1]
+
+
+def _kubectl(*args: str, manifest: dict[str, Any] | None = None) -> str:
+    """Run ``kubectl`` with *args*, giving it *manifest* as YAML, and return its output."""
     kubectl = shutil.which("kubectl")
     if kubectl is None:
         raise FileNotFoundError("kubectl is not installed, or not on PATH.")
     result = subprocess.run(
-        [kubectl, verb, "-f", "-", "-o", "name"],
-        input=to_yaml(manifest),
+        [kubectl, *args],
+        input=None if manifest is None else to_yaml(manifest),
         capture_output=True,
         text=True,
         check=False,
@@ -649,4 +784,4 @@ def _kubectl(verb: str, manifest: dict[str, Any]) -> str:
         raise RuntimeError(
             result.stderr.strip() or f"kubectl exited with {result.returncode}"
         )
-    return result.stdout.strip().split("/", 1)[-1]
+    return result.stdout

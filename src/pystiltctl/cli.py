@@ -9,13 +9,15 @@ Examples::
     pystiltctl schedule s3://bucket/projects/towers --volume met:/met
     pystiltctl status s3://bucket/projects/my_project
     pystiltctl worker s3://bucket/projects/my_project --tasks 20   # in a pod
+    pystiltctl fetch s3://bucket/projects/my_project               # in the fetch pod
 
 ``pystiltctl worker`` exits with ``stilt run``'s code: 0 when every
 simulation of the task is complete, 1 when some failed, and 3 when some
 were stopped. It also exits with 3 when it cannot copy the project's
 inputs (a retry may work), and with 2 when its command line is wrong,
 there is no project at the URL, or --input-hash does not match what it
-pulled (a retry will not help; submit again instead).
+pulled (a retry will not help; submit again instead). ``pystiltctl
+fetch`` exits the same way, with ``stilt fetch``'s codes.
 """
 
 from __future__ import annotations
@@ -167,6 +169,11 @@ def submit(
     config.yaml. A task that is stopped is retried; one whose simulations
     failed is not. Submit again to fill in what is missing: finished
     simulations are skipped.
+
+    When a met downloads (download: in config.yaml) into a folder on a
+    --volume, a fetch Job first downloads it once (stilt fetch), and submit
+    waits for it to end before it starts the Job, so the pods download
+    nothing.
     """
     try:
         spec = job.job_spec(
@@ -184,17 +191,52 @@ def submit(
         )
     except (ValueError, FileNotFoundError) as error:
         _fail(str(error))
+    for met in job.unshared_mets(spec):
+        typer.echo(
+            f"Note: met {met} downloads into each pod's own disk, so every pod "
+            "downloads the files it needs. Put its directory on a --volume to "
+            "download them once, before the Job.",
+            err=True,
+        )
+    fetch = job.fetch_manifest(spec) if job.needs_fetch(spec) else None
     manifest = job.manifest(spec)
     if dry_run:
-        typer.echo(job.to_yaml(manifest), nl=False)
+        manifests = [manifest] if fetch is None else [fetch, manifest]
+        typer.echo("---\n".join(job.to_yaml(m) for m in manifests), nl=False)
         return
-    try:
-        name = job.create(manifest)
-    except (FileNotFoundError, RuntimeError) as error:
-        _fail(f"{error} (--dry-run prints the Job without kubectl)")
+    if fetch is not None:
+        fetcher = _create(fetch)
+        typer.echo(
+            f"Submitted fetch job: {fetcher}  (downloads the met once; the Job "
+            "starts when it ends. If you stop waiting, it goes on: submit again "
+            "once it has ended.)"
+        )
+        try:
+            fetched = job.wait(fetcher, namespace=spec.namespace)
+        except (FileNotFoundError, RuntimeError) as error:
+            _fail(
+                f"cannot follow fetch job {fetcher}: {error}. Submit again once "
+                "it has ended.",
+                EXIT_RETRY,
+            )
+        if not fetched:
+            typer.echo(
+                f"Warning: fetch job {fetcher} failed (kubectl logs job/{fetcher}). "
+                "Starting the Job anyway: each pod downloads what is still missing.",
+                err=True,
+            )
+    name = _create(manifest)
     typer.echo(
         f"Submitted job: {name}  ({spec.tasks} tasks, {spec.parallelism} at once)"
     )
+
+
+def _create(manifest: dict) -> str:
+    """Create *manifest*'s Job with ``kubectl`` and return its name, or exit with 2."""
+    try:
+        return job.create(manifest)
+    except (FileNotFoundError, RuntimeError) as error:
+        _fail(f"{error} (--dry-run prints the Job without kubectl)")
 
 
 @app.command()
@@ -411,6 +453,46 @@ def worker_command(
             workdir=workdir,
             input_hash=input_hash,
         )
+    except (ValueError, FileNotFoundError) as error:
+        _fail(str(error))
+    except OSError as error:
+        _fail(f"cannot copy the project's inputs from {project}: {error}", EXIT_RETRY)
+
+
+@app.command(name="fetch")
+def fetch_command(
+    project: Annotated[
+        str, typer.Argument(help="The project: a URL, or a folder on a mounted volume.")
+    ],
+    output: Annotated[
+        str | None,
+        typer.Option(help="Output directory to use instead of config.yaml's."),
+    ] = None,
+    workdir: Annotated[
+        Path, typer.Option(help="Where a URL's inputs are copied.")
+    ] = worker.WORKDIR,
+    input_hash: Annotated[
+        str | None,
+        typer.Option(
+            "--input-hash",
+            help=(
+                "Hash of config.yaml and receptors.csv that submit saw. "
+                "Fails if what it pulls does not match."
+            ),
+        ),
+    ] = None,
+) -> None:
+    """
+    Get the met files a project needs, once: what a fetch Job's pod runs.
+
+    Copies the project's inputs from the URL, then runs stilt fetch, which
+    downloads the met files the unfinished simulations need into the met's
+    directory. Exits with stilt fetch's code: 0 when every file is there,
+    1 when the archive lacks some, 3 when stopped or the archive was busy.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    try:
+        worker.run_fetch(project, output=output, workdir=workdir, input_hash=input_hash)
     except (ValueError, FileNotFoundError) as error:
         _fail(str(error))
     except OSError as error:

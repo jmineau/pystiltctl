@@ -126,9 +126,10 @@ Three things change. The image is ``ghcr.io/jmineau/pystiltctl``, the
 default, so leave out ``--image``. The bucket is a real one, so leave
 ``AWS_ENDPOINT_URL`` unset and give the pods the bucket's credentials:
 a Secret with ``--secret``, or a service account with
-``--service-account``. And the met is either downloaded by each pod
-(``download: hrrr`` in ``config.yaml``) or a volume the cluster already
-has (``--volume``).
+``--service-account``. And the met is either a volume the cluster already
+has (``--volume``), or downloaded (``download: hrrr`` in ``config.yaml``)
+into a volume every pod mounts, which ``submit`` fills once, before the
+pods start (:doc:`usage`).
 
 :doc:`cloud` makes a cluster and a bucket on Google Cloud, step by step.
 

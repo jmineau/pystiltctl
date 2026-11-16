@@ -350,3 +350,44 @@ def test_cli_worker_without_the_bucket_package_exits_2(monkeypatch, tmp_path):
     result = CliRunner().invoke(app, [*args, "--workdir", str(tmp_path)])
     assert result.exit_code == 2, result.output
     assert "Install s3fs" in result.output
+
+
+def test_fetch_command_passes_the_output_on():
+    command = worker.fetch_command("/work/p", output="s3://b/out")
+    assert command[:3] == [sys.executable, "-m", "stilt"]
+    assert command[3:] == ["fetch", "/work/p", "--output", "s3://b/out"]
+    assert worker.fetch_command("/work/p")[3:] == ["fetch", "/work/p"]
+
+
+def test_run_fetch_pulls_a_url_then_runs_stilt_fetch(project, bucket, tmp_path, execs):
+    push(project, bucket)
+    worker.run_fetch(
+        bucket,
+        output="s3://b/out",
+        workdir=tmp_path / "pod",
+        input_hash=hash_inputs(project),
+    )
+    directory = tmp_path / "pod" / "my_project"
+    assert (directory / "config.yaml").is_file()
+    assert execs == [worker.fetch_command(directory, output="s3://b/out")]
+
+
+def test_cli_fetch_refuses_a_project_changed_since_submit(
+    project, bucket, tmp_path, execs
+):
+    push(project, bucket)
+    args = ["fetch", bucket, "--workdir", str(tmp_path), "--input-hash", "stale"]
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 2
+    assert "changed after submit" in result.output
+    assert execs == []
+
+
+def test_cli_fetch_failed_copy_is_retried(bucket, tmp_path, monkeypatch, execs):
+    def broken(*args, **kwargs):
+        raise OSError("connection reset")
+
+    monkeypatch.setattr(worker, "pull", broken)
+    result = CliRunner().invoke(app, ["fetch", bucket, "--workdir", str(tmp_path)])
+    assert result.exit_code == 3
+    assert "connection reset" in result.output

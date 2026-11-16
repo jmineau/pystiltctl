@@ -4,7 +4,8 @@ Run one task of a project, as a pod of a Kubernetes indexed Job does.
 The work is PYSTILT's: ``stilt run <project> --task I/N``. The worker only
 gets the project's inputs onto the pod's disk first, when they are on a
 bucket, and then becomes the ``stilt`` process, so that Kubernetes' stop
-signal reaches it and its exit code is the pod's.
+signal reaches it and its exit code is the pod's. A fetch Job's pod does
+the same with ``stilt fetch <project>`` (:func:`run_fetch`).
 """
 
 from __future__ import annotations
@@ -118,6 +119,21 @@ def stilt_command(
     return command
 
 
+def fetch_command(directory: str | Path, *, output: str | None = None) -> list[str]:
+    """
+    Return the ``stilt fetch`` command line for a project, run with this Python.
+
+    Examples
+    --------
+    >>> fetch_command("/work/my_project", output="s3://bucket/output")[2:]
+    ['stilt', 'fetch', '/work/my_project', '--output', 's3://bucket/output']
+    """
+    command = [sys.executable, "-m", "stilt", "fetch", str(directory)]
+    if output is not None:
+        command += ["--output", output]
+    return command
+
+
 def become(command: list[str]) -> None:
     """
     Replace this process with *command*, so its exit code and signals are this pod's.
@@ -210,7 +226,55 @@ def run_task(
     task = task_index(index)
     if not 0 <= task < n_tasks:
         raise ValueError(f"Task {task} is not one of 0 to {n_tasks - 1}.")
+    directory = _checked_directory(project, workdir, input_hash)
+    become(stilt_command(directory, task, n_tasks, cpus=cpus, output=output))
+
+
+def run_fetch(
+    project: str,
+    *,
+    output: str | None = None,
+    workdir: str | Path = WORKDIR,
+    input_hash: str | None = None,
+) -> None:
+    """
+    Get the met files *project*'s unfinished simulations need, in place of this process.
+
+    What a fetch Job's pod runs, once, before the pods of the project's
+    indexed Job start. Pulls the project's inputs when *project* is a URL,
+    then replaces this process with ``stilt fetch``, so this function does
+    not return. The exit code is ``stilt fetch``'s: 0 when every file is
+    there, 1 when the archive lacks some, 3 when stopped or the archive was
+    busy, 2 when the command line is wrong or *input_hash* does not match
+    what was pulled.
+
+    Parameters
+    ----------
+    project : str
+        The project: a URL, or a folder on a volume mounted in the pod.
+    output : str, optional
+        The output directory, in place of the one ``config.yaml`` names.
+        ``stilt fetch`` reads it to find the simulations still to run.
+    workdir : str or Path
+        Where a URL's inputs are copied.
+    input_hash : str, optional
+        The hash ``submit`` saw of ``config.yaml`` and ``receptors.csv``,
+        as for :func:`run_task`.
+
+    Raises
+    ------
+    ValueError
+        If *input_hash* is given and does not match what was pulled.
+    """
+    directory = _checked_directory(project, workdir, input_hash)
+    become(fetch_command(directory, output=output))
+
+
+def _checked_directory(
+    project: str, workdir: str | Path, input_hash: str | None
+) -> Path:
+    """Return :func:`project_directory`, after checking its inputs hash to *input_hash*."""
     directory = project_directory(project, workdir)
     if input_hash is not None and hash_inputs(directory) != input_hash:
         raise ValueError("the project changed after submit; submit again")
-    become(stilt_command(directory, task, n_tasks, cpus=cpus, output=output))
+    return directory

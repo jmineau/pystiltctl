@@ -47,12 +47,12 @@ complete, 1 some failed, 2 bad command line, 3 stopped).
     checking existence this way cannot tell a missing file from a bucket error; use
     `fs.info` and catch only `FileNotFoundError` where that distinction matters.
   - `worker.py`: what a pod runs: pull, then `become()` (`os.execv` into `python
-    -m stilt run`), so the stop signal and exit code are `stilt`'s own. `run()`,
+    -m stilt run`, or `stilt fetch` for the fetch Job), so the stop signal and exit code are `stilt`'s own. `run()`,
     for when something must happen after (`tick --render`), forwards
     `SIGTERM`/`SIGINT` to the child and sets `PR_SET_PDEATHSIG` on Linux, so an
     unforwardable `kill -9` of this process ends the child too, not an orphan.
-  - `job.py`: the indexed Job and the CronJob, defaults from `execution`; retries are
-    their `podFailurePolicy`, never a loop here.
+  - `job.py`: the indexed Job, the CronJob, and the fetch Job (`stilt fetch` once, when a met downloads onto a `--volume`; `submit` waits for it); defaults from `execution`;
+    retries are their `podFailurePolicy`, never a loop here (`wait` only watches a Job end).
   - `schedule.py`: `tick`, each hour's pod: holding `inputs.lock`, a fresh `receptors.csv`, `sites.csv`
     receptors via `add_receptors` (`due_hours` reaches further back, capped at
     `MAX_BACKFILL_HOURS`, to close a gap left by an outage), and its put back; then
