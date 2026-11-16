@@ -14,7 +14,11 @@ every pull request; `docs/kind.rst` is the same run by hand.
 
 The workflow pushes `demo/`, submits it with the image built from the commit,
 waits for the Job, and checks that `pystiltctl status` counts 2 complete
-simulations and one complete Job. Then it submits a Job whose project is
+simulations and one complete Job. Next it submits a copy of `demo/` whose met
+has `download: hrrr`, cropped to the block's box, to its own output, and
+checks that `submit` started a fetch Job first and then the Job, both
+complete: `stilt fetch` finds the block on the volume and downloads nothing.
+Then it submits a Job whose project is
 missing and checks that it fails with reason `PodFailurePolicy`, without
 retries (the worker's exit code 2). Last, it schedules `demo/`, starts one
 tick from the CronJob by hand, and checks that the tick added a day of
@@ -25,7 +29,8 @@ today's hours cannot run, as when an hour's met has not arrived.
 Two things to know:
 
 - `AWS_ENDPOINT_URL` sends every S3 call to moto, NOAA's too, so the pods'
-  met must be the mounted folder, never a `download:`.
+  met must be the mounted folder; a `download:` met works only while every
+  file it needs is already there.
 - `stilt status` reads the met's first file header to find the results, so
   wherever `pystiltctl status` runs, the met must be at the path
   `config.yaml` names: the workflow links the runner's folder to `/met`.

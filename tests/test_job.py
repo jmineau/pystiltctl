@@ -1,5 +1,6 @@
 """The Kubernetes Job for a project."""
 
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -396,3 +397,235 @@ def test_submit_says_which_line_of_config_is_not_yaml(project, text):
     assert result.exit_code == 2, result.output
     assert result.output.startswith("Error: config.yaml line ")
     assert len(result.output.splitlines()) == 1
+
+
+#: A config.yaml whose met downloads into /met/hrrr, with its output on a bucket.
+DOWNLOADING = """\
+mets:
+  hrrr: {download: hrrr, directory: /met/hrrr}
+variants:
+  hrrr: {}
+n_hours: -24
+output: s3://bucket/output
+execution: {n_workers: 12, cpus: 4, mem: 8G}
+"""
+
+
+@pytest.fixture
+def downloading(project, bucket):
+    """The project on a bucket, with a met that downloads into /met/hrrr."""
+    (project / "config.yaml").write_text(DOWNLOADING)
+    push(project, bucket)
+    return bucket
+
+
+def test_job_spec_names_the_mets_that_download(downloading):
+    assert job.job_spec(downloading).downloads == {"hrrr": "/met/hrrr"}
+
+
+def test_job_spec_of_a_met_on_disk_downloads_nothing(pushed):
+    assert job.job_spec(pushed).downloads == {}
+
+
+@pytest.mark.parametrize(
+    ("project", "directory", "volumes", "unshared"),
+    [
+        ("s3://b/p", "/met/hrrr", ["met:/met"], []),
+        ("s3://b/p", "/met", ["met:/met"], []),
+        ("s3://b/p", "/scratch/met", ["met:/met"], ["hrrr"]),
+        ("s3://b/p", "/metx/hrrr", ["met:/met"], ["hrrr"]),
+        ("s3://b/p", "/met/../scratch", ["met:/met"], ["hrrr"]),
+        ("s3://b/p", "/met/hrrr", [], ["hrrr"]),
+        # A relative directory starts from the project: the pod's copy of a
+        # URL's inputs, or the folder itself when the project is on a volume.
+        ("s3://b/p", "met", ["met:/met"], ["hrrr"]),
+        ("/data/projects/p", "met", ["data:/data"], []),
+    ],
+)
+def test_unshared_mets(project, directory, volumes, unshared):
+    spec = job.JobSpec(
+        project,
+        "p",
+        tasks=2,
+        parallelism=2,
+        volumes=tuple(job.Volume.parse(v) for v in volumes),
+        downloads={"hrrr": directory},
+    )
+    assert job.unshared_mets(spec) == unshared
+    assert job.needs_fetch(spec) == (not unshared)
+
+
+def test_needs_fetch_only_when_a_met_downloads():
+    spec = job.JobSpec("s3://b/p", "p", tasks=2, parallelism=2)
+    assert not job.needs_fetch(spec)
+
+
+def test_fetch_manifest_is_one_pod_of_stilt_fetch(downloading):
+    spec = job.job_spec(
+        downloading,
+        secrets=["creds"],
+        service_account="stilt",
+        namespace="runs",
+        volumes=[job.Volume.parse("met:/met")],
+    )
+    manifest = job.fetch_manifest(spec)
+    assert manifest["metadata"]["generateName"] == "stilt-my-project-fetch-"
+    assert manifest["metadata"]["namespace"] == "runs"
+    assert (
+        manifest["metadata"]["annotations"]
+        == job.manifest(spec)["metadata"]["annotations"]
+    )
+    body = manifest["spec"]
+    assert (body["completions"], body["parallelism"]) == (1, 1)
+    assert body["podFailurePolicy"] == job.manifest(spec)["spec"]["podFailurePolicy"]
+    pod = body["template"]["spec"]
+    assert pod["serviceAccountName"] == "stilt"
+    (container,) = pod["containers"]
+    assert container["args"] == [
+        "pystiltctl",
+        "fetch",
+        downloading,
+        "--workdir",
+        "/scratch/project",
+        "--input-hash",
+        spec.input_hash,
+    ]
+    assert container["resources"] == {
+        "requests": {"cpu": "1", "memory": "8Gi"},
+        "limits": {"memory": "8Gi"},
+    }
+    assert container["envFrom"] == [{"secretRef": {"name": "creds"}}]
+    assert {"name": "volume-0", "mountPath": "/met"} in container["volumeMounts"]
+
+
+def test_fetch_args_pass_the_output_on(downloading):
+    spec = job.job_spec(downloading, output="s3://other/output")
+    assert job.fetch_args(spec)[-4:-2] == ["--output", "s3://other/output"]
+
+
+def _kubectl_answers(monkeypatch, *answers):
+    """Make ``kubectl`` print each of *answers* in turn; return the calls it gets."""
+    calls = []
+    left = list(answers)
+
+    def run(args, **kwargs):
+        calls.append(args)
+        answer = left.pop(0)
+        if isinstance(answer, Exception):
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr=str(answer))
+        return subprocess.CompletedProcess(args, 0, stdout=answer, stderr="")
+
+    monkeypatch.setattr(job.shutil, "which", lambda name: "/usr/bin/kubectl")
+    monkeypatch.setattr(job.subprocess, "run", run)
+    monkeypatch.setattr(job.time, "sleep", lambda seconds: None)
+    return calls
+
+
+def _job_json(*conditions):
+    """Return a Job as ``kubectl get job -o json`` prints it, with these true conditions."""
+    status = {"conditions": [{"type": c, "status": "True"} for c in conditions]}
+    return json.dumps({"metadata": {"name": "f"}, "status": status})
+
+
+def test_wait_returns_when_the_job_completes(monkeypatch):
+    calls = _kubectl_answers(
+        monkeypatch,
+        json.dumps({"metadata": {"name": "f"}}),
+        _job_json("SuccessCriteriaMet"),
+        _job_json("SuccessCriteriaMet", "Complete"),
+    )
+    assert job.wait("stilt-p-fetch-x", namespace="runs") is True
+    assert len(calls) == 3
+    assert calls[0] == [
+        "/usr/bin/kubectl",
+        "get",
+        "job",
+        "stilt-p-fetch-x",
+        "-o",
+        "json",
+        "--namespace",
+        "runs",
+    ]
+
+
+def test_wait_returns_false_when_the_job_fails(monkeypatch):
+    _kubectl_answers(monkeypatch, _job_json("FailureTarget", "Failed"))
+    assert job.wait("stilt-p-fetch-x") is False
+
+
+def test_wait_reports_kubectls_error(monkeypatch):
+    _kubectl_answers(monkeypatch, RuntimeError('jobs "stilt-p-fetch-x" not found'))
+    with pytest.raises(RuntimeError, match="not found"):
+        job.wait("stilt-p-fetch-x")
+
+
+def test_cli_submit_dry_run_prints_the_fetch_job_first(downloading):
+    result = CliRunner().invoke(
+        app, ["submit", downloading, "--volume", "met:/met", "--dry-run"]
+    )
+    assert result.exit_code == 0, result.output
+    fetch, run = yaml.safe_load_all(result.stdout)
+    assert fetch["metadata"]["generateName"] == "stilt-my-project-fetch-"
+    assert fetch["spec"]["template"]["spec"]["containers"][0]["args"][1] == "fetch"
+    assert run["metadata"]["generateName"] == "stilt-my-project-"
+
+
+def test_cli_submit_says_when_each_pod_downloads_its_met(downloading):
+    result = CliRunner().invoke(app, ["submit", downloading, "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert yaml.safe_load(result.stdout)["spec"]["completions"] == 12
+    assert "met hrrr downloads into each pod's own disk" in result.stderr
+
+
+def _creates(monkeypatch, fetched):
+    """Fake ``job.create`` and ``job.wait``; return the manifests created, in order."""
+    created = []
+
+    def create(manifest):
+        created.append(manifest)
+        return manifest["metadata"]["generateName"] + "x7k2p"
+
+    def wait(name, namespace=None):
+        if isinstance(fetched, Exception):
+            raise fetched
+        return fetched
+
+    monkeypatch.setattr(job, "create", create)
+    monkeypatch.setattr(job, "wait", wait)
+    return created
+
+
+def test_cli_submit_starts_the_job_after_the_fetch(monkeypatch, downloading):
+    created = _creates(monkeypatch, True)
+    result = CliRunner().invoke(app, ["submit", downloading, "--volume", "met:/met"])
+    assert result.exit_code == 0, result.output
+    assert [m["metadata"]["generateName"] for m in created] == [
+        "stilt-my-project-fetch-",
+        "stilt-my-project-",
+    ]
+    assert "Submitted fetch job: stilt-my-project-fetch-x7k2p" in result.stdout
+    assert "Submitted job: stilt-my-project-x7k2p  (12 tasks" in result.stdout
+
+
+def test_cli_submit_starts_the_job_when_the_fetch_failed(monkeypatch, downloading):
+    """As PYSTILT's Slurm submit does: the runs whose met is there still go."""
+    created = _creates(monkeypatch, False)
+    result = CliRunner().invoke(app, ["submit", downloading, "--volume", "met:/met"])
+    assert result.exit_code == 0, result.output
+    assert len(created) == 2
+    assert "kubectl logs job/stilt-my-project-fetch-x7k2p" in result.stderr
+
+
+def test_cli_submit_stops_when_it_cannot_follow_the_fetch(monkeypatch, downloading):
+    created = _creates(monkeypatch, RuntimeError("the server is gone"))
+    result = CliRunner().invoke(app, ["submit", downloading, "--volume", "met:/met"])
+    assert result.exit_code == 3
+    assert len(created) == 1
+    assert "the server is gone" in result.stderr
+
+
+def test_cli_submit_without_a_download_has_no_fetch_job(monkeypatch, pushed):
+    created = _creates(monkeypatch, True)
+    result = CliRunner().invoke(app, ["submit", pushed, "--volume", "met:/met"])
+    assert result.exit_code == 0, result.output
+    assert [m["metadata"]["generateName"] for m in created] == ["stilt-my-project-"]

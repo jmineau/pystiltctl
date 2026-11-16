@@ -31,9 +31,11 @@ Worker
    :toctree: _autosummary
 
    worker.run_task
+   worker.run_fetch
    worker.task_index
    worker.project_directory
    worker.stilt_command
+   worker.fetch_command
    worker.become
    worker.run
 
@@ -47,9 +49,13 @@ Kubernetes Job
    job.Volume
    job.job_spec
    job.manifest
+   job.fetch_manifest
+   job.needs_fetch
+   job.unshared_mets
    job.cron_job
    job.create
    job.apply
+   job.wait
    job.to_yaml
    job.default_image
    job.kubernetes_memory
