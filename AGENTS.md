@@ -78,7 +78,7 @@ runs the same recipes.
 | Task | Command |
 |---|---|
 | Everything CI checks | `just quality-check` |
-| Tests (no network/slow) | `just test` (parallel; extra args go to pytest) |
+| Tests (no network/slow) / with every dependency at its minimum | `just test` (parallel; extra args go to pytest) / `just sync-floors`, then `just test` |
 | Lint / fix and format / type check | `just lint` / `just format` / `just type-check` (pyrefly) |
 | Docs (runs every example; warnings are errors) / live preview | `just build-docs` / `just docs-serve` (port 8000) |
 | All pre-commit hooks | `just pre-commit` |

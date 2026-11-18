@@ -3514,6 +3514,7 @@ s3 = [
 [package.dev-dependencies]
 dev = [
     { name = "arlmet" },
+    { name = "click" },
     { name = "docstr-coverage" },
     { name = "git-cliff" },
     { name = "ipython" },
@@ -3540,7 +3541,7 @@ dev = [
 requires-dist = [
     { name = "fsspec", specifier = ">=2024.12" },
     { name = "gcsfs", marker = "extra == 'gcs'", specifier = ">=2024.12" },
-    { name = "matplotlib", specifier = ">=3.8" },
+    { name = "matplotlib", specifier = ">=3.9" },
     { name = "packaging", specifier = ">=23" },
     { name = "pystilt", specifier = ">=0.1.0a27" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.12" },
@@ -3551,10 +3552,11 @@ provides-extras = ["s3", "gcs"]
 [package.metadata.requires-dev]
 dev = [
     { name = "arlmet", specifier = ">=0.1.0b5" },
+    { name = "click", specifier = ">=8.2" },
     { name = "docstr-coverage", specifier = ">=2.3" },
     { name = "git-cliff", specifier = ">=2.10" },
     { name = "ipython", specifier = ">=9.0" },
-    { name = "matplotlib", specifier = ">=3.8" },
+    { name = "matplotlib", specifier = ">=3.9" },
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "pydata-sphinx-theme", specifier = ">=0.22" },
     { name = "pyrefly", specifier = ">=1.3" },

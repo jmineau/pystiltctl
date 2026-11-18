@@ -6,6 +6,7 @@
 [![codecov](https://codecov.io/gh/jmineau/pystiltctl/branch/main/graph/badge.svg)](https://codecov.io/gh/jmineau/pystiltctl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Pyrefly](https://img.shields.io/badge/types-pyrefly-blue.svg)](https://pyrefly.org)
 
 Run [PYSTILT](https://github.com/jmineau/PYSTILT) projects at scale outside Slurm: Kubernetes
 Jobs, queues, autoscaled workers, and outputs on an object store.
