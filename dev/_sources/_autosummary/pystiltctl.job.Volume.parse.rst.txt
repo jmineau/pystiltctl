@@ -2,5 +2,4 @@ pystiltctl.job.Volume.parse
 ===========================
 
 .. currentmodule:: pystiltctl.job
-
 .. automethod:: Volume.parse
